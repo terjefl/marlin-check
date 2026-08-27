@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ t('site_title') }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
+</head>
+<body>
+<header>
+  <div class="wrap header-inner">
+    <a class="brand" href="/">🐟 {{ t('site_title') }}</a>
+    <nav>
+      <a href="/">{{ t('nav_home') }}</a>
+      <a href="/stats">{{ t('nav_stats') }}</a>
+      <a href="/privacy">{{ t('nav_privacy') }}</a>
+    </nav>
+    <form class="langpicker" method="get" action="">
+      <label class="visually-hidden" for="lang">{{ t('lang_label') }}</label>
+      <select id="lang" name="lang" onchange="this.form.submit()">
+        {% for code, name in languages.items() %}
+        <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</header>
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+<footer>
+  <div class="wrap">{{ t('footer_disclaimer') }}</div>
+</footer>
+</body>
+</html>

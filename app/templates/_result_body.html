@@ -1,0 +1,50 @@
+{# Delt mellom resultatsiden og PDF-rapporten #}
+<h1>{{ t('result_title', vin=report.vin) }}</h1>
+
+<div class="verdict {{ 'ready' if evaluation.verdict == 'ready' else 'zebra' }}">
+  <strong>{% if evaluation.verdict == 'ready' %}✅ {{ t('verdict_ready') }}{% else %}⚠️ {{ t('verdict_zebra') }}{% endif %}</strong>
+  <p>{% if evaluation.verdict == 'ready' %}{{ t('verdict_ready_text') }}{% else %}{{ t('verdict_zebra_text') }}{% endif %}</p>
+  {% if evaluation.verdict != 'ready' %}
+  <ul>
+    {% for r in evaluation.failing_critical %}
+    <li>{{ r.requirement.label }} — {{ t('status_' + r.status) }}{% if r.version %} ({{ r.version }} &lt; {{ r.requirement.min_version }}){% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }}</p>
+
+<table class="modules">
+  <thead>
+    <tr>
+      <th>{{ t('table_module') }}</th>
+      <th>{{ t('table_required') }}</th>
+      <th>{{ t('table_found') }}</th>
+      <th>{{ t('table_status') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in evaluation.results %}
+    <tr class="status-{{ r.status }}">
+      <td>{{ r.requirement.label }}{% if r.requirement.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
+      <td>≥ {{ r.requirement.min_version }}</td>
+      <td>{{ r.version or '—' }}</td>
+      <td>{% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if evaluation.extra_modules %}
+<details class="extra">
+  <summary>{{ t('extra_modules_title') }} ({{ evaluation.extra_modules | length }})</summary>
+  <table class="modules">
+    <tbody>
+      {% for m in evaluation.extra_modules %}
+      <tr><td>{{ m.raw_name }}</td><td>{{ m.version }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}

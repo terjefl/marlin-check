@@ -1,0 +1,13 @@
+# Lokal utvikling. Produksjons-compose ligger i Docker-repoet:
+# DMZ-DOCKER01/marlin/compose.yml
+services:
+  marlin:
+    build: .
+    image: marlin-check:dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./dev-data:/data
+      - ./requirements.example.yaml:/config/requirements.yaml:ro
+    environment:
+      TZ: Europe/Oslo

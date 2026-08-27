@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ t('result_title', vin=report.vin) }} — {{ t('site_title') }}{% endblock %}
+{% block content %}
+{% include "_result_body.html" %}
+<div class="actions">
+  <a class="button" href="/pdf/{{ token }}">{{ t('download_pdf') }}</a>
+  <a class="button secondary" href="/">{{ t('check_another') }}</a>
+</div>
+{% endblock %}

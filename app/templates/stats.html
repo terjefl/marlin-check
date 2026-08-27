@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ t('stats_title') }} — {{ t('site_title') }}{% endblock %}
+{% block content %}
+<h1>{{ t('stats_title') }}</h1>
+<p>{{ t('stats_intro') }}</p>
+
+{% if stats.unique_vins == 0 %}
+<div class="alert">{{ t('stats_empty') }}</div>
+{% else %}
+<div class="statgrid">
+  <div class="stat"><span class="num">{{ stats.unique_vins }}</span><span class="label">{{ t('stats_unique_vins') }}</span></div>
+  <div class="stat"><span class="num">{{ stats.total_submissions }}</span><span class="label">{{ t('stats_total') }}</span></div>
+  <div class="stat ok"><span class="num">{{ stats.verdicts.get('ready', 0) }}</span><span class="label">{{ t('stats_ready') }}</span></div>
+  <div class="stat warn"><span class="num">{{ stats.verdicts.get('zebra', 0) }}</span><span class="label">{{ t('stats_not_ready') }}</span></div>
+</div>
+
+<h2>{{ t('stats_module_heading') }}</h2>
+{% for module_id, versions in stats.module_versions.items() %}
+{% set total = versions | sum(attribute='count') %}
+<div class="modstat">
+  <h3>{{ module_id }}</h3>
+  {% for v in versions %}
+  <div class="bar-row">
+    <span class="bar-label">{{ v.version }}</span>
+    <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
+    <span class="bar-count">{{ v.count }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

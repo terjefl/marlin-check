@@ -1,0 +1,36 @@
+# Marlin-krav: minimumsversjoner per modul.
+#
+# UTKAST — modul-IDene og versjonene her er PLACEHOLDERE til foreningen
+# publiserer de faktiske kravene (Fase 3 i planen). Strukturen er den
+# endelige; bare innholdet skal byttes ut.
+#
+# I produksjon bind-mountes denne filen som /config/requirements.yaml og kan
+# redigeres på hosten uten rebuild — appen leser den på nytt ved hver analyse.
+#
+# Felter per modul:
+#   id:          kort stabil ID (brukes i databasen/statistikken)
+#   label:       visningsnavn
+#   match:       navnevarianter slik de opptrer i OLP-rapporten (case-insensitivt delstreng-treff)
+#   min_version: minste godkjente versjon
+#   critical:    true = må være oppfylt for Marlin; false = informativ
+
+version: "2026-08-28-draft"
+
+modules:
+  - id: VCU
+    label: Vehicle Control Unit
+    match: ["Vehicle Control Unit", "VCU"]
+    min_version: "2.1.0"
+    critical: true
+
+  - id: BMS
+    label: Battery Management System
+    match: ["Battery Management", "BMS"]
+    min_version: "2.1.0"
+    critical: true
+
+  - id: ICM
+    label: Infotainment / Central Display
+    match: ["Infotainment", "Central Display", "ICM"]
+    min_version: "2.0.0"
+    critical: false

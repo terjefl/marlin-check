@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1a1a1a; font-size: 11pt; }
+    h1 { font-size: 16pt; }
+    .brandline { color: #666; font-size: 9pt; margin-bottom: 1em; }
+    .verdict { padding: 10pt; border-radius: 6pt; margin: 10pt 0; }
+    .verdict.ready { background: #e6f4ea; border: 1pt solid #34a853; }
+    .verdict.zebra { background: #fdecea; border: 1pt solid #ea4335; }
+    .meta { color: #666; font-size: 9pt; }
+    table.modules { width: 100%; border-collapse: collapse; margin-top: 8pt; }
+    table.modules th, table.modules td { border: 0.5pt solid #ccc; padding: 4pt 6pt; text-align: left; }
+    table.modules th { background: #f2f2f2; }
+    tr.status-outdated td, tr.status-missing td { background: #fdecea; }
+    .crit { color: #666; font-size: 8pt; }
+    details.extra summary { font-weight: bold; margin-top: 10pt; }
+    footer { margin-top: 16pt; color: #666; font-size: 8pt; border-top: 0.5pt solid #ccc; padding-top: 6pt; }
+  </style>
+</head>
+<body>
+  <div class="brandline">{{ t('site_title') }} — {{ generated_at }}</div>
+  {% include "_result_body.html" %}
+  <footer>{{ t('footer_disclaimer') }}</footer>
+</body>
+</html>

@@ -1,0 +1,10 @@
+Ocean Link Pro - Diagnostics Report (SYNTETISK TESTFIL)
+Generated: 2026-08-28
+
+VIN: VCF1ZBU25PG012345
+
+Vehicle Control Unit: 2.1.4
+Battery Management: 2.1.0
+Infotainment: 1.9.2
+Door Module FL: 1.4.0
+Door Module FR: 1.4.0

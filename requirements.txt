@@ -1,0 +1,7 @@
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+jinja2==3.1.*
+python-multipart==0.0.20
+pyyaml==6.0.*
+pdfplumber==0.11.*
+weasyprint==63.*

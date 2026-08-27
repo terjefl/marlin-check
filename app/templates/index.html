@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>{{ t('intro_heading') }}</h1>
+  <p class="tagline">{{ t('tagline') }}</p>
+  <p>{{ t('intro_text') }}</p>
+</section>
+
+{% if error %}
+<div class="alert error">{{ error }}</div>
+{% endif %}
+
+<form class="uploadbox" method="post" action="/analyze" enctype="multipart/form-data">
+  <label class="filelabel" for="report">{{ t('upload_label') }}</label>
+  <input type="file" id="report" name="report" required
+         accept=".pdf,.txt,application/pdf,text/plain">
+  <label class="consent">
+    <input type="checkbox" name="consent" value="yes">
+    <span>{{ t('consent_label') }}</span>
+  </label>
+  <p class="hint">{{ t('consent_hint') }}</p>
+  <button type="submit">{{ t('upload_button') }}</button>
+</form>
+{% endblock %}
