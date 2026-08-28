@@ -44,5 +44,7 @@
   "stats_empty": "Ingen data ennå — statistikken vises når medlemmer laster opp rapporter med samtykke.",
   "privacy_title": "Personvern",
   "privacy_text": "Denne portalen drives av frivillige for medlemmer av Fisker Owners Association. Når du laster opp en rapport analyseres den på serveren vår og resultatet vises til deg. Hvis du IKKE krysser av for samtykke, behandles rapporten kun i minnet og ingenting lagres. Krysser du av, lagrer vi rapportfilen, VIN og modulversjonene slik at foreningen kan lage aggregert statistikk (antall unike biler, versjonsfordeling). Statistikken viser aldri enkelt-VIN. Ingen data deles med tredjeparter, og ingen sporingscookies brukes (kun en cookie som husker språkvalget ditt). Kontakt foreningen for å få lagrede data slettet.",
-  "footer_disclaimer": "Frivillig verktøy — ikke tilknyttet Fisker Inc. Verifiser resultatet med foreningen før du avtaler oppdateringer."
+  "footer_disclaimer": "Frivillig verktøy — ikke tilknyttet Fisker Inc. Verifiser resultatet med foreningen før du avtaler oppdateringer.",
+  "alpha_title": "ALFA — testversjon",
+  "alpha_text": "Denne portalen er under utvikling. Kravene den sammenligner mot er et ubekreftet utkast, så resultatet kan være feil. Ikke ta beslutninger basert på denne rapporten ennå."
 }

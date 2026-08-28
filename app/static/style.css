@@ -29,6 +29,7 @@ nav { display: flex; gap: 0.9rem; flex: 1; }
 nav a { color: #ffffffd9; text-decoration: none; }
 nav a:hover { color: #fff; text-decoration: underline; }
 .langpicker select { border-radius: 6px; border: none; padding: 0.25rem 0.4rem; }
+.alphabar { background: #fff3cd; border-bottom: 1px solid #e0c46c; color: #5c4400; padding: 0.55rem 0; font-size: 0.92rem; }
 main { flex: 1; padding: 1.5rem 1rem 3rem; }
 footer { background: var(--surface); border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; padding: 0.8rem 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
