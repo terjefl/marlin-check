@@ -151,10 +151,21 @@ async def analyze(request: Request, report: UploadFile):
     token = secrets.token_urlsafe(16)
     _recent_results[token] = {"report": parsed, "evaluation": evaluation, "at": time.time()}
 
+    # POST-redirect-GET: resultatsiden er en GET-side, så språkbytte og
+    # sideoppdatering fungerer uten re-innsending av rapporten.
+    return RedirectResponse(f"/result/{token}", status_code=303)
+
+
+@app.get("/result/{token}", response_class=HTMLResponse)
+def result(request: Request, token: str):
+    _prune_results()
+    cached = _recent_results.get(token)
+    if cached is None:
+        return RedirectResponse("/", status_code=303)
     return _render(
         request,
         "result.html",
-        {"report": parsed, "evaluation": evaluation, "token": token},
+        {"report": cached["report"], "evaluation": cached["evaluation"], "token": token},
     )
 
 

@@ -71,6 +71,27 @@ def test_stats_and_privacy_pages_render(client):
     assert c.get("/healthz").json() == {"status": "ok"}
 
 
+def test_result_page_survives_language_switch_and_reload(client):
+    """POST /analyze redirecter til GET /result/<token>; språkbytte og refresh fungerer."""
+    c, _ = client
+    response = _upload(c, consent=False)
+    assert response.status_code == 200
+    assert "/result/" in str(response.url)
+
+    # Refresh (GET samme URL) fungerer
+    again = c.get(str(response.url))
+    assert again.status_code == 200 and "VCF1ZBE20PG099999" in again.text
+
+    # Språkbytte via ?lang= gir samme resultat på nytt språk
+    german = c.get(str(response.url) + "?lang=de")
+    assert german.status_code == 200
+    assert "Ergebnis für VIN" in german.text
+
+    # Utløpt/ukjent token -> tilbake til forsiden
+    gone = c.get("/result/finnesikke", follow_redirects=False)
+    assert gone.status_code == 303 and gone.headers["location"] == "/"
+
+
 def test_language_negotiation(client):
     c, _ = client
     norsk = c.get("/", headers={"accept-language": "nb-NO,nb;q=0.9"})
