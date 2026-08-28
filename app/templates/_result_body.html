@@ -7,13 +7,13 @@
   {% if evaluation.verdict != 'ready' %}
   <ul>
     {% for r in evaluation.failing_critical %}
-    <li>{{ r.requirement.label }} — {{ t('status_' + r.status) }}{% if r.version %} ({{ r.version }} &lt; {{ r.requirement.min_version }}){% endif %}</li>
+    <li>{{ r.requirement.label }} — {{ t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }} &lt; {{ r.required }}){% endif %}</li>
     {% endfor %}
   </ul>
   {% endif %}
 </div>
 
-<p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }}</p>
+<p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }} · {{ t('target_profile_label') }}: {{ evaluation.target_profile }}</p>
 
 <table class="modules">
   <thead>
@@ -28,9 +28,12 @@
     {% for r in evaluation.results %}
     <tr class="status-{{ r.status }}">
       <td>{{ r.requirement.label }}{% if r.requirement.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
-      <td>≥ {{ r.requirement.min_version }}</td>
-      <td>{{ r.version or '—' }}</td>
-      <td>{% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}</td>
+      <td>≥ {{ r.required if r.required is not none else '—' }}</td>
+      <td>{{ r.version or '—' }}{% if r.extracted is not none %} <span class="crit">→ {{ r.extracted }}</span>{% endif %}</td>
+      <td>
+        {% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}
+        {% if r.level and r.status != 'ok' %} <span class="crit">({{ t('level_label') }} {{ r.level }})</span>{% endif %}
+      </td>
     </tr>
     {% endfor %}
   </tbody>

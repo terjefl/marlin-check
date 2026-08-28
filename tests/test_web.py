@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-FIXTURE = Path(__file__).parent / "fixtures" / "synthetic_report.txt"
+FIXTURE = Path(__file__).parent / "fixtures" / "olp_report.txt"
 
 
 @pytest.fixture()
@@ -32,7 +32,7 @@ def test_upload_without_consent_stores_nothing(client):
     c, main = client
     response = _upload(c, consent=False)
     assert response.status_code == 200
-    assert "VCF1ZBU25PG012345" in response.text
+    assert "VCF1ZBE20PG099999" in response.text
     assert main.database.stats()["unique_vins"] == 0
     assert not Path(main.UPLOADS_DIR).exists()
 
@@ -46,7 +46,7 @@ def test_upload_with_consent_stores_submission_and_file(client):
     assert stats["total_submissions"] == 1
     stored = list(Path(main.UPLOADS_DIR).iterdir())
     assert len(stored) == 1
-    assert "VCF1ZBU25PG012345" in stored[0].name
+    assert "VCF1ZBE20PG099999" in stored[0].name
 
     # Samme VIN på nytt -> fortsatt 1 unik bil, 2 innsendinger
     _upload(c, consent=True)

@@ -16,15 +16,18 @@ minimumsversjonene for den store **Marlin**-programvareoppdateringen.
 
 | Fase | Innhold | Status |
 |---|---|---|
-| 1 | App-scaffold (denne koden) | ✅ |
-| 2 | Ekte OLP-parser (`app/parser.py`) — venter på ekte rapport | ⏳ |
-| 3 | Ekte Marlin-krav i `requirements.yaml` — venter på foreningen | ⏳ |
+| 1 | App-scaffold | ✅ |
+| 2 | Ekte OLP-parser (`app/parser.py`) — verifisert mot ekte rapport 2026-08-28 | ✅ |
+| 3 | Marlin-krav i `requirements.yaml` — utkast fra videomøte lagt inn; offisielle tall og to uttrekks-antakelser (BCM, ESP) må bekreftes | ⏳ |
 | 4 | Deploy på DMZ-DOCKER01 bak marlin.flagan.net | ⏳ |
 
-`app/parser.py` inneholder i dag en midlertidig parser for et syntetisk
-tekstformat (se `tests/fixtures/synthetic_report.txt`). Når det ekte
-OLP-formatet foreligger byttes uttrekkslogikken ut — grensesnittet
-(`parse_report(bytes) -> ParsedReport`) er stabilt.
+Parseren leser OLP-ens «ECU Software Version Report»-PDF (eller tekstuttrekket
+av den): seksjoner (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS), ECU-blokker
+(`KODE - Navn`) og feltet **Supplier SW Version**, som er det som sammenlignes
+mot kravene. Kravmodellen er profilbasert (2.0/2.1): en bil som når 2.1-nivået
+på alle kravmoduler er «100 % 2.1» og kan oppdateres direkte til Marlin;
+ellers er den en «zebra» og må via SW 2.2 / målrettede oppdateringer først.
+Se kommentarene i `requirements.example.yaml` for antakelsene.
 
 ## Kravfilen
 
@@ -38,7 +41,7 @@ kan oppdateres på hosten **uten** rebuild av imaget.
 docker compose up --build
 ```
 
-Åpne <http://localhost:8000>. Test med `tests/fixtures/synthetic_report.txt`.
+Åpne <http://localhost:8000>. Test med `tests/fixtures/olp_report.txt` (anonymisert ekte rapport).
 
 Uten Docker (PDF-nedlasting krever pango/cairo installert):
 
