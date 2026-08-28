@@ -37,15 +37,17 @@
     </thead>
     <tbody>
       {% for m in requirements.modules %}
+      {% set mi = loop.index0 %}
       <tr>
-        <td><input class="mono" type="text" name="mod-{{ loop.index0 }}-id" value="{{ m.id }}"></td>
-        <td><input type="text" name="mod-{{ loop.index0 }}-label" value="{{ m.label }}"></td>
-        <td><input class="mono" type="text" name="mod-{{ loop.index0 }}-match" value="{{ m.match | join(', ') }}"></td>
-        <td><input class="mono" type="text" name="mod-{{ loop.index0 }}-extract" value="{{ m.extract or '' }}" placeholder="(siste tall i strengen)"></td>
+        <td><input class="mono" type="text" name="mod-{{ mi }}-id" value="{{ m.id }}"></td>
+        <td><input type="text" name="mod-{{ mi }}-label" value="{{ m.label }}"></td>
+        <td><input class="mono" type="text" name="mod-{{ mi }}-match" value="{{ m.match | join(', ') }}"></td>
+        <td><input class="mono" type="text" name="mod-{{ mi }}-extract" value="{{ m.extract or '' }}" placeholder="(siste tall i strengen)"></td>
         {% for p in requirements.profiles %}
-        <td class="num"><input type="number" name="mod-{{ loop.index0 }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"></td>
+        {# NB: mi, ikke loop.index0 — her er loop profil-løkken #}
+        <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"></td>
         {% endfor %}
-        <td class="crit"><input type="checkbox" name="mod-{{ loop.index0 }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
+        <td class="crit"><input type="checkbox" name="mod-{{ mi }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
         <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Slett</button></td>
       </tr>
       {% endfor %}

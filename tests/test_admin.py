@@ -155,6 +155,45 @@ def test_form_save_rejects_bad_level(client):
     assert main.REQUIREMENTS_PATH.read_text() == original
 
 
+def test_form_roundtrip_from_rendered_html(client):
+    """Regresjon: render admin-siden, post skjemaet UENDRET tilbake -> «Ingen endringer»
+    ville vært ideelt, men skjemaet regenererer YAML (kommentarer forsvinner), så vi
+    krever at lagringen validerer OK og at innholdet er semantisk identisk."""
+    import html as html_module
+    import re as re_module
+
+    c, main = client
+    page = c.get("/admin", headers=_basic("terje", "hemmelig123")).text
+    form_html = re_module.search(
+        r'<form method="post" action="/admin/save-form">(.*?)</form>', page, re_module.S
+    ).group(1)
+    fields: list[tuple[str, str]] = []
+    for m in re_module.finditer(r"<input([^>]*)>", form_html):
+        attrs = dict(re_module.findall(r'(\w+)="([^"]*)"', m.group(1)))
+        if attrs.get("type") == "checkbox":
+            if "checked" in m.group(1):
+                fields.append((attrs["name"], attrs.get("value", "on")))
+        elif "name" in attrs:
+            fields.append((attrs["name"], html_module.unescape(attrs.get("value", ""))))
+
+    # Feltnavnene skal være unike (loop.index0-bug ga kollisjoner mellom rader)
+    names = [n for n, _ in fields]
+    assert len(names) == len(set(names)), f"kolliderende feltnavn: {sorted(names)}"
+
+    from app.rules import load_requirements
+
+    before = load_requirements(main.REQUIREMENTS_PATH)
+    response = c.post(
+        "/admin/save-form", headers=_basic("terje", "hemmelig123"), data=dict(fields)
+    )
+    assert response.status_code == 200, response.text
+    after = load_requirements(main.REQUIREMENTS_PATH)
+    assert [m.id for m in after.modules] == [m.id for m in before.modules]
+    assert {m.id: m.levels for m in after.modules} == {m.id: m.levels for m in before.modules}
+    assert {m.id: m.extract for m in after.modules} == {m.id: m.extract for m in before.modules}
+    assert after.target_profile == before.target_profile
+
+
 def test_rate_limit_on_failed_logins(client):
     c, _ = client
     for _ in range(10):
