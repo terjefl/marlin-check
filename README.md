@@ -31,9 +31,25 @@ Se kommentarene i `requirements.example.yaml` for antakelsene.
 
 ## Kravfilen
 
-`requirements.example.yaml` definerer modulkravene og bind-mountes i produksjon
-som `/config/requirements.yaml`. Den leses på nytt ved hver analyse, så krav
-kan oppdateres på hosten **uten** rebuild av imaget.
+`requirements.example.yaml` definerer modulkravene. I produksjon ligger den som
+`/config/requirements.yaml` (bind-mountet katalog). Den leses på nytt ved hver
+analyse, så krav kan oppdateres **uten** rebuild — enten direkte på hosten
+eller via admin-siden.
+
+## Admin-side (`/admin`)
+
+Beskyttet side for web-redigering av kravspec:
+
+- **Innlogging:** HTTP Basic med flere brukere. Brukerne ligger i
+  `/config/admin_users.yaml` (se `admin_users.example.yaml`) som
+  `brukernavn: pbkdf2-hash` — lag hasher med `python3 scripts/hash_password.py`.
+  Kun hasher lagres. Feilede forsøk rate-limites (10 per 15 min per IP).
+- **Redigering:** YAML-en valideres (syntaks, struktur, regexer, profiler) før
+  lagring; ugyldig innhold avvises uten å røre filen. Lagring er atomisk og
+  virker umiddelbart på neste analyse.
+- **Revisjonslogg:** hver lagring logges i SQLite (`audit_log`) med tidspunkt,
+  brukernavn, klient-IP (fra `CF-Connecting-IP`) og unified diff av endringen.
+  Loggen vises nederst på admin-siden.
 
 ## Kjøre lokalt
 

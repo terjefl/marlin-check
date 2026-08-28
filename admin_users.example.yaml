@@ -1,0 +1,9 @@
+# Brukere for admin-siden (/admin) — HTTP Basic-innlogging.
+# Kun passordhasher lagres. Lag en hash med:
+#     python3 scripts/hash_password.py
+# og lim inn under. Filen leses ved hvert kall, så endringer virker umiddelbart.
+# I produksjon: /home/dockeradmin/docker_volumes/marlin/config/admin_users.yaml
+
+users:
+  # eksempelbruker (passord "changeme" — IKKE bruk i produksjon):
+  example: pbkdf2_sha256$600000$00000000000000000000000000000000$0000000000000000000000000000000000000000000000000000000000000000

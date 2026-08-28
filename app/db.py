@@ -35,6 +35,15 @@ CREATE TABLE IF NOT EXISTS module_readings (
     status TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_readings_module ON module_readings(module_id);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    username TEXT NOT NULL,
+    ip TEXT NOT NULL,
+    action TEXT NOT NULL,
+    detail TEXT NOT NULL
+);
 """
 
 
@@ -91,6 +100,24 @@ class Database:
                 rows,
             )
         return submission_id
+
+    def add_audit(self, username: str, ip: str, action: str, detail: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO audit_log (ts, username, ip, action, detail) VALUES (?, ?, ?, ?, ?)",
+                (datetime.now(timezone.utc).isoformat(), username, ip, action, detail),
+            )
+
+    def audit_entries(self, limit: int = 50) -> list[dict]:
+        with self._connect() as conn:
+            return [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT ts, username, ip, action, detail FROM audit_log"
+                    " ORDER BY id DESC LIMIT ?",
+                    (limit,),
+                )
+            ]
 
     def stats(self) -> dict:
         """Aggregert statistikk. Kun siste innsending per VIN teller."""

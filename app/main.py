@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import os
 import re
 import secrets
@@ -9,15 +10,22 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Request, UploadFile
+from fastapi import Depends, FastAPI, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db as db_module
+from .auth import client_ip as auth_client_ip
+from .auth import require_admin
 from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
-from .rules import evaluate, load_requirements
+from .rules import (
+    RequirementsValidationError,
+    evaluate,
+    load_requirements,
+    parse_requirements_text,
+)
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = Path(os.environ.get("MARLIN_DATA_DIR", "./data"))
@@ -167,3 +175,66 @@ def stats(request: Request):
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy(request: Request):
     return _render(request, "privacy.html", {})
+
+
+# --- Admin: web-redigering av kravspec med revisjonslogg -------------------
+
+def _render_admin(request: Request, username: str, *, message: str = "",
+                  error: str = "", yaml_text: str | None = None,
+                  status_code: int = 200) -> Response:
+    return _render(
+        request,
+        "admin.html",
+        {
+            "username": username,
+            "message": message,
+            "error": error,
+            "yaml_text": yaml_text if yaml_text is not None
+            else REQUIREMENTS_PATH.read_text(encoding="utf-8"),
+            "audit": database.audit_entries(50),
+        },
+        status_code=status_code,
+    )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin(request: Request, username: str = Depends(require_admin)):
+    return _render_admin(request, username)
+
+
+@app.post("/admin/save")
+async def admin_save(request: Request, username: str = Depends(require_admin)):
+    form = await request.form()
+    new_text = str(form.get("yaml_text", "")).replace("\r\n", "\n")
+    old_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
+
+    if new_text.strip() == old_text.strip():
+        return _render_admin(request, username, message="Ingen endringer å lagre.")
+
+    try:
+        parsed = parse_requirements_text(new_text)
+    except RequirementsValidationError as exc:
+        return _render_admin(
+            request, username, error=f"Ikke lagret — valideringsfeil: {exc}",
+            yaml_text=new_text, status_code=422,
+        )
+
+    diff = "\n".join(
+        difflib.unified_diff(
+            old_text.splitlines(), new_text.splitlines(),
+            fromfile="requirements.yaml (før)", tofile="requirements.yaml (etter)",
+            lineterm="",
+        )
+    )[:20000]
+
+    # Atomisk erstatning i samme katalog (derfor er /config mountet som katalog)
+    tmp_path = REQUIREMENTS_PATH.with_suffix(".yaml.tmp")
+    tmp_path.write_text(new_text, encoding="utf-8")
+    os.replace(tmp_path, REQUIREMENTS_PATH)
+
+    database.add_audit(username, auth_client_ip(request), "requirements_update", diff)
+    return _render_admin(
+        request, username,
+        message=f"Lagret. Ny kravversjon: {parsed.version} "
+                f"({len(parsed.modules)} moduler, target {parsed.target_profile}).",
+    )

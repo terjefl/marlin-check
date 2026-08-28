@@ -100,3 +100,7 @@ details.extra summary { cursor: pointer; font-weight: 600; }
 .bar-count { text-align: right; font-size: 0.85rem; color: var(--muted); }
 
 .prose { max-width: 68ch; }
+
+.yamledit { width: 100%; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; background: var(--surface); color: var(--text); resize: vertical; }
+.auditentry { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
+pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding: 0.6rem; border-radius: 6px; white-space: pre; }

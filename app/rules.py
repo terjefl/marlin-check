@@ -83,8 +83,54 @@ class Evaluation:
         return [r for r in self.results if r.status != OK and r.requirement.critical]
 
 
+class RequirementsValidationError(Exception):
+    """Kravteksten kunne ikke tolkes som et gyldig regelverk."""
+
+
+def parse_requirements_text(text: str) -> RequirementSet:
+    """Parser og validerer kravtekst (YAML). Kaster RequirementsValidationError."""
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise RequirementsValidationError(f"Ugyldig YAML: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise RequirementsValidationError("Toppnivået må være et YAML-objekt.")
+    try:
+        result = _build_requirement_set(raw)
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        raise RequirementsValidationError(f"Ugyldig struktur: {exc!r}") from exc
+    if not result.modules:
+        raise RequirementsValidationError("Ingen moduler definert under `modules:`.")
+    if not result.target_profile or result.target_profile == "None":
+        raise RequirementsValidationError("`target_profile` mangler.")
+    if result.target_profile not in result.profiles:
+        raise RequirementsValidationError(
+            f"target_profile {result.target_profile!r} finnes ikke i profiles {result.profiles}."
+        )
+    for module in result.modules:
+        if module.extract:
+            try:
+                pattern = re.compile(module.extract)
+            except re.error as exc:
+                raise RequirementsValidationError(
+                    f"Modul {module.id}: ugyldig extract-regex: {exc}"
+                ) from exc
+            if pattern.groups < 1:
+                raise RequirementsValidationError(
+                    f"Modul {module.id}: extract-regexen mangler capture-gruppe."
+                )
+        if module.levels.get(result.target_profile) is None:
+            raise RequirementsValidationError(
+                f"Modul {module.id}: mangler nivå for target_profile {result.target_profile!r}."
+            )
+    return result
+
+
 def load_requirements(path: str | Path) -> RequirementSet:
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return parse_requirements_text(Path(path).read_text(encoding="utf-8"))
+
+
+def _build_requirement_set(raw: dict) -> RequirementSet:
     modules = [
         Requirement(
             id=m["id"],

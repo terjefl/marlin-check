@@ -8,6 +8,8 @@ services:
       - "8000:8000"
     volumes:
       - ./dev-data:/data
-      - ./requirements.example.yaml:/config/requirements.yaml:ro
+      # Lokal dev: kopier requirements.example.yaml -> dev-config/requirements.yaml
+      # og lag dev-config/admin_users.yaml (se admin_users.example.yaml) for /admin
+      - ./dev-config:/config
     environment:
       TZ: Europe/Oslo
