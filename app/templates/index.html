@@ -21,4 +21,29 @@
   <p class="hint">{{ t('consent_hint') }}</p>
   <button type="submit">{{ t('upload_button') }}</button>
 </form>
+
+{% if requirements %}
+<details class="extra frontreqs">
+  <summary>{{ t('front_requirements_title') }}</summary>
+  <p class="meta">{{ t('front_requirements_intro', profile=requirements.target_profile, version=requirements.version) }}</p>
+  <table class="modules">
+    <thead>
+      <tr>
+        <th>{{ t('table_module') }}</th>
+        <th>{{ t('table_codes') }}</th>
+        <th>{{ t('table_required') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in requirements.modules %}
+      <tr>
+        <td>{{ m.label }}{% if m.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
+        <td class="mono">{{ m.match | join(', ') }}</td>
+        <td>≥ {{ m.levels.get(requirements.target_profile, '—') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
 {% endblock %}

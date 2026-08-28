@@ -46,5 +46,8 @@
   "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. If you do NOT tick the consent box, the report is processed in memory only and nothing is stored. If you tick the box, we store the report file, your VIN and the module versions so the association can build aggregated statistics (number of unique cars, version distribution). Statistics never show individual VINs. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have stored data removed, contact the association.",
   "footer_disclaimer": "Community tool — not affiliated with Fisker Inc. Verify results with the association before scheduling updates.",
   "alpha_title": "ALPHA — test version",
-  "alpha_text": "This portal is under development. The requirements it compares against are an unconfirmed draft, so the result may be wrong. Do not make decisions based on this report yet."
+  "alpha_text": "This portal is under development. The requirements it compares against are an unconfirmed draft, so the result may be wrong. Do not make decisions based on this report yet.",
+  "front_requirements_title": "Which requirements are checked?",
+  "front_requirements_intro": "Each module must be at least at the level below to count as {profile}. Requirements version: {version}.",
+  "table_codes": "ECU codes"
 }

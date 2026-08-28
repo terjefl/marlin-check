@@ -95,9 +95,17 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
     return response
 
 
+def _current_requirements():
+    try:
+        return load_requirements(REQUIREMENTS_PATH)
+    except (RequirementsValidationError, OSError):
+        return None
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return _render(request, "index.html", {"error": None})
+    return _render(request, "index.html",
+                   {"error": None, "requirements": _current_requirements()})
 
 
 @app.get("/healthz")
@@ -111,11 +119,11 @@ async def analyze(request: Request, report: UploadFile):
     t = translator(lang)
 
     if _rate_limited(_client_ip(request)):
-        return _render(request, "index.html", {"error": t("error_rate_limited")}, status_code=429)
+        return _render(request, "index.html", {"error": t("error_rate_limited"), "requirements": _current_requirements()}, status_code=429)
 
     data = await report.read()
     if len(data) > MAX_REPORT_BYTES:
-        return _render(request, "index.html", {"error": t("error_too_large")}, status_code=413)
+        return _render(request, "index.html", {"error": t("error_too_large"), "requirements": _current_requirements()}, status_code=413)
 
     form = await request.form()
     consent = form.get("consent") == "yes"
@@ -126,7 +134,7 @@ async def analyze(request: Request, report: UploadFile):
         evaluation = evaluate(parsed, requirements)
     except ReportParseError as exc:
         return _render(
-            request, "index.html", {"error": t("error_parse", reason=str(exc))}, status_code=422
+            request, "index.html", {"error": t("error_parse", reason=str(exc)), "requirements": _current_requirements()}, status_code=422
         )
 
     if consent:
