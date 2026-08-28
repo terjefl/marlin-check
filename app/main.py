@@ -42,6 +42,14 @@ app = FastAPI(title="Marlin Readiness Check", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+# Cache-busting: innholdshash av style.css i URL-en, så Cloudflare/nettlesere
+# aldri serverer utdatert CSS etter en deploy.
+import hashlib as _hashlib
+
+STATIC_VERSION = _hashlib.md5(
+    (BASE_DIR / "static" / "style.css").read_bytes()
+).hexdigest()[:8]
+
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
 
 # Nylige analyser i minnet, så resultatsiden kan tilby PDF uten re-opplasting.
@@ -78,7 +86,8 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
     response = templates.TemplateResponse(
         request,
         template,
-        {"lang": lang, "t": translator(lang), "languages": LANGUAGE_NAMES, **context},
+        {"lang": lang, "t": translator(lang), "languages": LANGUAGE_NAMES,
+         "static_v": STATIC_VERSION, **context},
         status_code=status_code,
     )
     if request.query_params.get("lang") in SUPPORTED:
