@@ -182,6 +182,11 @@ def privacy(request: Request):
 def _render_admin(request: Request, username: str, *, message: str = "",
                   error: str = "", yaml_text: str | None = None,
                   status_code: int = 200) -> Response:
+    current_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
+    try:
+        requirements = parse_requirements_text(current_text)
+    except RequirementsValidationError:
+        requirements = None  # vis kun YAML-editoren hvis fila er ugyldig
     return _render(
         request,
         "admin.html",
@@ -189,25 +194,17 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "username": username,
             "message": message,
             "error": error,
-            "yaml_text": yaml_text if yaml_text is not None
-            else REQUIREMENTS_PATH.read_text(encoding="utf-8"),
+            "requirements": requirements,
+            "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),
         },
         status_code=status_code,
     )
 
 
-@app.get("/admin", response_class=HTMLResponse)
-def admin(request: Request, username: str = Depends(require_admin)):
-    return _render_admin(request, username)
-
-
-@app.post("/admin/save")
-async def admin_save(request: Request, username: str = Depends(require_admin)):
-    form = await request.form()
-    new_text = str(form.get("yaml_text", "")).replace("\r\n", "\n")
+def _save_requirements(request: Request, username: str, new_text: str) -> Response:
+    """Felles lagringslogikk for skjema- og YAML-redigering."""
     old_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
-
     if new_text.strip() == old_text.strip():
         return _render_admin(request, username, message="Ingen endringer å lagre.")
 
@@ -237,4 +234,85 @@ async def admin_save(request: Request, username: str = Depends(require_admin)):
         request, username,
         message=f"Lagret. Ny kravversjon: {parsed.version} "
                 f"({len(parsed.modules)} moduler, target {parsed.target_profile}).",
+    )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin(request: Request, username: str = Depends(require_admin)):
+    return _render_admin(request, username)
+
+
+@app.post("/admin/save")
+async def admin_save(request: Request, username: str = Depends(require_admin)):
+    form = await request.form()
+    new_text = str(form.get("yaml_text", "")).replace("\r\n", "\n")
+    return _save_requirements(request, username, new_text)
+
+
+@app.post("/admin/save-form")
+async def admin_save_form(request: Request, username: str = Depends(require_admin)):
+    form = await request.form()
+    try:
+        new_text = _form_to_yaml(form, username)
+    except ValueError as exc:
+        return _render_admin(
+            request, username, error=f"Ikke lagret — {exc}", status_code=422
+        )
+    return _save_requirements(request, username, new_text)
+
+
+def _form_to_yaml(form, username: str) -> str:
+    """Bygger kravfil-YAML fra admin-skjemaet. Kaster ValueError ved åpenbare feil."""
+    import yaml as yaml_module
+
+    profiles = [p.strip() for p in str(form.get("profiles", "")).split(",") if p.strip()]
+    if not profiles:
+        raise ValueError("minst én profil må angis.")
+
+    modules = []
+    indices = sorted(
+        {m.group(1) for k in form.keys() if (m := re.match(r"mod-(\d+)-id$", k))},
+        key=int,
+    )
+    for i in indices:
+        module_id = str(form.get(f"mod-{i}-id", "")).strip()
+        if not module_id:
+            continue  # tom rad
+        levels = {}
+        for profile in profiles:
+            value = str(form.get(f"mod-{i}-level-{profile}", "")).strip()
+            if value:
+                try:
+                    levels[profile] = int(value)
+                except ValueError:
+                    raise ValueError(
+                        f"modul {module_id}: nivå for {profile} må være et heltall (fikk {value!r})."
+                    )
+        module: dict = {
+            "id": module_id,
+            "label": str(form.get(f"mod-{i}-label", "")).strip() or module_id,
+            "match": [s.strip() for s in str(form.get(f"mod-{i}-match", "")).split(",") if s.strip()]
+            or [module_id],
+            "levels": levels,
+            "critical": "yes" in form.getlist(f"mod-{i}-critical"),
+        }
+        extract = str(form.get(f"mod-{i}-extract", "")).strip()
+        if extract:
+            module["extract"] = extract
+        modules.append(module)
+
+    data = {
+        "version": str(form.get("version", "")).strip(),
+        "profiles": profiles,
+        "target_profile": str(form.get("target_profile", "")).strip(),
+        "modules": modules,
+    }
+    header = (
+        "# Marlin-krav: minimumsnivåer per ECU og programvareprofil.\n"
+        f"# Generert av admin-skjemaet på marlin-portalen (bruker: {username}).\n"
+        "# Feltdokumentasjon: requirements.example.yaml i kilderepoet\n"
+        "# https://github.com/terjefl/marlin-check\n\n"
+    )
+    return header + yaml_module.safe_dump(
+        data, allow_unicode=True, sort_keys=False, default_flow_style=False, width=100
     )

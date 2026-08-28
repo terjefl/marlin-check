@@ -108,6 +108,53 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
     assert "2026-09-offisiell" in result.text
 
 
+def test_form_save_builds_valid_yaml_and_audits(client):
+    c, main = client
+    form = {
+        "version": "2026-09-skjema",
+        "profiles": "2.0, 2.1",
+        "target_profile": "2.1",
+        "mod-0-id": "VCU",
+        "mod-0-label": "Vehicle Control Unit",
+        "mod-0-match": "VCU",
+        "mod-0-extract": r"VCU\d{3}0*(\d+)$",
+        "mod-0-level-2.0": "21",
+        "mod-0-level-2.1": "23",
+        "mod-0-critical": "yes",
+        "mod-7-id": "BMS",  # ikke-sammenhengende indeks (JS bruker tilfeldige)
+        "mod-7-label": "Battery Management System",
+        "mod-7-match": "BMS",
+        "mod-7-extract": r"BMSN\d{3}0*(\d+)$",
+        "mod-7-level-2.1": "21",
+    }
+    response = c.post("/admin/save-form", headers=_basic("terje", "hemmelig123"), data=form)
+    assert response.status_code == 200, response.text
+    assert "Lagret" in response.text
+
+    saved = main.REQUIREMENTS_PATH.read_text()
+    assert "2026-09-skjema" in saved
+    from app.rules import load_requirements
+
+    parsed = load_requirements(main.REQUIREMENTS_PATH)
+    assert [m.id for m in parsed.modules] == ["VCU", "BMS"]
+    assert parsed.modules[0].critical is True
+    assert parsed.modules[1].critical is False  # checkbox ikke sendt
+    assert parsed.modules[1].levels == {"2.1": 21}
+    assert main.database.audit_entries()[0]["action"] == "requirements_update"
+
+
+def test_form_save_rejects_bad_level(client):
+    c, main = client
+    original = main.REQUIREMENTS_PATH.read_text()
+    form = {
+        "version": "x", "profiles": "2.1", "target_profile": "2.1",
+        "mod-0-id": "VCU", "mod-0-level-2.1": "ikke-tall",
+    }
+    response = c.post("/admin/save-form", headers=_basic("terje", "hemmelig123"), data=form)
+    assert response.status_code == 422
+    assert main.REQUIREMENTS_PATH.read_text() == original
+
+
 def test_rate_limit_on_failed_logins(client):
     c, _ = client
     for _ in range(10):
