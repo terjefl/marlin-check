@@ -95,6 +95,30 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
     return response
 
 
+def _usage_ip_hash(request: Request) -> str:
+    """Døgnroterende hash av klient-IP — teller unike brukere per dag uten å
+    lagre IP-adressen. Gårsdagens hasher kan ikke kobles tilbake til IP."""
+    import hashlib
+
+    day_salt = f"marlin-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+    return hashlib.sha256(f"{day_salt}|{auth_client_ip(request)}".encode()).hexdigest()[:16]
+
+
+def _log_usage(request: Request, lang: str, outcome: str, consent: bool) -> None:
+    browser_lang = request.headers.get("accept-language", "").split(",")[0].split(";")[0].strip()
+    try:
+        database.add_usage(
+            country=request.headers.get("cf-ipcountry", "").upper(),
+            ui_lang=lang,
+            browser_lang=browser_lang[:16],
+            outcome=outcome,
+            consent=consent,
+            ip_hash=_usage_ip_hash(request),
+        )
+    except Exception:  # statistikk skal aldri velte selve analysen
+        pass
+
+
 def _current_requirements():
     try:
         return load_requirements(REQUIREMENTS_PATH)
@@ -133,6 +157,7 @@ async def analyze(request: Request, report: UploadFile):
         requirements = load_requirements(REQUIREMENTS_PATH)
         evaluation = evaluate(parsed, requirements)
     except ReportParseError as exc:
+        _log_usage(request, lang, "parse_error", consent=False)
         return _render(
             request, "index.html", {"error": t("error_parse", reason=str(exc)), "requirements": _current_requirements()}, status_code=422
         )
@@ -146,6 +171,8 @@ async def analyze(request: Request, report: UploadFile):
         )
         (UPLOADS_DIR / stored_filename).write_bytes(data)
         database.store_submission(parsed, evaluation, lang, stored_filename)
+
+    _log_usage(request, lang, evaluation.verdict, consent=consent)
 
     _prune_results()
     token = secrets.token_urlsafe(16)
@@ -225,6 +252,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "requirements": requirements,
             "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),
+            "usage": database.usage_stats(14),
         },
         status_code=status_code,
     )

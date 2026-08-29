@@ -92,6 +92,40 @@ def test_result_page_survives_language_switch_and_reload(client):
     assert gone.status_code == 303 and gone.headers["location"] == "/"
 
 
+def test_usage_logged_without_consent_and_without_ip(client):
+    """Brukstelling skjer også uten samtykke — men uten VIN eller rå IP."""
+    c, main = client
+    headers = {"CF-IPCountry": "NO", "Accept-Language": "nb-NO,nb;q=0.9"}
+    response = c.post(
+        "/analyze",
+        files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    # Parsefeil telles også
+    c.post("/analyze", files={"report": ("junk.txt", b"garbage", "text/plain")}, headers=headers)
+
+    usage = main.database.usage_stats()
+    assert usage["total"] == 2
+    assert usage["consented"] == 0
+    assert usage["outcomes"] == {"zebra": 1, "parse_error": 1}
+    assert usage["countries"][0]["country"] == "NO"
+    assert usage["languages"][0]["ui_lang"] == "nb"
+    assert usage["per_day"][0]["unique_users"] == 1  # samme klient begge ganger
+
+    # Rå IP eller VIN skal aldri finnes i usage-tabellen
+    import sqlite3
+
+    conn = sqlite3.connect(main.database.path)
+    rows = conn.execute("SELECT * FROM usage_events").fetchall()
+    blob = str(rows)
+    assert "VCF1ZBE20PG099999" not in blob
+    assert "testclient" not in blob and "127.0.0.1" not in blob
+
+    # Ingen submissions lagret (samtykke ikke gitt)
+    assert main.database.stats()["unique_vins"] == 0
+
+
 def test_language_negotiation(client):
     c, _ = client
     norsk = c.get("/", headers={"accept-language": "nb-NO,nb;q=0.9"})

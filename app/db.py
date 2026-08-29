@@ -36,6 +36,21 @@ CREATE TABLE IF NOT EXISTS module_readings (
 );
 CREATE INDEX IF NOT EXISTS idx_readings_module ON module_readings(module_id);
 
+-- Anonym bruksstatistikk: aldri VIN, rapportinnhold eller rå IP.
+-- ip_hash er en døgnroterende hash, kun for å telle unike brukere per dag.
+CREATE TABLE IF NOT EXISTS usage_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    day TEXT NOT NULL,
+    country TEXT NOT NULL DEFAULT '',
+    ui_lang TEXT NOT NULL DEFAULT '',
+    browser_lang TEXT NOT NULL DEFAULT '',
+    outcome TEXT NOT NULL,
+    consent INTEGER NOT NULL DEFAULT 0,
+    ip_hash TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_usage_day ON usage_events(day);
+
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
@@ -100,6 +115,60 @@ class Database:
                 rows,
             )
         return submission_id
+
+    def add_usage(self, *, country: str, ui_lang: str, browser_lang: str,
+                  outcome: str, consent: bool, ip_hash: str) -> None:
+        now = datetime.now(timezone.utc)
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO usage_events (ts, day, country, ui_lang, browser_lang,"
+                " outcome, consent, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (now.isoformat(), now.strftime("%Y-%m-%d"), country, ui_lang,
+                 browser_lang, outcome, int(consent), ip_hash),
+            )
+
+    def usage_stats(self, days: int = 14) -> dict:
+        with self._connect() as conn:
+            totals = conn.execute(
+                "SELECT COUNT(*) AS n, SUM(consent) AS consented FROM usage_events"
+            ).fetchone()
+            outcomes = {
+                row["outcome"]: row["n"]
+                for row in conn.execute(
+                    "SELECT outcome, COUNT(*) AS n FROM usage_events GROUP BY outcome"
+                )
+            }
+            countries = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT country, COUNT(*) AS n FROM usage_events"
+                    " GROUP BY country ORDER BY n DESC LIMIT 15"
+                )
+            ]
+            languages = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT ui_lang, COUNT(*) AS n FROM usage_events"
+                    " GROUP BY ui_lang ORDER BY n DESC"
+                )
+            ]
+            per_day = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT day, COUNT(*) AS uploads,"
+                    " COUNT(DISTINCT ip_hash) AS unique_users"
+                    " FROM usage_events GROUP BY day ORDER BY day DESC LIMIT ?",
+                    (days,),
+                )
+            ]
+        return {
+            "total": totals["n"],
+            "consented": totals["consented"] or 0,
+            "outcomes": outcomes,
+            "countries": countries,
+            "languages": languages,
+            "per_day": per_day,
+        }
 
     def add_audit(self, username: str, ip: str, action: str, detail: str) -> None:
         with self._connect() as conn:

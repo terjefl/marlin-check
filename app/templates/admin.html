@@ -95,6 +95,35 @@ function addRow() {
   </form>
 </details>
 
+<h2>Bruksstatistikk</h2>
+<p class="meta">Anonym telling per opplasting: land (fra Cloudflare), språk, utfall og døgnroterende IP-hash for unike brukere. Ingen VIN, rapportdata eller rå IP lagres.</p>
+{% if usage.total == 0 %}
+<p class="meta">Ingen opplastinger registrert ennå.</p>
+{% else %}
+<div class="statgrid">
+  <div class="stat"><span class="num">{{ usage.total }}</span><span class="label">Opplastinger totalt</span></div>
+  <div class="stat"><span class="num">{{ usage.consented }}</span><span class="label">Med samtykke</span></div>
+  <div class="stat ok"><span class="num">{{ usage.outcomes.get('ready', 0) }}</span><span class="label">Marlin-klare</span></div>
+  <div class="stat warn"><span class="num">{{ usage.outcomes.get('zebra', 0) }}</span><span class="label">Zebra</span></div>
+  <div class="stat"><span class="num">{{ usage.outcomes.get('parse_error', 0) }}</span><span class="label">Parsefeil</span></div>
+</div>
+<div class="usagegrid">
+  <div>
+    <h3>Siste {{ usage.per_day | length }} dager</h3>
+    <table class="modules"><thead><tr><th>Dag</th><th>Opplastinger</th><th>Unike brukere</th></tr></thead>
+    <tbody>{% for d in usage.per_day %}<tr><td>{{ d.day }}</td><td>{{ d.uploads }}</td><td>{{ d.unique_users }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div>
+    <h3>Land</h3>
+    <table class="modules"><tbody>{% for c in usage.countries %}<tr><td>{{ c.country or '(ukjent)' }}</td><td>{{ c.n }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div>
+    <h3>Portalspråk</h3>
+    <table class="modules"><tbody>{% for l in usage.languages %}<tr><td>{{ l.ui_lang }}</td><td>{{ l.n }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+{% endif %}
+
 <h2>Endringslogg ({{ audit | length }} siste)</h2>
 {% if not audit %}
 <p class="meta">Ingen endringer logget ennå.</p>

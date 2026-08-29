@@ -122,5 +122,7 @@ table.modedit td.del { text-align: center; width: 3.5rem; }
 button.small { padding: 0.3rem 0.7rem; font-size: 0.85rem; }
 button.danger { background: var(--warn); }
 .fieldhelp { color: var(--muted); font-size: 0.82rem; margin: 0.4rem 0 1rem; }
+.usagegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
+.usagegrid h3 { margin: 0.2rem 0 0.5rem; }
 .auditentry { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
 pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding: 0.6rem; border-radius: 6px; white-space: pre; }
