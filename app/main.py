@@ -137,6 +137,15 @@ def healthz():
     return {"status": "ok"}
 
 
+@app.get("/analyze")
+def analyze_get(request: Request):
+    """Språkvelgeren (og bokmerker) kan treffe /analyze med GET — f.eks. fra
+    feilmeldingssiden, som rendres direkte på POST-URL-en. Send til forsiden
+    med språkvalget bevart i stedet for 405."""
+    lang = request.query_params.get("lang")
+    return RedirectResponse(f"/?lang={lang}" if lang in SUPPORTED else "/", status_code=303)
+
+
 @app.post("/analyze")
 async def analyze(request: Request, report: UploadFile):
     lang = negotiate_language(request)
@@ -158,8 +167,11 @@ async def analyze(request: Request, report: UploadFile):
         evaluation = evaluate(parsed, requirements)
     except ReportParseError as exc:
         _log_usage(request, lang, "parse_error", consent=False)
+        reason = t(f"parse_{exc.key}")
+        if exc.detail:
+            reason += f" ({exc.detail})"
         return _render(
-            request, "index.html", {"error": t("error_parse", reason=str(exc)), "requirements": _current_requirements()}, status_code=422
+            request, "index.html", {"error": t("error_parse", reason=reason), "requirements": _current_requirements()}, status_code=422
         )
 
     if consent:

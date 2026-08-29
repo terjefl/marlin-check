@@ -64,6 +64,34 @@ def test_invalid_file_shows_error(client):
     assert response.status_code == 422
 
 
+def test_parse_error_is_fully_translated(client):
+    """Regresjon: feilårsaken skal følge sidens språk, ikke være hardkodet norsk."""
+    c, _ = client
+    english = c.post(
+        "/analyze?lang=en",
+        files={"report": ("junk.txt", b"nothing useful here", "text/plain")},
+    )
+    assert "Could not find the heading" in english.text
+    assert "Fant ikke overskriften" not in english.text
+
+    german = c.post(
+        "/analyze?lang=de",
+        files={"report": ("junk.txt", b"nothing useful here", "text/plain")},
+    )
+    assert "wurde nicht gefunden" in german.text
+
+
+def test_language_switch_on_error_page_redirects_home(client):
+    """Språkvelgeren på feilsiden gjør GET /analyze?lang=... — skal ikke gi 405."""
+    c, _ = client
+    response = c.get("/analyze?lang=de", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/?lang=de"
+    followed = c.get("/analyze?lang=de")
+    assert followed.status_code == 200
+    assert "Mein Auto prüfen" in followed.text
+
+
 def test_stats_and_privacy_pages_render(client):
     c, _ = client
     assert c.get("/stats").status_code == 200

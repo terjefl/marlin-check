@@ -49,5 +49,12 @@
   "alpha_text": "Denne portal er under udvikling. Kravene, den sammenligner med, er et ubekræftet udkast, så resultatet kan være forkert. Træf ikke beslutninger baseret på denne rapport endnu.",
   "front_requirements_title": "Hvilke krav kontrolleres?",
   "front_requirements_intro": "Hvert modul skal mindst ligge på niveauet nedenfor for at tælle som {profile}. Kravversion: {version}.",
-  "table_codes": "ECU-koder"
+  "table_codes": "ECU-koder",
+  "parse_too_large": "Filen er større end grænsen på 15 MB.",
+  "parse_empty": "Filen er tom.",
+  "parse_bad_pdf": "PDF-indholdet kunne ikke læses.",
+  "parse_unreadable": "Filen er hverken PDF eller læsbar tekst.",
+  "parse_no_header": "Kunne ikke finde overskriften »ECU Software Version Report« — er dette en diagnoserapport eksporteret fra OceanLink Pro?",
+  "parse_no_vin": "Ingen VIN-linje (VIN: <17 tegn>) blev fundet i rapporten.",
+  "parse_no_modules": "Ingen ECU-afsnit blev fundet i rapporten."
 }

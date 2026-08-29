@@ -49,5 +49,12 @@
   "alpha_text": "This portal is under development. The requirements it compares against are an unconfirmed draft, so the result may be wrong. Do not make decisions based on this report yet.",
   "front_requirements_title": "Which requirements are checked?",
   "front_requirements_intro": "Each module must be at least at the level below to count as {profile}. Requirements version: {version}.",
-  "table_codes": "ECU codes"
+  "table_codes": "ECU codes",
+  "parse_too_large": "The file is larger than the 15 MB limit.",
+  "parse_empty": "The file is empty.",
+  "parse_bad_pdf": "The PDF content could not be read.",
+  "parse_unreadable": "The file is neither a PDF nor readable text.",
+  "parse_no_header": "Could not find the heading “ECU Software Version Report” — is this a diagnostics report exported from OceanLink Pro?",
+  "parse_no_vin": "No VIN line (VIN: <17 characters>) was found in the report.",
+  "parse_no_modules": "No ECU sections were found in the report."
 }

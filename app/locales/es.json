@@ -49,5 +49,12 @@
   "alpha_text": "Este portal está en desarrollo. Los requisitos con los que compara son un borrador sin confirmar, por lo que el resultado puede ser incorrecto. No tomes decisiones basadas en este informe todavía.",
   "front_requirements_title": "¿Qué requisitos se comprueban?",
   "front_requirements_intro": "Cada módulo debe estar al menos en el nivel indicado abajo para contar como {profile}. Versión de los requisitos: {version}.",
-  "table_codes": "Códigos ECU"
+  "table_codes": "Códigos ECU",
+  "parse_too_large": "El archivo supera el límite de 15 MB.",
+  "parse_empty": "El archivo está vacío.",
+  "parse_bad_pdf": "No se pudo leer el contenido del PDF.",
+  "parse_unreadable": "El archivo no es un PDF ni texto legible.",
+  "parse_no_header": "No se encontró el encabezado «ECU Software Version Report» — ¿es esto un informe de diagnóstico exportado desde OceanLink Pro?",
+  "parse_no_vin": "No se encontró ninguna línea VIN (VIN: <17 caracteres>) en el informe.",
+  "parse_no_modules": "No se encontraron secciones de ECU en el informe."
 }

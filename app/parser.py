@@ -37,7 +37,16 @@ MAX_REPORT_BYTES = 15 * 1024 * 1024
 
 
 class ReportParseError(Exception):
-    """Filen kunne ikke tolkes som en gyldig OLP-rapport."""
+    """Filen kunne ikke tolkes som en gyldig OLP-rapport.
+
+    `key` er en i18n-nøkkel (locales: "parse_<key>") slik at årsaken kan vises
+    på brukerens språk; `detail` er valgfri teknisk tilleggsinfo (uoversatt).
+    """
+
+    def __init__(self, key: str, detail: str = ""):
+        self.key = key
+        self.detail = detail
+        super().__init__(key if not detail else f"{key}: {detail}")
 
 
 @dataclass
@@ -77,11 +86,11 @@ def _extract_text(data: bytes, filename: str) -> str:
                 pages = [page.extract_text() or "" for page in pdf.pages]
             return "\n".join(pages)
         except Exception as exc:  # korrupt/kryptert PDF o.l.
-            raise ReportParseError(f"Kunne ikke lese PDF-innhold: {exc}") from exc
+            raise ReportParseError("bad_pdf", str(exc)) from exc
     try:
         return data.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise ReportParseError("Filen er verken PDF eller lesbar tekst.") from exc
+        raise ReportParseError("unreadable") from exc
 
 
 _FIELD_ATTR = {
@@ -94,21 +103,18 @@ _FIELD_ATTR = {
 
 def parse_report(data: bytes, filename: str = "") -> ParsedReport:
     if len(data) > MAX_REPORT_BYTES:
-        raise ReportParseError("Filen er større enn maksgrensen på 15 MB.")
+        raise ReportParseError("too_large")
     if not data:
-        raise ReportParseError("Filen er tom.")
+        raise ReportParseError("empty")
 
     text = _extract_text(data, filename)
 
     if "ECU Software Version Report" not in text:
-        raise ReportParseError(
-            "Fant ikke overskriften «ECU Software Version Report» — er dette en"
-            " diagnoserapport eksportert fra OceanLink Pro?"
-        )
+        raise ReportParseError("no_header")
 
     vin_match = VIN_RE.search(text)
     if not vin_match:
-        raise ReportParseError("Fant ingen VIN-linje (VIN: <17 tegn>) i rapporten.")
+        raise ReportParseError("no_vin")
     vin = vin_match.group(1)
 
     date_match = DATE_RE.search(text)
@@ -149,7 +155,7 @@ def parse_report(data: bytes, filename: str = "") -> ParsedReport:
     _flush()
 
     if not modules:
-        raise ReportParseError("Fant ingen ECU-blokker i rapporten.")
+        raise ReportParseError("no_modules")
 
     return ParsedReport(
         vin=vin,
