@@ -1,33 +1,37 @@
-# Marlin-krav: minimumsnivåer per ECU og programvareprofil.
+# Marlin requirements: minimum levels per ECU and software profile.
 #
-# Kilde: foreningens tabell vist på videomøte 2026-08 («MINIMUM ECU
-# requirements your car has to meet to have your 2.1 car be able to call it
-# a 100% 2.1 — otherwise it is a Zebra»). UTKAST — tallene bekreftes når
-# foreningen publiserer kravene offisielt.
+# Source: the association's table shown at the 2026-08 members' web meeting
+# ("MINIMUM ECU requirements your car has to meet to have your 2.1 car be able
+# to call it a 100% 2.1 — otherwise it is a Zebra"). DRAFT — the numbers must
+# be confirmed once the association publishes the official requirements.
 #
-# Modell:
-#   - En bil er «100 % 2.1» når ALLE modulene under minst når 2.1-nivået.
-#     Da kan den oppdateres direkte til Marlin (target_profile: "2.1").
-#   - Ellers er bilen en «zebra» og må først via SW 2.2 / målrettede
-#     moduloppdateringer. (Oppdatering via 2.2 løfter iflg. møtet også
-#     ECC, ESP, PVIU og iBooster.)
+# Model:
+#   - A car is "100% 2.1" when ALL of the modules below reach at least the
+#     2.1 level. It can then be updated directly to Marlin
+#     (target_profile: "2.1").
+#   - Otherwise the car is a "zebra" and must first go via SW 2.2 / targeted
+#     module updates. (According to the meeting, updating via 2.2 also lifts
+#     ECC, ESP, PVIU and iBooster.)
 #
-# Tallet som sammenlignes trekkes ut av rapportfeltet «Supplier SW Version»
-# med `extract` (regex, capture-gruppe 1) — feltet har ulik form per
-# leverandør, f.eks. BCM395021, «ECC395 24», MCU5000019, 89324V040200990131.
+# The number being compared is extracted from the report field
+# "Supplier SW Version" using `extract` (regex, capture group 1) — the field's
+# shape differs per supplier, e.g. BCM395021, "ECC395 24", MCU5000019,
+# 89324V040200990131.
 #
-# ANTAKELSER SOM MÅ BEKREFTES MOT FORENINGEN (merket [?] under):
-#   - BCM: tabellkrav 30/42 mot «BCM395021» — vi antar suffikset (21) er
-#     nivået, samme mønster som BMS/VCU. Gir BCM=21 < 30, dvs. under 2.0!
-#   - ESP: tabellkrav 400/500 mot «89324V040200990131» — vi antar de fire
-#     sifrene etter V er nivået (0402 -> 402).
+# ASSUMPTIONS THAT MUST BE CONFIRMED WITH THE ASSOCIATION (marked [?] below):
+#   - BCM: table requirement 30/42 vs "BCM395021" — we assume the suffix (21)
+#     is the level, same pattern as BMS/VCU. That makes BCM=21 < 30, i.e.
+#     below even 2.0!
+#   - ESP: table requirement 400/500 vs "89324V040200990131" — we assume the
+#     digits after the V are the level (0402 -> 402).
 #
-# I produksjon bind-mountes denne som /config/requirements.yaml og leses på
-# nytt ved hver analyse — kan redigeres på hosten uten rebuild.
+# In production this file is bind-mounted as /config/requirements.yaml and
+# re-read on every analysis — it can be edited on the host (or via /admin)
+# without a rebuild.
 
-version: "2026-08-videomote-utkast"
+version: "2026-08-web-meeting-draft"
 
-# Profiler i stigende rekkefølge, og profilen som kreves for direkte Marlin
+# Profiles in ascending order, and the profile required for direct Marlin
 profiles: ["2.0", "2.1"]
 target_profile: "2.1"
 
@@ -62,7 +66,7 @@ modules:
 
   - id: MCU_R
     label: Motor Control Unit Rear
-    match: [MCU_R, MCU_RR]          # rapporten bruker MCU_R, møtetabellen MCU_RR
+    match: [MCU_R, MCU_RR]          # the report uses MCU_R, the meeting table MCU_RR
     extract: 'MCU\d{5}0*(\d+)$'     # MCU5000019 -> 19
     levels: {"2.0": 19, "2.1": 21}
     critical: true

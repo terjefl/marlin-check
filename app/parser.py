@@ -1,21 +1,21 @@
-"""Parser for «ECU Software Version Report» fra OceanLink Pro (OLP).
+"""Parser for the "ECU Software Version Report" exported by OceanLink Pro (OLP).
 
-Formatet (verifisert mot ekte rapport 2026-08-28):
+The format (verified against a real report, 2026-08-28):
 
     OceanLink Pro
     ECU Software Version Report
     Date: 2026-08-28 18:15:16.564271
     VIN: VCF1ZBE21PG0xxxxx
-    BODY                                  <- seksjon (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS)
-    GW - Gateway                          <- ECU-blokk: KODE - Fullt navn
+    BODY                                  <- section (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS)
+    GW - Gateway                          <- ECU block: CODE - Full name
     Software Version: FM298034S100K
     Hardware Version: FM298034H100C
-    Supplier SW Version: GW500002         <- feltet som brukes i Marlin-sammenligningen
+    Supplier SW Version: GW500002         <- the field used in the Marlin comparison
     Bootloader Version: HIRAIN1.0.8
     ...
 
-Parseren tar både PDF (tekst trekkes ut med pdfplumber) og ren tekst med
-samme linjestruktur.
+The parser accepts both PDF (text extracted with pdfplumber) and plain text
+with the same line structure.
 """
 
 from __future__ import annotations
@@ -25,9 +25,9 @@ from dataclasses import dataclass, field
 
 VIN_RE = re.compile(r"^VIN:\s*([A-HJ-NPR-Z0-9]{17})\s*$", re.MULTILINE)
 DATE_RE = re.compile(r"^Date:\s*(.+)$", re.MULTILINE)
-# Seksjonsoverskrifter er korte linjer i bare store bokstaver (BODY, ADAS, ...)
+# Section headings are short all-uppercase lines (BODY, ADAS, ...)
 SECTION_RE = re.compile(r"^[A-Z][A-Z ]{2,24}$")
-# ECU-blokk: "KODE - Fullt navn", f.eks. "MCU_F - Motor Control Unit Front"
+# ECU block: "CODE - Full name", e.g. "MCU_F - Motor Control Unit Front"
 ECU_HEADER_RE = re.compile(r"^([A-Z][A-Z0-9_]{0,11}) - (.+)$")
 FIELD_RE = re.compile(
     r"^(Software|Hardware|Supplier SW|Bootloader) Version:\s*(.*)$"
@@ -37,10 +37,10 @@ MAX_REPORT_BYTES = 15 * 1024 * 1024
 
 
 class ReportParseError(Exception):
-    """Filen kunne ikke tolkes som en gyldig OLP-rapport.
+    """The file could not be interpreted as a valid OLP report.
 
-    `key` er en i18n-nøkkel (locales: "parse_<key>") slik at årsaken kan vises
-    på brukerens språk; `detail` er valgfri teknisk tilleggsinfo (uoversatt).
+    `key` is an i18n key (locales: "parse_<key>") so the reason can be shown in
+    the user's language; `detail` is optional technical extra info (untranslated).
     """
 
     def __init__(self, key: str, detail: str = ""):
@@ -51,10 +51,10 @@ class ReportParseError(Exception):
 
 @dataclass
 class ModuleReading:
-    code: str            # f.eks. "VCU", "MCU_F"
-    name: str            # f.eks. "Vehicle Control Unit"
-    section: str         # f.eks. "POWERTRAIN"
-    supplier_sw: str     # "Supplier SW Version" — brukes i sammenligningen
+    code: str            # e.g. "VCU", "MCU_F"
+    name: str            # e.g. "Vehicle Control Unit"
+    section: str         # e.g. "POWERTRAIN"
+    supplier_sw: str     # "Supplier SW Version" — used in the comparison
     software: str = ""
     hardware: str = ""
     bootloader: str = ""
@@ -85,7 +85,7 @@ def _extract_text(data: bytes, filename: str) -> str:
             with pdfplumber.open(io.BytesIO(data)) as pdf:
                 pages = [page.extract_text() or "" for page in pdf.pages]
             return "\n".join(pages)
-        except Exception as exc:  # korrupt/kryptert PDF o.l.
+        except Exception as exc:  # corrupt/encrypted PDF etc.
             raise ReportParseError("bad_pdf", str(exc)) from exc
     try:
         return data.decode("utf-8")

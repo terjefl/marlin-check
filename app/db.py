@@ -1,6 +1,6 @@
-"""SQLite-lagring for innsendinger med samtykke, og aggregert statistikk.
+"""SQLite storage for consented submissions, plus aggregated statistics.
 
-Uten samtykke skrives INGENTING hit — hele analysen skjer i minnet.
+Without consent NOTHING is written here — the whole analysis happens in memory.
 """
 
 from __future__ import annotations
@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS module_readings (
 );
 CREATE INDEX IF NOT EXISTS idx_readings_module ON module_readings(module_id);
 
--- Anonym bruksstatistikk: aldri VIN, rapportinnhold eller rå IP.
--- ip_hash er en døgnroterende hash, kun for å telle unike brukere per dag.
+-- Anonymous usage statistics: never VIN, report content, or raw IP.
+-- ip_hash is a daily-rotating hash, only used to count unique users per day.
 CREATE TABLE IF NOT EXISTS usage_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts TEXT NOT NULL,
@@ -189,7 +189,7 @@ class Database:
             ]
 
     def stats(self) -> dict:
-        """Aggregert statistikk. Kun siste innsending per VIN teller."""
+        """Aggregated statistics. Only the latest submission per VIN counts."""
         with self._connect() as conn:
             latest = (
                 "SELECT s.* FROM submissions s"

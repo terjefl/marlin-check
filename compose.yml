@@ -1,5 +1,5 @@
-# Lokal utvikling. Produksjons-compose ligger i Docker-repoet:
-# DMZ-DOCKER01/marlin/compose.yml
+# Local development. The production compose file lives in the operator's
+# infrastructure repo.
 services:
   marlin:
     build: .
@@ -8,8 +8,8 @@ services:
       - "8000:8000"
     volumes:
       - ./dev-data:/data
-      # Lokal dev: kopier requirements.example.yaml -> dev-config/requirements.yaml
-      # og lag dev-config/admin_users.yaml (se admin_users.example.yaml) for /admin
+      # Local dev: copy requirements.example.yaml -> dev-config/requirements.yaml
+      # and create dev-config/admin_users.yaml (see admin_users.example.yaml) for /admin
       - ./dev-config:/config
     environment:
       TZ: Europe/Oslo

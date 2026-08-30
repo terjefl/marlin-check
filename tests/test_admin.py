@@ -1,4 +1,4 @@
-"""Tester for admin-siden: auth, validering, lagring og revisjonslogg."""
+"""Tests for the admin page: auth, validation, saving and audit log."""
 
 import base64
 import importlib
@@ -53,7 +53,7 @@ def test_admin_page_renders_for_both_users(client):
         response = c.get("/admin", headers=_basic(user, pw))
         assert response.status_code == 200
         assert user in response.text
-        assert "target_profile" in response.text  # YAML-innholdet vises
+        assert "target_profile" in response.text  # the YAML content is shown
 
 
 def test_save_rejects_invalid_yaml_without_writing(client):
@@ -65,11 +65,11 @@ def test_save_rejects_invalid_yaml_without_writing(client):
         data={"yaml_text": "dette er: [ikke gyldig"},
     )
     assert response.status_code == 422
-    assert "valideringsfeil" in response.text
+    assert "validation error" in response.text
     assert main.REQUIREMENTS_PATH.read_text() == original
     assert main.database.audit_entries() == []
 
-    # Gyldig YAML men ugyldig struktur (mangler target_profile-nivå)
+    # Valid YAML but invalid structure (missing target_profile level)
     response = c.post(
         "/admin/save",
         headers=_basic("terje", "hemmelig123"),
@@ -82,7 +82,7 @@ def test_save_rejects_invalid_yaml_without_writing(client):
 def test_save_writes_and_audits_with_user_ip_and_diff(client):
     c, main = client
     new_text = main.REQUIREMENTS_PATH.read_text().replace(
-        'version: "2026-08-videomote-utkast"', 'version: "2026-09-offisiell"'
+        'version: "2026-08-web-meeting-draft"', 'version: "2026-09-official"'
     )
     response = c.post(
         "/admin/save",
@@ -90,8 +90,8 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
         data={"yaml_text": new_text},
     )
     assert response.status_code == 200
-    assert "Lagret" in response.text
-    assert 'version: "2026-09-offisiell"' in main.REQUIREMENTS_PATH.read_text()
+    assert "Saved" in response.text
+    assert 'version: "2026-09-official"' in main.REQUIREMENTS_PATH.read_text()
 
     entries = main.database.audit_entries()
     assert len(entries) == 1
@@ -99,19 +99,19 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
     assert entry["username"] == "styremedlem"
     assert entry["ip"] == "203.0.113.7"
     assert entry["action"] == "requirements_update"
-    assert '-version: "2026-08-videomote-utkast"' in entry["detail"]
-    assert '+version: "2026-09-offisiell"' in entry["detail"]
+    assert '-version: "2026-08-web-meeting-draft"' in entry["detail"]
+    assert '+version: "2026-09-official"' in entry["detail"]
 
-    # Analysen bruker den nye kravversjonen umiddelbart
+    # The analysis uses the new requirements version immediately
     fixture = Path(__file__).parent / "fixtures" / "olp_report.txt"
     result = c.post("/analyze", files={"report": ("r.txt", fixture.read_bytes(), "text/plain")})
-    assert "2026-09-offisiell" in result.text
+    assert "2026-09-official" in result.text
 
 
 def test_form_save_builds_valid_yaml_and_audits(client):
     c, main = client
     form = {
-        "version": "2026-09-skjema",
+        "version": "2026-09-form",
         "profiles": "2.0, 2.1",
         "target_profile": "2.1",
         "mod-0-id": "VCU",
@@ -121,7 +121,7 @@ def test_form_save_builds_valid_yaml_and_audits(client):
         "mod-0-level-2.0": "21",
         "mod-0-level-2.1": "23",
         "mod-0-critical": "yes",
-        "mod-7-id": "BMS",  # ikke-sammenhengende indeks (JS bruker tilfeldige)
+        "mod-7-id": "BMS",  # non-contiguous index (the JS uses random ones)
         "mod-7-label": "Battery Management System",
         "mod-7-match": "BMS",
         "mod-7-extract": r"BMSN\d{3}0*(\d+)$",
@@ -129,16 +129,16 @@ def test_form_save_builds_valid_yaml_and_audits(client):
     }
     response = c.post("/admin/save-form", headers=_basic("terje", "hemmelig123"), data=form)
     assert response.status_code == 200, response.text
-    assert "Lagret" in response.text
+    assert "Saved" in response.text
 
     saved = main.REQUIREMENTS_PATH.read_text()
-    assert "2026-09-skjema" in saved
+    assert "2026-09-form" in saved
     from app.rules import load_requirements
 
     parsed = load_requirements(main.REQUIREMENTS_PATH)
     assert [m.id for m in parsed.modules] == ["VCU", "BMS"]
     assert parsed.modules[0].critical is True
-    assert parsed.modules[1].critical is False  # checkbox ikke sendt
+    assert parsed.modules[1].critical is False  # checkbox not submitted
     assert parsed.modules[1].levels == {"2.1": 21}
     assert main.database.audit_entries()[0]["action"] == "requirements_update"
 
@@ -156,9 +156,9 @@ def test_form_save_rejects_bad_level(client):
 
 
 def test_form_roundtrip_from_rendered_html(client):
-    """Regresjon: render admin-siden, post skjemaet UENDRET tilbake -> «Ingen endringer»
-    ville vært ideelt, men skjemaet regenererer YAML (kommentarer forsvinner), så vi
-    krever at lagringen validerer OK og at innholdet er semantisk identisk."""
+    """Regression: render the admin page and post the form back UNCHANGED. The form
+    regenerates the YAML (comments are dropped), so we require that the save
+    validates OK and that the content is semantically identical."""
     import html as html_module
     import re as re_module
 
@@ -176,9 +176,9 @@ def test_form_roundtrip_from_rendered_html(client):
         elif "name" in attrs:
             fields.append((attrs["name"], html_module.unescape(attrs.get("value", ""))))
 
-    # Feltnavnene skal være unike (loop.index0-bug ga kollisjoner mellom rader)
+    # Field names must be unique (a loop.index0 bug caused collisions between rows)
     names = [n for n, _ in fields]
-    assert len(names) == len(set(names)), f"kolliderende feltnavn: {sorted(names)}"
+    assert len(names) == len(set(names)), f"colliding field names: {sorted(names)}"
 
     from app.rules import load_requirements
 

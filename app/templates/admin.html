@@ -2,8 +2,8 @@
 {% block title %}Admin — {{ t('site_title') }}{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
-<h1>Kravspec-administrasjon</h1>
-<p class="meta">Innlogget som <strong>{{ username }}</strong>. Endringer valideres før lagring, tas i bruk ved neste analyse, og logges med brukernavn, IP og diff.</p>
+<h1>Requirements administration</h1>
+<p class="meta">Logged in as <strong>{{ username }}</strong>. Changes are validated before saving, take effect on the next analysis, and are logged with username, IP and diff.</p>
 
 {% if message %}<div class="alert">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
@@ -11,13 +11,13 @@
 {% if requirements %}
 <form method="post" action="/admin/save-form">
   <div class="globalfields">
-    <label>Kravversjon (navn på denne utgaven)
+    <label>Requirements version (name of this revision)
       <input type="text" name="version" value="{{ requirements.version }}" required>
     </label>
-    <label>Profiler (kommaseparert, stigende)
+    <label>Profiles (comma-separated, ascending)
       <input type="text" name="profiles" value="{{ requirements.profiles | join(', ') }}" required>
     </label>
-    <label>Krevd profil for Marlin
+    <label>Required profile for Marlin
       <input type="text" name="target_profile" value="{{ requirements.target_profile }}" required>
     </label>
   </div>
@@ -27,11 +27,11 @@
     <thead>
       <tr>
         <th>ID</th>
-        <th>Visningsnavn</th>
-        <th>Treff på ECU-koder<br><span style="font-weight:normal">(kommaseparert)</span></th>
-        <th>Uttrekks-regex<br><span style="font-weight:normal">(mot Supplier SW Version)</span></th>
-        {% for p in requirements.profiles %}<th>Min. nivå {{ p }}</th>{% endfor %}
-        <th>Kritisk</th>
+        <th>Display name</th>
+        <th>Match ECU codes<br><span style="font-weight:normal">(comma-separated)</span></th>
+        <th>Extract regex<br><span style="font-weight:normal">(applied to Supplier SW Version)</span></th>
+        {% for p in requirements.profiles %}<th>Min. level {{ p }}</th>{% endfor %}
+        <th>Critical</th>
         <th></th>
       </tr>
     </thead>
@@ -42,95 +42,95 @@
         <td><input class="mono" type="text" name="mod-{{ mi }}-id" value="{{ m.id }}"></td>
         <td><input type="text" name="mod-{{ mi }}-label" value="{{ m.label }}"></td>
         <td><input class="mono" type="text" name="mod-{{ mi }}-match" value="{{ m.match | join(', ') }}"></td>
-        <td><input class="mono" type="text" name="mod-{{ mi }}-extract" value="{{ m.extract or '' }}" placeholder="(siste tall i strengen)"></td>
+        <td><input class="mono" type="text" name="mod-{{ mi }}-extract" value="{{ m.extract or '' }}" placeholder="(last number in the string)"></td>
         {% for p in requirements.profiles %}
-        {# NB: mi, ikke loop.index0 — her er loop profil-løkken #}
+        {# NB: mi, not loop.index0 — inside this loop, `loop` is the profile loop #}
         <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"></td>
         {% endfor %}
         <td class="crit"><input type="checkbox" name="mod-{{ mi }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
-        <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Slett</button></td>
+        <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Delete</button></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
   <p class="fieldhelp">
-    <button type="button" class="small secondary button" onclick="addRow()">+ Legg til modul</button>
-    &nbsp; «Treff på ECU-koder» matches mot kodene i rapporten (f.eks. <code>MCU_R, MCU_RR</code>).
-    Uttrekks-regexen må ha én capture-gruppe som fanger tallet som sammenlignes; tom = siste tall i strengen.
-    Tomt nivå-felt = ikke noe krav for den profilen (krevd profil må ha nivå).
+    <button type="button" class="small secondary button" onclick="addRow()">+ Add module</button>
+    &nbsp; "Match ECU codes" is matched against the codes in the report (e.g. <code>MCU_R, MCU_RR</code>).
+    The extract regex must have one capture group catching the number to compare; empty = last number in the string.
+    An empty level field = no requirement for that profile (the required profile must have a level).
   </p>
   <div class="actions">
-    <button type="submit">Valider og lagre</button>
-    <a class="button secondary" href="/admin">Forkast endringer</a>
+    <button type="submit">Validate and save</button>
+    <a class="button secondary" href="/admin">Discard changes</a>
   </div>
 </form>
 
 <script>
 function addRow() {
   const tbody = document.querySelector('#modtable tbody');
-  const idx = Date.now() % 1000000;  // unik indeks; serveren bryr seg ikke om rekkefølgen på tall
+  const idx = Date.now() % 1000000;  // unique index; the server does not care about numeric order
   const profiles = {{ requirements.profiles | tojson }};
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input class="mono" type="text" name="mod-${idx}-id"></td>
     <td><input type="text" name="mod-${idx}-label"></td>
     <td><input class="mono" type="text" name="mod-${idx}-match"></td>
-    <td><input class="mono" type="text" name="mod-${idx}-extract" placeholder="(siste tall i strengen)"></td>
+    <td><input class="mono" type="text" name="mod-${idx}-extract" placeholder="(last number in the string)"></td>
     ${profiles.map(p => `<td class="num"><input type="number" name="mod-${idx}-level-${p}"></td>`).join('')}
     <td class="crit"><input type="checkbox" name="mod-${idx}-critical" value="yes" checked></td>
-    <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Slett</button></td>`;
+    <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Delete</button></td>`;
   tbody.appendChild(tr);
 }
 </script>
 {% endif %}
 
 <details class="extra" {% if not requirements %}open{% endif %}>
-  <summary>Avansert: rediger YAML direkte</summary>
+  <summary>Advanced: edit the YAML directly</summary>
   <form method="post" action="/admin/save">
     <textarea name="yaml_text" class="yamledit" rows="26" spellcheck="false">{{ yaml_text }}</textarea>
     <div class="actions">
-      <button type="submit">Valider og lagre YAML</button>
+      <button type="submit">Validate and save YAML</button>
     </div>
   </form>
 </details>
 
-<h2>Bruksstatistikk</h2>
-<p class="meta">Anonym telling per opplasting: land (fra Cloudflare), språk, utfall og døgnroterende IP-hash for unike brukere. Ingen VIN, rapportdata eller rå IP lagres.</p>
+<h2>Usage statistics</h2>
+<p class="meta">Anonymous count per upload: country (from Cloudflare), language, outcome, and a daily-rotating IP hash for unique users. No VIN, report data or raw IP is ever stored.</p>
 {% if usage.total == 0 %}
-<p class="meta">Ingen opplastinger registrert ennå.</p>
+<p class="meta">No uploads recorded yet.</p>
 {% else %}
 <div class="statgrid">
-  <div class="stat"><span class="num">{{ usage.total }}</span><span class="label">Opplastinger totalt</span></div>
-  <div class="stat"><span class="num">{{ usage.consented }}</span><span class="label">Med samtykke</span></div>
-  <div class="stat ok"><span class="num">{{ usage.outcomes.get('ready', 0) }}</span><span class="label">Marlin-klare</span></div>
+  <div class="stat"><span class="num">{{ usage.total }}</span><span class="label">Total uploads</span></div>
+  <div class="stat"><span class="num">{{ usage.consented }}</span><span class="label">With consent</span></div>
+  <div class="stat ok"><span class="num">{{ usage.outcomes.get('ready', 0) }}</span><span class="label">Marlin ready</span></div>
   <div class="stat warn"><span class="num">{{ usage.outcomes.get('zebra', 0) }}</span><span class="label">Zebra</span></div>
-  <div class="stat"><span class="num">{{ usage.outcomes.get('parse_error', 0) }}</span><span class="label">Parsefeil</span></div>
+  <div class="stat"><span class="num">{{ usage.outcomes.get('parse_error', 0) }}</span><span class="label">Parse errors</span></div>
 </div>
 <div class="usagegrid">
   <div>
-    <h3>Siste {{ usage.per_day | length }} dager</h3>
-    <table class="modules"><thead><tr><th>Dag</th><th>Opplastinger</th><th>Unike brukere</th></tr></thead>
+    <h3>Last {{ usage.per_day | length }} days</h3>
+    <table class="modules"><thead><tr><th>Day</th><th>Uploads</th><th>Unique users</th></tr></thead>
     <tbody>{% for d in usage.per_day %}<tr><td>{{ d.day }}</td><td>{{ d.uploads }}</td><td>{{ d.unique_users }}</td></tr>{% endfor %}</tbody></table>
   </div>
   <div>
-    <h3>Land</h3>
-    <table class="modules"><tbody>{% for c in usage.countries %}<tr><td>{{ c.country or '(ukjent)' }}</td><td>{{ c.n }}</td></tr>{% endfor %}</tbody></table>
+    <h3>Countries</h3>
+    <table class="modules"><tbody>{% for c in usage.countries %}<tr><td>{{ c.country or '(unknown)' }}</td><td>{{ c.n }}</td></tr>{% endfor %}</tbody></table>
   </div>
   <div>
-    <h3>Portalspråk</h3>
+    <h3>Portal language</h3>
     <table class="modules"><tbody>{% for l in usage.languages %}<tr><td>{{ l.ui_lang }}</td><td>{{ l.n }}</td></tr>{% endfor %}</tbody></table>
   </div>
 </div>
 {% endif %}
 
-<h2>Endringslogg ({{ audit | length }} siste)</h2>
+<h2>Change log ({{ audit | length }} most recent)</h2>
 {% if not audit %}
-<p class="meta">Ingen endringer logget ennå.</p>
+<p class="meta">No changes logged yet.</p>
 {% else %}
 {% for entry in audit %}
 <details class="extra auditentry">
-  <summary>{{ entry.ts[:19] }} UTC — <strong>{{ entry.username }}</strong> fra {{ entry.ip }} ({{ entry.action }})</summary>
+  <summary>{{ entry.ts[:19] }} UTC — <strong>{{ entry.username }}</strong> from {{ entry.ip }} ({{ entry.action }})</summary>
   <pre class="diff">{{ entry.detail }}</pre>
 </details>
 {% endfor %}

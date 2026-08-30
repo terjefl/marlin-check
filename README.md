@@ -1,65 +1,92 @@
 # Marlin Readiness Check
 
-Webportal for Fisker Owners Association: medlemmer laster opp en diagnoserapport
-fra **Ocean Link Pro (OLP)**, og portalen sjekker om bilens moduler oppfyller
-minimumsversjonene for den store **Marlin**-programvareoppdateringen.
+Web portal for the Fisker Owners Association: members upload an ECU diagnostics
+report exported from **OceanLink Pro (OLP)**, and the portal checks whether the
+car's control modules meet the minimum software levels required for the big
+**Marlin** software update.
 
-- Umiddelbart resultat per modul (OK / utdatert / mangler) og samlet verdikt
-  (Marlin-klar eller «zebra» — trenger målrettede oppdateringer først).
-- Nedlastbar PDF-rapport (WeasyPrint).
-- Valgfritt samtykke til lagring → anonym flåtestatistikk (unike VIN,
-  versjonsfordeling per modul). Uten samtykke lagres ingenting.
-- 7 språk (en, nb, sv, da, de, fr, es) med autovalg fra nettleseren.
-- Ingen LLM — deterministisk parsing og versjonssammenligning.
+- Instant per-module result (OK / outdated / missing) and an overall verdict:
+  Marlin-ready, or a "zebra" (mixed versions — needs targeted updates via
+  SW 2.2 first).
+- Downloadable PDF report (WeasyPrint), generated in the active language.
+- Optional consent for storage → anonymous fleet statistics (unique VINs,
+  version distribution per module). Without consent nothing is stored.
+- 7 languages (en, nb, sv, da, de, fr, es) with browser auto-detection.
+- Deterministic parsing and comparison — no LLMs involved.
 
-## Status / faser
+## Repository layout
 
-| Fase | Innhold | Status |
+```
+app/
+  main.py       FastAPI app: routes, upload flow, admin, usage logging
+  parser.py     Parses the OLP "ECU Software Version Report" (PDF or text)
+  rules.py      Rule engine: profile-based requirements model + validation
+  db.py         SQLite: consented submissions, usage stats, audit log
+  auth.py       HTTP Basic multi-user auth for /admin (PBKDF2 hashes)
+  i18n.py       Language negotiation + JSON dictionaries in app/locales/
+  templates/    Jinja2 templates (base/index/result/stats/privacy/admin/pdf)
+  static/       style.css (served with a content-hash cache buster)
+tests/          pytest suite incl. an anonymized real report as fixture
+scripts/        hash_password.py — create admin password hashes
+```
+
+## Status / phases
+
+| Phase | Content | Status |
 |---|---|---|
-| 1 | App-scaffold | ✅ |
-| 2 | Ekte OLP-parser (`app/parser.py`) — verifisert mot ekte rapport 2026-08-28 | ✅ |
-| 3 | Marlin-krav i `requirements.yaml` — utkast fra videomøte lagt inn; offisielle tall og to uttrekks-antakelser (BCM, ESP) må bekreftes | ⏳ |
-| 4 | Deploy på DMZ-DOCKER01 bak marlin.flagan.net | ⏳ |
+| 1 | App scaffold | ✅ |
+| 2 | Real OLP parser — verified against a real report 2026-08-28 | ✅ |
+| 3 | Requirements in `requirements.yaml` — draft from the members' web meeting; official numbers and two extraction assumptions (BCM, ESP) must be confirmed | ⏳ |
+| 4 | Deployment (currently self-hosted behind Cloudflare at marlin.flagan.net, ALPHA banner) | ✅ |
 
-Parseren leser OLP-ens «ECU Software Version Report»-PDF (eller tekstuttrekket
-av den): seksjoner (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS), ECU-blokker
-(`KODE - Navn`) og feltet **Supplier SW Version**, som er det som sammenlignes
-mot kravene. Kravmodellen er profilbasert (2.0/2.1): en bil som når 2.1-nivået
-på alle kravmoduler er «100 % 2.1» og kan oppdateres direkte til Marlin;
-ellers er den en «zebra» og må via SW 2.2 / målrettede oppdateringer først.
-Se kommentarene i `requirements.example.yaml` for antakelsene.
+The parser reads the OLP "ECU Software Version Report" PDF (or its extracted
+text): sections (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS), ECU blocks
+(`CODE - Name`) and the **Supplier SW Version** field, which is what gets
+compared against the requirements. The requirements model is profile-based
+(2.0/2.1): a car that reaches the 2.1 level on all required modules is
+"100% 2.1" and can be updated directly to Marlin; otherwise it is a "zebra"
+and must go via SW 2.2 / targeted updates first. See the comments in
+`requirements.example.yaml` for the assumptions.
 
-## Kravfilen
+## The requirements file
 
-`requirements.example.yaml` definerer modulkravene. I produksjon ligger den som
-`/config/requirements.yaml` (bind-mountet katalog). Den leses på nytt ved hver
-analyse, så krav kan oppdateres **uten** rebuild — enten direkte på hosten
-eller via admin-siden.
+`requirements.example.yaml` defines the module requirements. In production it
+lives as `/config/requirements.yaml` (bind-mounted directory). It is re-read
+on every analysis, so requirements can be updated **without** a rebuild —
+either directly on the host or via the admin page.
 
-## Admin-side (`/admin`)
+## Admin page (`/admin`)
 
-Beskyttet side for web-redigering av kravspec:
+Protected page for web editing of the requirements spec:
 
-- **Innlogging:** HTTP Basic med flere brukere. Brukerne ligger i
-  `/config/admin_users.yaml` (se `admin_users.example.yaml`) som
-  `brukernavn: pbkdf2-hash` — lag hasher med `python3 scripts/hash_password.py`.
-  Kun hasher lagres. Feilede forsøk rate-limites (10 per 15 min per IP).
-- **Redigering:** YAML-en valideres (syntaks, struktur, regexer, profiler) før
-  lagring; ugyldig innhold avvises uten å røre filen. Lagring er atomisk og
-  virker umiddelbart på neste analyse.
-- **Revisjonslogg:** hver lagring logges i SQLite (`audit_log`) med tidspunkt,
-  brukernavn, klient-IP (fra `CF-Connecting-IP`) og unified diff av endringen.
-  Loggen vises nederst på admin-siden.
+- **Login:** HTTP Basic with multiple users. Users live in
+  `/config/admin_users.yaml` (see `admin_users.example.yaml`) as
+  `username: pbkdf2-hash` — create hashes with
+  `python3 scripts/hash_password.py`. Only hashes are stored. Failed attempts
+  are rate limited (10 per 15 min per IP).
+- **Editing:** a form editor (one row per module) plus a raw YAML editor as an
+  advanced option. Everything is validated (syntax, structure, regexes,
+  profiles) before saving; invalid content is rejected without touching the
+  file. Saves are atomic and take effect on the next analysis.
+- **Audit log:** every save is logged in SQLite (`audit_log`) with timestamp,
+  username, client IP (from `CF-Connecting-IP`) and a unified diff. The log is
+  shown at the bottom of the admin page.
+- **Usage statistics:** anonymous per-upload counters (country from
+  Cloudflare's `CF-IPCountry`, language, outcome, daily-rotating IP hash for
+  unique users). Never VIN, report content or raw IP.
 
-## Kjøre lokalt
+## Running locally
 
 ```bash
 docker compose up --build
 ```
 
-Åpne <http://localhost:8000>. Test med `tests/fixtures/olp_report.txt` (anonymisert ekte rapport).
+Open <http://localhost:8000>. Test with `tests/fixtures/olp_report.txt`
+(an anonymized real report). For the admin page, copy
+`requirements.example.yaml` to `dev-config/requirements.yaml` and create
+`dev-config/admin_users.yaml` (see `admin_users.example.yaml`).
 
-Uten Docker (PDF-nedlasting krever pango/cairo installert):
+Without Docker (PDF download requires pango/cairo installed):
 
 ```bash
 pip install -r requirements.txt pytest httpx
@@ -67,16 +94,32 @@ pytest
 uvicorn app.main:app --reload
 ```
 
-## Miljøvariabler
+## Environment variables
 
-| Variabel | Standard | Beskrivelse |
+| Variable | Default | Description |
 |---|---|---|
-| `MARLIN_DATA_DIR` | `/data` | SQLite-database (`marlin.sqlite3`) |
-| `MARLIN_UPLOADS_DIR` | `/data/uploads` | Lagrede rapportfiler (kun ved samtykke) |
-| `MARLIN_REQUIREMENTS_PATH` | `/config/requirements.yaml` | Kravfilen |
+| `MARLIN_DATA_DIR` | `/data` | SQLite database (`marlin.sqlite3`) |
+| `MARLIN_UPLOADS_DIR` | `/data/uploads` | Stored report files (only with consent) |
+| `MARLIN_REQUIREMENTS_PATH` | `/config/requirements.yaml` | The requirements file |
+| `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | Admin users (PBKDF2 hashes) |
 
-## Bygg og deploy
+## Build and deploy
 
-GitHub Actions bygger og publiserer `ghcr.io/terjefl/marlin-check` (`latest` +
-git-SHA) ved push til `main`. Produksjons-stacken ligger i Docker-repoet under
-`DMZ-DOCKER01/marlin/` og deployes via Portainer (GitOps).
+GitHub Actions runs the test suite and builds/publishes
+`ghcr.io/terjefl/marlin-check` (`latest` + git SHA) on every push to `main`.
+The container is self-contained: mount a data directory on `/data` and a
+config directory on `/config` (with `requirements.yaml` and
+`admin_users.yaml`), publish port 8000, and put it behind any HTTPS reverse
+proxy. Country statistics use Cloudflare's `CF-IPCountry` header and degrade
+gracefully without it.
+
+## Privacy model
+
+- Without the consent checkbox nothing from the report is stored — the
+  analysis happens in memory and the result lives 30 minutes behind an
+  unguessable token (`/result/<token>`).
+- With consent: report file + VIN + module versions are stored for aggregated
+  fleet statistics (`/stats` never shows individual VINs).
+- Anonymous usage counting per upload (admin-only view): country, language,
+  outcome, daily-rotating IP hash. No VIN, no report data, no raw IP.
+- Email delivery was deliberately left out (abuse surface).

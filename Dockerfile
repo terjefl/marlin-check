@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# WeasyPrint trenger pango/cairo-bibliotekene fra OS-et
+# WeasyPrint needs the pango/cairo libraries from the OS
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \

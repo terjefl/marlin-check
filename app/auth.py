@@ -1,13 +1,13 @@
-"""Enkel flerbruker-autentisering (HTTP Basic) for admin-sidene.
+"""Simple multi-user authentication (HTTP Basic) for the admin pages.
 
-Brukere ligger i en YAML-fil på hosten (bind-mountet, leses ved hvert kall):
+Users live in a YAML file on the host (bind-mounted, read on every call):
 
     users:
       terje: pbkdf2_sha256$600000$<salt_hex>$<hash_hex>
       styremedlem: pbkdf2_sha256$600000$...
 
-Hasher lages med scripts/hash_password.py. Kun hasher lagres — aldri klartekst.
-Feilede forsøk rate-limites per IP (10 per 15 min).
+Hashes are created with scripts/hash_password.py. Only hashes are stored —
+never plaintext. Failed attempts are rate limited per IP (10 per 15 min).
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def load_users() -> dict[str, str]:
 
 
 def client_ip(request: Request) -> str:
-    # Bak Cloudflare: CF-Connecting-IP er den ekte klient-IP-en
+    # Behind Cloudflare: CF-Connecting-IP is the real client IP
     for header in ("cf-connecting-ip", "x-forwarded-for"):
         value = request.headers.get(header, "")
         if value:
@@ -85,7 +85,7 @@ def _unauthorized(detail: str) -> HTTPException:
 
 
 def require_admin(request: Request) -> str:
-    """FastAPI-dependency: returnerer innlogget brukernavn eller kaster 401/429."""
+    """FastAPI dependency: returns the logged-in username or raises 401/429."""
     ip = client_ip(request)
     if _too_many_failures(ip):
         raise HTTPException(status_code=429, detail="Too many failed login attempts. Try again later.")
@@ -99,7 +99,7 @@ def require_admin(request: Request) -> str:
         raise _unauthorized("Invalid authorization header")
 
     stored = load_users().get(username)
-    # Kjør alltid en hash-verifisering så timing ikke røper om brukeren finnes
+    # Always run a hash verification so timing does not reveal whether the user exists
     dummy = hash_password("dummy") if stored is None else stored
     if stored is None or not verify_password(password, dummy):
         _register_failure(ip)

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Lag en passordhash for admin_users.yaml.
+"""Create a password hash for admin_users.yaml.
 
-Bruk:  python3 scripts/hash_password.py
-Spør interaktivt etter passord (vises ikke) og skriver ut hashen som limes
-inn i admin_users.yaml:
+Usage:  python3 scripts/hash_password.py
+Prompts interactively for a password (not echoed) and prints the hash to paste
+into admin_users.yaml:
 
     users:
-      <brukernavn>: <hash>
+      <username>: <hash>
 """
 
 import getpass
@@ -17,10 +17,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.auth import hash_password  # noqa: E402
 
 if __name__ == "__main__":
-    password = getpass.getpass("Passord: ")
-    confirm = getpass.getpass("Gjenta: ")
+    password = getpass.getpass("Password: ")
+    confirm = getpass.getpass("Repeat: ")
     if password != confirm:
-        sys.exit("Passordene er ulike.")
+        sys.exit("Passwords do not match.")
     if len(password) < 8:
-        sys.exit("Minst 8 tegn.")
+        sys.exit("At least 8 characters.")
     print(hash_password(password))

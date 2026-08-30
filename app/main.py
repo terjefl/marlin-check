@@ -1,4 +1,4 @@
-"""Marlin Readiness Check — webportal for Fisker Owners Association."""
+"""Marlin Readiness Check — web portal for the Fisker Owners Association."""
 
 from __future__ import annotations
 
@@ -34,16 +34,16 @@ REQUIREMENTS_PATH = Path(
     os.environ.get("MARLIN_REQUIREMENTS_PATH", "./requirements.example.yaml")
 )
 
-RESULT_TTL_SECONDS = 30 * 60  # resultat/PDF-lenke lever en halvtime i minnet
-RATE_LIMIT_UPLOADS = 10       # per IP per vindu
-RATE_LIMIT_WINDOW = 60        # sekunder
+RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
+RATE_LIMIT_UPLOADS = 10       # per IP per window
+RATE_LIMIT_WINDOW = 60        # seconds
 
 app = FastAPI(title="Marlin Readiness Check", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-# Cache-busting: innholdshash av style.css i URL-en, så Cloudflare/nettlesere
-# aldri serverer utdatert CSS etter en deploy.
+# Cache busting: content hash of style.css in the URL, so Cloudflare/browsers
+# never serve stale CSS after a deploy.
 import hashlib as _hashlib
 
 STATIC_VERSION = _hashlib.md5(
@@ -52,7 +52,7 @@ STATIC_VERSION = _hashlib.md5(
 
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
 
-# Nylige analyser i minnet, så resultatsiden kan tilby PDF uten re-opplasting.
+# Recent analyses kept in memory, so the result page can offer the PDF without re-upload.
 _recent_results: dict[str, dict] = {}
 _upload_hits: dict[str, list[float]] = {}
 
@@ -74,7 +74,7 @@ def _rate_limited(ip: str) -> bool:
 
 
 def _client_ip(request: Request) -> str:
-    # Bak NPM/Cloudflare: bruk første X-Forwarded-For-adresse hvis satt
+    # Behind Cloudflare/reverse proxy: use the first X-Forwarded-For address if set
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -96,8 +96,8 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
 
 
 def _usage_ip_hash(request: Request) -> str:
-    """Døgnroterende hash av klient-IP — teller unike brukere per dag uten å
-    lagre IP-adressen. Gårsdagens hasher kan ikke kobles tilbake til IP."""
+    """Daily-rotating hash of the client IP — counts unique users per day without
+    storing the IP address. Yesterday's hashes cannot be linked back to an IP."""
     import hashlib
 
     day_salt = f"marlin-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
@@ -115,7 +115,7 @@ def _log_usage(request: Request, lang: str, outcome: str, consent: bool) -> None
             consent=consent,
             ip_hash=_usage_ip_hash(request),
         )
-    except Exception:  # statistikk skal aldri velte selve analysen
+    except Exception:  # usage stats must never break the analysis itself
         pass
 
 
@@ -139,9 +139,9 @@ def healthz():
 
 @app.get("/analyze")
 def analyze_get(request: Request):
-    """Språkvelgeren (og bokmerker) kan treffe /analyze med GET — f.eks. fra
-    feilmeldingssiden, som rendres direkte på POST-URL-en. Send til forsiden
-    med språkvalget bevart i stedet for 405."""
+    """The language picker (and bookmarks) can hit /analyze with GET — e.g. from
+    the error page, which is rendered directly on the POST URL. Redirect to the
+    front page with the language choice preserved instead of returning 405."""
     lang = request.query_params.get("lang")
     return RedirectResponse(f"/?lang={lang}" if lang in SUPPORTED else "/", status_code=303)
 
@@ -190,8 +190,8 @@ async def analyze(request: Request, report: UploadFile):
     token = secrets.token_urlsafe(16)
     _recent_results[token] = {"report": parsed, "evaluation": evaluation, "at": time.time()}
 
-    # POST-redirect-GET: resultatsiden er en GET-side, så språkbytte og
-    # sideoppdatering fungerer uten re-innsending av rapporten.
+    # POST-redirect-GET: the result page is a GET page, so switching language
+    # and reloading work without re-submitting the report.
     return RedirectResponse(f"/result/{token}", status_code=303)
 
 
@@ -223,7 +223,7 @@ def download_pdf(request: Request, token: str):
         evaluation=cached["evaluation"],
         generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
-    from weasyprint import HTML  # tung import — utsettes til første PDF
+    from weasyprint import HTML  # heavy import — deferred until the first PDF
 
     pdf_bytes = HTML(string=html).write_pdf()
     filename = f"marlin-check_{cached['report'].vin}.pdf"
@@ -244,7 +244,7 @@ def privacy(request: Request):
     return _render(request, "privacy.html", {})
 
 
-# --- Admin: web-redigering av kravspec med revisjonslogg -------------------
+# --- Admin: web editing of the requirements spec, with audit log -----------
 
 def _render_admin(request: Request, username: str, *, message: str = "",
                   error: str = "", yaml_text: str | None = None,
@@ -253,7 +253,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
     try:
         requirements = parse_requirements_text(current_text)
     except RequirementsValidationError:
-        requirements = None  # vis kun YAML-editoren hvis fila er ugyldig
+        requirements = None  # show only the YAML editor if the file is invalid
     return _render(
         request,
         "admin.html",
@@ -271,28 +271,28 @@ def _render_admin(request: Request, username: str, *, message: str = "",
 
 
 def _save_requirements(request: Request, username: str, new_text: str) -> Response:
-    """Felles lagringslogikk for skjema- og YAML-redigering."""
+    """Shared save logic for the form editor and the raw YAML editor."""
     old_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
     if new_text.strip() == old_text.strip():
-        return _render_admin(request, username, message="Ingen endringer å lagre.")
+        return _render_admin(request, username, message="No changes to save.")
 
     try:
         parsed = parse_requirements_text(new_text)
     except RequirementsValidationError as exc:
         return _render_admin(
-            request, username, error=f"Ikke lagret — valideringsfeil: {exc}",
+            request, username, error=f"Not saved — validation error: {exc}",
             yaml_text=new_text, status_code=422,
         )
 
     diff = "\n".join(
         difflib.unified_diff(
             old_text.splitlines(), new_text.splitlines(),
-            fromfile="requirements.yaml (før)", tofile="requirements.yaml (etter)",
+            fromfile="requirements.yaml (before)", tofile="requirements.yaml (after)",
             lineterm="",
         )
     )[:20000]
 
-    # Atomisk erstatning i samme katalog (derfor er /config mountet som katalog)
+    # Atomic replace within the same directory (which is why /config is mounted as a directory)
     tmp_path = REQUIREMENTS_PATH.with_suffix(".yaml.tmp")
     tmp_path.write_text(new_text, encoding="utf-8")
     os.replace(tmp_path, REQUIREMENTS_PATH)
@@ -300,8 +300,8 @@ def _save_requirements(request: Request, username: str, new_text: str) -> Respon
     database.add_audit(username, auth_client_ip(request), "requirements_update", diff)
     return _render_admin(
         request, username,
-        message=f"Lagret. Ny kravversjon: {parsed.version} "
-                f"({len(parsed.modules)} moduler, target {parsed.target_profile}).",
+        message=f"Saved. New requirements version: {parsed.version} "
+                f"({len(parsed.modules)} modules, target {parsed.target_profile}).",
     )
 
 
@@ -324,18 +324,18 @@ async def admin_save_form(request: Request, username: str = Depends(require_admi
         new_text = _form_to_yaml(form, username)
     except ValueError as exc:
         return _render_admin(
-            request, username, error=f"Ikke lagret — {exc}", status_code=422
+            request, username, error=f"Not saved — {exc}", status_code=422
         )
     return _save_requirements(request, username, new_text)
 
 
 def _form_to_yaml(form, username: str) -> str:
-    """Bygger kravfil-YAML fra admin-skjemaet. Kaster ValueError ved åpenbare feil."""
+    """Builds requirements YAML from the admin form. Raises ValueError on obvious errors."""
     import yaml as yaml_module
 
     profiles = [p.strip() for p in str(form.get("profiles", "")).split(",") if p.strip()]
     if not profiles:
-        raise ValueError("minst én profil må angis.")
+        raise ValueError("at least one profile must be specified.")
 
     modules = []
     indices = sorted(
@@ -345,7 +345,7 @@ def _form_to_yaml(form, username: str) -> str:
     for i in indices:
         module_id = str(form.get(f"mod-{i}-id", "")).strip()
         if not module_id:
-            continue  # tom rad
+            continue  # empty row
         levels = {}
         for profile in profiles:
             value = str(form.get(f"mod-{i}-level-{profile}", "")).strip()
@@ -354,7 +354,7 @@ def _form_to_yaml(form, username: str) -> str:
                     levels[profile] = int(value)
                 except ValueError:
                     raise ValueError(
-                        f"modul {module_id}: nivå for {profile} må være et heltall (fikk {value!r})."
+                        f"module {module_id}: level for {profile} must be an integer (got {value!r})."
                     )
         module: dict = {
             "id": module_id,
@@ -376,9 +376,9 @@ def _form_to_yaml(form, username: str) -> str:
         "modules": modules,
     }
     header = (
-        "# Marlin-krav: minimumsnivåer per ECU og programvareprofil.\n"
-        f"# Generert av admin-skjemaet på marlin-portalen (bruker: {username}).\n"
-        "# Feltdokumentasjon: requirements.example.yaml i kilderepoet\n"
+        "# Marlin requirements: minimum levels per ECU and software profile.\n"
+        f"# Generated by the admin form on the Marlin portal (user: {username}).\n"
+        "# Field documentation: requirements.example.yaml in the source repo\n"
         "# https://github.com/terjefl/marlin-check\n\n"
     )
     return header + yaml_module.safe_dump(

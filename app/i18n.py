@@ -1,6 +1,6 @@
-"""Enkel i18n: JSON-ordbøker per språk, engelsk som fallback.
+"""Simple i18n: JSON dictionaries per language, English as fallback.
 
-Språkvalg (prioritert): ?lang=-parameter -> cookie -> Accept-Language -> en.
+Language selection (in priority order): ?lang= parameter -> cookie -> Accept-Language -> en.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ LANGUAGE_NAMES = {
     "fr": "Français",
     "es": "Español",
 }
-# Accept-Language-koder som mappes til våre locales
+# Accept-Language codes mapped onto our locales
 _ALIASES = {"no": "nb", "nn": "nb"}
 
 _translations: dict[str, dict[str, str]] = {}

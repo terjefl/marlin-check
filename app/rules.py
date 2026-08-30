@@ -1,17 +1,19 @@
-"""Regelmotor: sammenligner en parset OLP-rapport mot requirements.yaml.
+"""Rule engine: compares a parsed OLP report against requirements.yaml.
 
-Kravmodellen følger foreningens tabell fra videomøtet 2026-08 («MINIMUM ECU
-requirements»): hver relevant ECU har et minimumsnivå per programvareprofil
-(2.0, 2.1, ...). En bil er «100 % <profil>» når ALLE kravmodulene minst når
-profilens nivå. En 100 % 2.1-bil kan oppdateres direkte til Marlin; en bil
-med blandede nivåer («zebra») må først via SW 2.2 / målrettede oppdateringer.
+The requirements model follows the association's table from the 2026-08 web
+meeting ("MINIMUM ECU requirements"): each relevant ECU has a minimum level per
+software profile (2.0, 2.1, ...). A car is "100% <profile>" when ALL required
+modules reach at least the profile's level. A 100% 2.1 car can be updated
+directly to Marlin; a car with mixed levels (a "zebra") must first go via
+SW 2.2 / targeted module updates.
 
-Tallet som sammenlignes trekkes ut av feltet «Supplier SW Version» med en
-modulspesifikk regex (`extract` i YAML, capture-gruppe 1), fordi feltet har
-ulik form per leverandør (BCM395021, MCU5000019, «ECC395 24», 89324V04...).
+The number being compared is extracted from the "Supplier SW Version" field
+with a module-specific regex (`extract` in the YAML, capture group 1), because
+the field's shape differs per supplier (BCM395021, MCU5000019, "ECC395 24",
+89324V04...).
 
-requirements.yaml bind-mountes inn i containeren og leses på nytt ved hver
-evaluering, slik at oppdaterte krav virker umiddelbart uten rebuild.
+requirements.yaml is bind-mounted into the container and re-read on every
+evaluation, so updated requirements take effect immediately without a rebuild.
 """
 
 from __future__ import annotations
@@ -24,25 +26,25 @@ import yaml
 
 from .parser import ParsedReport
 
-# Modulstatus
-OK = "ok"                    # nivå >= målprofilens krav
-OUTDATED = "outdated"        # nivå < målprofilens krav
-MISSING = "missing"          # kravmodul ikke funnet i rapporten
-UNPARSEABLE = "unparseable"  # klarte ikke trekke tall ut av Supplier SW Version
+# Module status
+OK = "ok"                    # level >= target profile requirement
+OUTDATED = "outdated"        # level < target profile requirement
+MISSING = "missing"          # required module not found in the report
+UNPARSEABLE = "unparseable"  # could not extract a number from Supplier SW Version
 
 VERDICT_READY = "ready"
 VERDICT_ZEBRA = "zebra"
 
-# Fallback når modulen mangler egen extract-regex: siste siffergruppe
+# Fallback when the module has no extract regex of its own: last digit group
 _DEFAULT_EXTRACT = re.compile(r"(\d+)\s*$")
 
 
 @dataclass
 class Requirement:
     id: str
-    match: list[str]              # ECU-koder i rapporten (f.eks. ["MCU_R", "MCU_RR"])
-    levels: dict[str, int]        # profil -> minimumsnivå, f.eks. {"2.0": 19, "2.1": 21}
-    extract: str | None = None    # regex med capture-gruppe mot Supplier SW Version
+    match: list[str]              # ECU codes in the report (e.g. ["MCU_R", "MCU_RR"])
+    levels: dict[str, int]        # profile -> minimum level, e.g. {"2.0": 19, "2.1": 21}
+    extract: str | None = None    # regex with a capture group, applied to Supplier SW Version
     critical: bool = True
     label: str = ""
 
@@ -50,8 +52,8 @@ class Requirement:
 @dataclass
 class RequirementSet:
     version: str
-    target_profile: str           # profilen som kreves for direkte Marlin (nå "2.1")
-    profiles: list[str]           # stigende rekkefølge, f.eks. ["2.0", "2.1"]
+    target_profile: str           # profile required for direct Marlin (currently "2.1")
+    profiles: list[str]           # ascending order, e.g. ["2.0", "2.1"]
     modules: list[Requirement]
 
 
@@ -60,10 +62,10 @@ class ModuleResult:
     requirement: Requirement
     status: str
     raw_name: str = ""
-    version: str = ""             # Supplier SW Version som funnet i rapporten
-    extracted: int | None = None  # tallet som ble trukket ut
-    required: int | None = None   # målprofilens minimumsnivå
-    level: str | None = None      # høyeste profil modulen oppfyller, None = under alle
+    version: str = ""             # Supplier SW Version as found in the report
+    extracted: int | None = None  # the extracted number
+    required: int | None = None   # the target profile minimum level
+    level: str | None = None      # highest profile the module satisfies, None = below all
 
 
 @dataclass
@@ -72,7 +74,7 @@ class Evaluation:
     requirements_version: str
     target_profile: str
     results: list[ModuleResult]
-    extra_modules: list = field(default_factory=list)  # moduler i rapporten uten krav
+    extra_modules: list = field(default_factory=list)  # report modules without a requirement
 
     @property
     def failing(self) -> list[ModuleResult]:
@@ -84,28 +86,28 @@ class Evaluation:
 
 
 class RequirementsValidationError(Exception):
-    """Kravteksten kunne ikke tolkes som et gyldig regelverk."""
+    """The requirements text could not be parsed as a valid rule set."""
 
 
 def parse_requirements_text(text: str) -> RequirementSet:
-    """Parser og validerer kravtekst (YAML). Kaster RequirementsValidationError."""
+    """Parses and validates requirements text (YAML). Raises RequirementsValidationError."""
     try:
         raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
-        raise RequirementsValidationError(f"Ugyldig YAML: {exc}") from exc
+        raise RequirementsValidationError(f"Invalid YAML: {exc}") from exc
     if not isinstance(raw, dict):
-        raise RequirementsValidationError("Toppnivået må være et YAML-objekt.")
+        raise RequirementsValidationError("The top level must be a YAML mapping.")
     try:
         result = _build_requirement_set(raw)
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
-        raise RequirementsValidationError(f"Ugyldig struktur: {exc!r}") from exc
+        raise RequirementsValidationError(f"Invalid structure: {exc!r}") from exc
     if not result.modules:
-        raise RequirementsValidationError("Ingen moduler definert under `modules:`.")
+        raise RequirementsValidationError("No modules defined under `modules:`.")
     if not result.target_profile or result.target_profile == "None":
-        raise RequirementsValidationError("`target_profile` mangler.")
+        raise RequirementsValidationError("`target_profile` is missing.")
     if result.target_profile not in result.profiles:
         raise RequirementsValidationError(
-            f"target_profile {result.target_profile!r} finnes ikke i profiles {result.profiles}."
+            f"target_profile {result.target_profile!r} is not in profiles {result.profiles}."
         )
     for module in result.modules:
         if module.extract:
@@ -113,15 +115,15 @@ def parse_requirements_text(text: str) -> RequirementSet:
                 pattern = re.compile(module.extract)
             except re.error as exc:
                 raise RequirementsValidationError(
-                    f"Modul {module.id}: ugyldig extract-regex: {exc}"
+                    f"Module {module.id}: invalid extract regex: {exc}"
                 ) from exc
             if pattern.groups < 1:
                 raise RequirementsValidationError(
-                    f"Modul {module.id}: extract-regexen mangler capture-gruppe."
+                    f"Module {module.id}: the extract regex has no capture group."
                 )
         if module.levels.get(result.target_profile) is None:
             raise RequirementsValidationError(
-                f"Modul {module.id}: mangler nivå for target_profile {result.target_profile!r}."
+                f"Module {module.id}: missing level for target_profile {result.target_profile!r}."
             )
     return result
 
@@ -162,7 +164,7 @@ def _extract_number(supplier_sw: str, req: Requirement) -> int | None:
 
 
 def _profile_level(extracted: int, req: Requirement, profiles: list[str]) -> str | None:
-    """Høyeste profil (i stigende rekkefølge) hvor kravet er oppfylt."""
+    """Highest profile (in ascending order) whose requirement is satisfied."""
     level = None
     for profile in profiles:
         minimum = req.levels.get(profile)
