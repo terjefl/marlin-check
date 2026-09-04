@@ -1,10 +1,18 @@
 {# Shared between the result page and the PDF report #}
 <h1>{{ t('result_title', vin=report.vin) }}</h1>
 
-<div class="verdict {{ 'ready' if evaluation.verdict == 'ready' else 'zebra' }}">
-  <strong>{% if evaluation.verdict == 'ready' %}✅ {{ t('verdict_ready') }}{% else %}⚠️ {{ t('verdict_zebra') }}{% endif %}</strong>
-  <p>{% if evaluation.verdict == 'ready' %}{{ t('verdict_ready_text') }}{% else %}{{ t('verdict_zebra_text') }}{% endif %}</p>
-  {% if evaluation.verdict != 'ready' %}
+<div class="verdict {{ evaluation.verdict if evaluation.verdict in ('ready', 'marlin') else 'zebra' }}">
+  <strong>{% if evaluation.verdict == 'ready' %}✅ {{ t('verdict_ready') }}{% elif evaluation.verdict == 'marlin' %}🐟 {{ t('verdict_marlin') }}{% else %}⚠️ {{ t('verdict_zebra') }}{% endif %}</strong>
+  <p>{% if evaluation.verdict == 'ready' %}{{ t('verdict_ready_text') }}{% elif evaluation.verdict == 'marlin' %}{{ t('verdict_marlin_text') }}{% else %}{{ t('verdict_zebra_text') }}{% endif %}</p>
+  {% if evaluation.verdict == 'marlin' and evaluation.below_top %}
+  <p>{{ t('marlin_below_top_note') }}</p>
+  <ul>
+    {% for r in evaluation.below_top %}
+    <li>{{ r.requirement.label }} — {{ r.version }} ({{ r.extracted }} &lt; {{ r.top_required }})</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if evaluation.verdict == 'zebra' %}
   <ul>
     {% for r in evaluation.failing_critical %}
     <li>{{ r.requirement.label }} — {{ t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }} &lt; {{ r.required }}){% endif %}</li>

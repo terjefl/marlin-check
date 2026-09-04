@@ -360,3 +360,26 @@ def test_pdf_download_is_not_cacheable(client):
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.headers["cache-control"] == "private, no-store"
+
+
+def test_marlin_car_result_page_and_statistics(client):
+    """A car already on Marlin gets the informational verdict on the page and
+    is counted separately in the public statistics."""
+    c, main = client
+    fixture = Path(__file__).parent / "fixtures" / "olp_report_marlin_bcm41.txt"
+    response = c.post(
+        "/analyze?lang=en",
+        files={"report": ("r.txt", fixture.read_bytes(), "text/plain")},
+        data={"consent": "yes"},
+    )
+    assert response.status_code == 200
+    assert "Already on Marlin" in response.text
+    assert "can be updated directly to Marlin" not in response.text
+    assert "Marlin does not update every module" in response.text
+    assert "Body Control Module — BCM395041 (41 &lt; 42)" in response.text
+
+    stats = main.database.stats()
+    assert stats["verdicts"] == {"marlin": 1}
+    page = c.get("/stats?lang=en")
+    assert "Already on Marlin" in page.text
+    assert main.database.usage_stats()["outcomes"] == {"marlin": 1}

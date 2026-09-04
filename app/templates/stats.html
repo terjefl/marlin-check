@@ -12,6 +12,7 @@
   <div class="stat"><span class="num">{{ stats.total_submissions }}</span><span class="label">{{ t('stats_total') }}</span></div>
   <div class="stat ok"><span class="num">{{ stats.verdicts.get('ready', 0) }}</span><span class="label">{{ t('stats_ready') }}</span></div>
   <div class="stat warn"><span class="num">{{ stats.verdicts.get('zebra', 0) }}</span><span class="label">{{ t('stats_not_ready') }}</span></div>
+  <div class="stat info"><span class="num">{{ stats.verdicts.get('marlin', 0) }}</span><span class="label">{{ t('stats_marlin') }}</span></div>
 </div>
 
 <h2>{{ t('stats_module_heading') }}</h2>

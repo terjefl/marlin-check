@@ -1,0 +1,194 @@
+OceanLink Pro
+ECU Software Version Report
+Date: 2026-08-28 18:15:16.564271
+VIN: VCF1ZBE20PG099996
+BODY
+GW - Gateway
+Software Version: FM298034S100K
+Hardware Version: FM298034H100C
+Supplier SW Version: GW500002
+Bootloader Version: HIRAIN1.0.8
+OHC - Overhead Console
+Software Version: FM297026S042H
+Hardware Version: FM297026H042G
+Supplier SW Version: OHC390006
+Bootloader Version: Unknown
+PKC - Phone Key Controller
+Software Version: FM298020S180Q
+Hardware Version: FM298020H180G
+Supplier SW Version: F160808131321.3
+Bootloader Version: PKC403411
+PWC_R - Phone Wireless Charging Right
+Software Version: FM297050S060F
+Hardware Version: FM297050H060C
+Supplier SW Version: PWCRSORP05
+Bootloader Version: PWCRSORP-BT02
+PWC_L - Phone Wireless Charging Left
+Software Version: FM297050S081F
+Hardware Version: FM297050H081B
+Supplier SW Version: PWCLSORP05
+Bootloader Version: PWCLSORP-BT02
+MFSS - Multifunction Steering
+Software Version: FM294090S005E
+Hardware Version: FM294090H005E
+Supplier SW Version: MFSSSORP02
+Bootloader Version: NA
+CIM - Column Integrated Module
+Software Version: FM297023S001G
+Hardware Version: FM297023H001E
+Supplier SW Version: CIMSORP06
+Bootloader Version: 08.CBD2101046
+BCM - Body Control Module
+Software Version: FM298033S001K
+Hardware Version: FM298033H001E
+Supplier SW Version: BCM395041
+Bootloader Version: 0108
+DSCM - Driver Seat Memory Controller
+Software Version: FM298036S120F
+Hardware Version: FM298036H120C
+Supplier SW Version: DSCM390004
+Bootloader Version: Unknown
+PLGM - Power Lift Gate Module
+Software Version: FM298020S160G
+Hardware Version: FM298020H160D
+Supplier SW Version: PLGM400001
+Bootloader Version: FBL-SW-000004
+ACU - Airbag Control Unit
+Software Version: FM298011S009G
+Hardware Version: FM298011H011A
+Supplier SW Version: ACU980004
+Bootloader Version: ACU- #-203-
+TRM - Trailer Module
+Software Version: FM292070S007E
+Hardware Version: FM292070H007A
+Supplier SW Version: TRM390001
+Bootloader Version: NA
+ECC - Electrical Climate Controller
+Software Version: FM293020S180N
+Hardware Version: FM293020H180D
+Supplier SW Version: ECC395 25
+Bootloader Version: ECC230215V005
+INFOTAINMENT
+ICC - Integrated Cockpit Controller
+Software Version: FM297030S183V
+Hardware Version: FM297030H001C
+Supplier SW Version: ICC390047
+Bootloader Version: FFFFFF
+TBOX - Telematics Box
+Software Version: FM297050S020H
+Hardware Version: FM297050H020E
+Supplier SW Version: TBOX390005
+Bootloader Version: 0000000000015
+VSP - Vehicle Sound For Pedestrians
+Software Version: FM298015S001H
+Hardware Version: FM298015H001E
+Supplier SW Version: VSP39007
+Bootloader Version: 0000000000008
+AMP - Amplifier
+Software Version: FM297030S083G
+Hardware Version: FM297030H083D
+Supplier SW Version: C62A63M39
+Bootloader Version: V00.00.13
+POWERTRAIN
+VCU - Vehicle Control Unit
+Software Version: FM291590S001S
+Hardware Version: FM291590H001E
+Supplier SW Version: VCU039024
+Bootloader Version: FM2915900021H
+PDU - Power Distribution Unit
+Software Version: FM291584S001F
+Hardware Version: FM291584H001D
+Supplier SW Version: PDU3900D02
+Bootloader Version: UDSBOOT-V1.20
+MCU_F - Motor Control Unit Front
+Software Version: FM291040S100P
+Hardware Version: FM291040H100C
+Supplier SW Version: MCU5000021
+Bootloader Version: 006.000.002
+MCU_R - Motor Control Unit Rear
+Software Version: FM291040S103P
+Hardware Version: FM291040H103C
+Supplier SW Version: MCU5000021
+Bootloader Version: 006.000.002
+BMS - Battery Management System
+Software Version: FM291560S180G
+Hardware Version: FM291560H180A
+Supplier SW Version: BMSN39021
+Bootloader Version: BMSBLAV11
+IBS - iBooster
+Software Version: FM292044S004H
+Hardware Version: FM292044H004E
+Supplier SW Version: 88211V040000420131
+Bootloader Version: FM292044B004B
+CHASSIS
+RAC - Rear Airconditioning Control
+Software Version: FM297026S084F
+Hardware Version: FM297026H084D
+Supplier SW Version: RAC3504
+Bootloader Version: Unknown
+EPS1 - Electric Power Steering
+Software Version: FM292010S041G
+Hardware Version: FM292010H041B
+Supplier SW Version: EPS395001
+Bootloader Version: FM292010B041H
+ESP - Electronic Stability Program
+Software Version: FM292045S020J
+Hardware Version: FM292045H020A
+Supplier SW Version: 89819V050101060131
+Bootloader Version: FM292045B020B
+EPS2 - Electric Power Steering
+Software Version: FM292010S041G
+Hardware Version: FM292010H041B
+Supplier SW Version: EPS395001
+Bootloader Version: FM292010B041H
+WTC - Water Thermal Controller Heat
+Software Version: NA
+Hardware Version: H002
+Supplier SW Version: S002.001
+Bootloader Version: WTC "005
+BTC - Battery Thermal Control
+Software Version: NA
+Hardware Version: H002
+Supplier SW Version: S002.001
+Bootloader Version: BTC "004
+PSCM - Passenger Seat Module
+Software Version: FM298036S121E
+Hardware Version: FM298036H121C
+Supplier SW Version: PSM390004
+Bootloader Version: Unknown
+ADAS
+FCM - Front Camera Module
+Software Version: FM298014S002H
+Hardware Version: FM298014H002C
+Supplier SW Version: FCMSORP0E
+Bootloader Version: FCM2302220101
+MRR - Mid Range Radar
+Software Version: FM298014S080H
+Hardware Version: FM298014H080D
+Supplier SW Version: MRR0395070
+Bootloader Version: MRRBTLD039507
+CMRR_RL - Corner Mid Range Radar Rear Left
+Software Version: FM298014S080H
+Hardware Version: FM298014H080D
+Supplier SW Version: MRR0395070
+Bootloader Version: MRRBTLD039507
+CMRR_RR - Corner Mid Range Radar Rear Right
+Software Version: FM298014S080H
+Hardware Version: FM298014H080D
+Supplier SW Version: MRR0395070
+Bootloader Version: MRRBTLD039507
+CMRR_FL - Corner Mid Range Radar Front Left
+Software Version: FM298014S080H
+Hardware Version: FM298014H080D
+Supplier SW Version: MRR0395070
+Bootloader Version: MRRBTLD039507
+CMRR_FR - Corner Mid Range Radar Front Right
+Software Version: FM298014S080H
+Hardware Version: FM298014H080D
+Supplier SW Version: MRR0395070
+Bootloader Version: MRRBTLD039507
+HYDRA - Advanced Driver Assist System
+Software Version: FM298014S120J
+Hardware Version: FM298014H120E
+Supplier SW Version: ADAS039017
+Bootloader Version: ADAS000000500

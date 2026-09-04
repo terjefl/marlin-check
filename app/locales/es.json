@@ -64,5 +64,9 @@
   "trim_unknown_note": "No se pudo determinar la versión a partir del VIN, por lo que todos los módulos se consideran obligatorios (incluido el controlador del motor trasero).",
   "parse_too_many_pages": "El PDF tiene demasiadas páginas para ser un informe de diagnóstico de OLP.",
   "error_requirements_unavailable": "El archivo de requisitos del portal no está disponible en este momento, por lo que no se pueden analizar informes. Los administradores han sido avisados; inténtelo de nuevo más tarde.",
-  "result_expired": "Este enlace de resultado ha caducado (los resultados se conservan 30 minutos). Vuelva a subir el informe."
+  "result_expired": "Este enlace de resultado ha caducado (los resultados se conservan 30 minutos). Vuelva a subir el informe.",
+  "verdict_marlin": "Ya en Marlin",
+  "verdict_marlin_text": "Este coche ya funciona con Marlin (VCU 2.4 o posterior). La comprobación de preparación para Marlin no se aplica; la tabla siguiente es solo informativa.",
+  "marlin_below_top_note": "Nota: Marlin no actualiza todos los módulos. Estos módulos siguen por debajo del nivel 2.2:",
+  "stats_marlin": "Ya en Marlin"
 }

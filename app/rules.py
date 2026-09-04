@@ -34,6 +34,7 @@ UNPARSEABLE = "unparseable"  # could not extract a number from Supplier SW Versi
 
 VERDICT_READY = "ready"
 VERDICT_ZEBRA = "zebra"
+VERDICT_MARLIN = "marlin"    # the car already runs Marlin; the readiness check does not apply
 
 # Fallback when the module has no extract regex of its own: last digit group
 _DEFAULT_EXTRACT = re.compile(r"(\d+)\s*$")
@@ -60,6 +61,11 @@ class Requirement:
     critical: bool = True
     label: str = ""
     variants: list[Variant] = field(default_factory=list)
+    # Level at which this module shows the car is ALREADY on Marlin (e.g. VCU
+    # 24 = "VCU 2.4", which only Marlin installs). When every module that has
+    # a marlin_level reaches it, the verdict is "marlin" instead of
+    # ready/zebra. None = this module is not a Marlin marker.
+    marlin_level: int | None = None
     # Trim letters (5th VIN character: Z/E/U/S = One/Extreme/Ultra/Sport) this
     # module is required for. None = required for all trims. Example: MCU_R is
     # absent on the single-motor Sport, so only_trims: [Z, E, U]. The exemption
@@ -110,6 +116,18 @@ class Evaluation:
             r for r in self.results
             if r.status == OK
             and r.top_required is not None
+            and r.extracted is not None
+            and r.extracted < r.top_required
+        ]
+
+    @property
+    def below_top(self) -> list[ModuleResult]:
+        """Every module with a number that is below the highest profile,
+        whatever its status. Used for cars already on Marlin, which does not
+        update every ECU: this is what is still on older software."""
+        return [
+            r for r in self.results
+            if r.top_required is not None
             and r.extracted is not None
             and r.extracted < r.top_required
         ]
@@ -258,9 +276,15 @@ def _build_requirement_set(raw: dict) -> RequirementSet:
                     extract=_optional_str(v.get("extract"), f"{where}/{v['name']}: `extract`"),
                 )
             )
+        marlin_level = m.get("marlin_level")
+        if marlin_level is not None and (
+            isinstance(marlin_level, bool) or not isinstance(marlin_level, int)
+        ):
+            raise RequirementsValidationError(f"{where}: `marlin_level` must be an integer.")
         modules.append(
             Requirement(
                 id=module_id,
+                marlin_level=marlin_level,
                 match=[
                     code.upper()
                     for code in _str_list(m.get("match", [module_id]), f"{where}: `match`")
@@ -380,8 +404,20 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
 
     extra = [m for m in report.modules if m.code.upper() not in matched_codes]
     failing_critical = [r for r in results if r.status != OK and r.requirement.critical]
+
+    # Already on Marlin: every marker module reached its marlin_level
+    markers = [r for r in results if r.requirement.marlin_level is not None]
+    on_marlin = bool(markers) and all(
+        r.extracted is not None and r.extracted >= r.requirement.marlin_level for r in markers
+    )
+    if on_marlin:
+        verdict = VERDICT_MARLIN
+    elif failing_critical:
+        verdict = VERDICT_ZEBRA
+    else:
+        verdict = VERDICT_READY
     return Evaluation(
-        verdict=VERDICT_READY if not failing_critical else VERDICT_ZEBRA,
+        verdict=verdict,
         requirements_version=requirements.version,
         target_profile=target,
         results=results,

@@ -27,10 +27,24 @@
 # Sport). `only_trims` limits a requirement to those trims — the single-motor
 # Sport has no rear motor controller, so MCU_R is only required for Z/E/U.
 #
+# Already on Marlin: `marlin_level` on a module marks the level that only
+# Marlin installs (VCU 24 = "VCU 2.4"). When every marked module reaches it,
+# the verdict is "already on Marlin" instead of ready/zebra, and the result
+# lists what Marlin left on older levels (Marlin does not update every ECU).
+# Verified against two Marlin cars (Sep 2026): VCU 24, MCU 21, BMS 21, ESP 501,
+# ECC 25, BCM 42 (one car had BCM 41 — open question).
+#
 # STILL DRAFT ("WIP" workbook): to be confirmed by the association. Known open
-# points: ECC at 2.2 is 24 in the table but 25 in the 2.2 reference car; the
-# Sport/LFP BMS level (15) and the RHD variants are read from reference
-# reports, not from an official minimum table.
+# points: ECC at 2.2 is 24 in the table, but all three 2.2/Marlin reference
+# cars show 25; one Marlin car has BCM 41 where the table says 42; the
+# Sport/LFP BMS level (15) is read from a Sport reference report
+# ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
+# table, so it may not be the true 2.1 minimum for the LFP line.
+#
+# Right-hand drive: the workbook shows RHD-specific software lines only on
+# EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
+# (ADAS039021 vs ADAS039020). None of these is a required module, and ESP
+# has no RHD variant, so RHD cars need no special handling here.
 #
 # In production this file is bind-mounted as /config/requirements.yaml and
 # re-read on every analysis — edit it on the host or via /admin (no rebuild).
@@ -102,3 +116,4 @@ modules:
     extract: 'VCU\d{3}0*(\d+)$'     # VCU039021 -> 21
     levels: {"2.0": 20, "2.1": 21, "2.2": 23}
     critical: true
+    marlin_level: 24                # VCU039024 = "VCU 2.4": the car already runs Marlin

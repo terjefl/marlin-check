@@ -64,5 +64,9 @@
   "trim_unknown_note": "Udgaven kunne ikke aflæses fra stelnummeret (VIN), så alle moduler regnes som påkrævede (inklusive den bageste motorstyring).",
   "parse_too_many_pages": "PDF-filen har for mange sider til at være en OLP-diagnoserapport.",
   "error_requirements_unavailable": "Portalens kravfil er ikke tilgængelig lige nu, så rapporter kan ikke analyseres. Administratorerne er underrettet – prøv igen senere.",
-  "result_expired": "Dette resultatlink er udløbet (resultater gemmes i 30 minutter). Upload rapporten igen."
+  "result_expired": "Dette resultatlink er udløbet (resultater gemmes i 30 minutter). Upload rapporten igen.",
+  "verdict_marlin": "Allerede på Marlin",
+  "verdict_marlin_text": "Denne bil kører allerede Marlin (VCU 2.4 eller nyere). Marlin-tjekket gælder ikke for den; tabellen nedenfor er kun til orientering.",
+  "marlin_below_top_note": "Bemærk: Marlin opdaterer ikke alle moduler. Disse moduler ligger stadig under 2.2-niveauet:",
+  "stats_marlin": "Allerede på Marlin"
 }

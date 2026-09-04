@@ -308,6 +308,8 @@ def test_form_roundtrip_from_rendered_html(client):
     assert {m.id: [(v.name, v.pattern, v.levels) for v in m.variants] for m in after.modules} == {
         m.id: [(v.name, v.pattern, v.levels) for v in m.variants] for m in before.modules
     }
+    assert {m.id: m.marlin_level for m in after.modules} == {m.id: m.marlin_level for m in before.modules}
+    assert after.modules[-1].marlin_level == 24  # VCU keeps its Marlin marker through a form save
 
 
 def test_lockout_on_failed_logins_per_ip_and_per_user(client):

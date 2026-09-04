@@ -6,8 +6,9 @@ car's control modules meet the minimum software levels required for the big
 **Marlin** software update.
 
 - Instant per-module result (OK / outdated / missing) and an overall verdict:
-  Marlin-ready, or a "zebra" (mixed versions — needs targeted updates via
-  SW 2.2 first).
+  Marlin-ready, a "zebra" (mixed versions — needs targeted updates via
+  SW 2.2 first), or "already on Marlin" (VCU 2.4 detected; the check does
+  not apply, the page lists what Marlin left on older levels instead).
 - Downloadable PDF report (WeasyPrint), generated in the active language.
 - Optional consent for storage → anonymous fleet statistics (unique VINs,
   version distribution per module). Without consent nothing is stored.
@@ -26,7 +27,8 @@ app/
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
   templates/    Jinja2 templates (base/index/result/stats/privacy/admin/pdf)
   static/       style.css (served with a content-hash cache buster)
-tests/          pytest suite incl. a real OLP report as fixture (PDF + text)
+tests/          pytest suite incl. a real OLP report as fixture (PDF + text) and
+                synthetic reference cars (100% 2.1, full 2.2, two Marlin cars)
 scripts/        hash_password.py — create admin password hashes
 ```
 

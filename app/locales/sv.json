@@ -64,5 +64,9 @@
   "trim_unknown_note": "Utförandet kunde inte läsas ur VIN-numret, så alla moduler räknas som obligatoriska (inklusive den bakre motorstyrenheten).",
   "parse_too_many_pages": "PDF-filen har för många sidor för att vara en OLP-diagnosrapport.",
   "error_requirements_unavailable": "Portalens kravfil är inte tillgänglig just nu, så rapporter kan inte analyseras. Administratörerna är informerade – försök igen senare.",
-  "result_expired": "Den här resultatlänken har gått ut (resultat sparas i 30 minuter). Ladda upp rapporten igen."
+  "result_expired": "Den här resultatlänken har gått ut (resultat sparas i 30 minuter). Ladda upp rapporten igen.",
+  "verdict_marlin": "Redan på Marlin",
+  "verdict_marlin_text": "Den här bilen kör redan Marlin (VCU 2.4 eller nyare). Marlin-kontrollen gäller inte för den; tabellen nedan är endast information.",
+  "marlin_below_top_note": "Obs: Marlin uppdaterar inte alla moduler. Dessa moduler ligger fortfarande under 2.2-nivån:",
+  "stats_marlin": "Redan på Marlin"
 }

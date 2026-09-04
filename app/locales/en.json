@@ -64,5 +64,9 @@
   "trim_unknown_note": "The trim could not be determined from the VIN, so every module is treated as required (including the rear motor controller).",
   "parse_too_many_pages": "The PDF has too many pages to be an OLP diagnostics report.",
   "error_requirements_unavailable": "The portal's requirements file is currently unavailable, so reports cannot be analyzed right now. The administrators have been notified — please try again later.",
-  "result_expired": "This result link has expired (results are kept for 30 minutes). Please upload the report again."
+  "result_expired": "This result link has expired (results are kept for 30 minutes). Please upload the report again.",
+  "verdict_marlin": "Already on Marlin",
+  "verdict_marlin_text": "This car already runs Marlin (VCU 2.4 or newer). The Marlin readiness check does not apply to it; the table below is for information only.",
+  "marlin_below_top_note": "Note: Marlin does not update every module. These modules are still below the 2.2 level:",
+  "stats_marlin": "Already on Marlin"
 }

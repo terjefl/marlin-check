@@ -71,6 +71,8 @@ button:hover, .button:hover { filter: brightness(1.1); }
 .verdict { border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
 .verdict.ready { background: var(--ok-bg); border: 1px solid var(--ok); }
 .verdict.zebra { background: var(--warn-bg); border: 1px solid var(--warn); }
+.verdict.marlin { background: #e8f0fe; border: 1px solid #1a73e8; }
+.stat.info .num { color: #1a73e8; }
 .verdict strong { font-size: 1.1rem; }
 .meta { color: var(--muted); font-size: 0.85rem; }
 

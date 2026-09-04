@@ -280,3 +280,70 @@ def test_ok_below_top_only_lists_modules_with_a_top_level():
     evaluation = evaluate(_report(), with_top)  # VCU039021 -> 21 < 23
     assert [r.requirement.id for r in evaluation.ok_below_top] == ["VCU"]
     assert evaluation.results[0].top_required == 23
+
+
+def _fixture_report(name: str):
+    return parse_report((FIXTURES / name).read_bytes(), name)
+
+
+def test_reference_cars_from_the_fleet():
+    """Module values observed on real consented uploads (Sep 2026), applied to
+    the fixture report: a 100% 2.1 car, a full 2.2 car and two Marlin cars.
+    These pin the verdicts the association saw and agreed with."""
+    requirements = load_requirements(REQUIREMENTS)
+
+    full_21 = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
+    assert full_21.verdict == VERDICT_READY
+    assert all(r.status == OK for r in full_21.results)
+    # Every module exactly at the 2.1 minimum -> all five 2.2-only ECUs are left behind
+    assert {r.requirement.id for r in full_21.ok_below_top} == {"BCM", "ESP", "MCU_F", "MCU_R", "VCU"}
+
+    full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
+    assert full_22.verdict == VERDICT_READY
+    assert full_22.ok_below_top == []
+    assert {r.requirement.id: r.level for r in full_22.results} == {
+        m: "2.2" for m in ["BCM", "ESP", "ECC", "BMS", "MCU_R", "MCU_F", "VCU"]
+    }
+
+
+def test_car_already_on_marlin_gets_marlin_verdict_not_ready():
+    """VCU 24 (= VCU 2.4) only exists on Marlin cars. Such a car must not be
+    told it 'can be updated to Marlin' (or worse, that it is a zebra); it gets
+    the informational 'already on Marlin' verdict and a list of what Marlin
+    left below the 2.2 level."""
+    from app.rules import VERDICT_MARLIN
+
+    requirements = load_requirements(REQUIREMENTS)
+
+    marlin = evaluate(_fixture_report("olp_report_marlin.txt"), requirements)
+    assert marlin.verdict == VERDICT_MARLIN
+    assert marlin.below_top == []
+    by_id = {r.requirement.id: r for r in marlin.results}
+    assert by_id["VCU"].extracted == 24 and by_id["VCU"].requirement.marlin_level == 24
+
+    bcm41 = evaluate(_fixture_report("olp_report_marlin_bcm41.txt"), requirements)
+    assert bcm41.verdict == VERDICT_MARLIN
+    assert [(r.requirement.id, r.extracted, r.top_required) for r in bcm41.below_top] == [("BCM", 41, 42)]
+
+    # A Marlin car with a failing critical module is still "on Marlin", not a zebra
+    report = _fixture_report("olp_report_marlin.txt")
+    report.modules = [m for m in report.modules if m.code != "BMS"]
+    assert evaluate(report, requirements).verdict == VERDICT_MARLIN
+
+    # VCU below the marker -> ordinary readiness logic applies
+    report = _fixture_report("olp_report_marlin.txt")
+    for m in report.modules:
+        if m.code == "VCU":
+            m.supplier_sw = "VCU039023"
+    assert evaluate(report, requirements).verdict == VERDICT_READY
+
+    # Without any marlin_level in the file, no car can be "on Marlin"
+    plain = parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", ""))
+    assert all(m.marlin_level is None for m in plain.modules)
+    assert evaluate(_fixture_report("olp_report_marlin.txt"), plain).verdict == VERDICT_READY
+
+
+def test_marlin_level_must_be_an_integer():
+    with pytest.raises(RequirementsValidationError) as excinfo:
+        parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", "marlin_level: soon"))
+    assert "marlin_level" in str(excinfo.value)
