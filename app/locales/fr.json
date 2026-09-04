@@ -44,7 +44,7 @@
   "stats_empty": "Pas encore de données — les statistiques apparaîtront dès que des membres téléverseront des rapports avec consentement.",
   "privacy_title": "Confidentialité",
   "privacy_text": "Ce portail est géré par des bénévoles pour les membres de la Fisker Owners Association. Lorsque vous téléversez un rapport, il est analysé sur notre serveur et le résultat vous est présenté. Si vous ne cochez PAS la case de consentement, le rapport est traité uniquement en mémoire et rien n'est conservé. Si vous la cochez, nous conservons le fichier du rapport, votre VIN et les versions des modules afin que l'association puisse produire des statistiques agrégées (nombre de voitures uniques, répartition des versions). Les statistiques n'affichent jamais de VIN individuel. Aucune donnée n'est partagée avec des tiers et aucun cookie de suivi n'est utilisé (seulement un cookie mémorisant votre choix de langue). Pour faire supprimer des données conservées, contactez l'association. À chaque téléversement, nous enregistrons aussi une entrée d'utilisation anonyme — pays (via Cloudflare), langue et si la voiture était prête — jamais le VIN, le rapport ni votre adresse IP.",
-  "footer_disclaimer": "Outil communautaire — sans lien avec Fisker Inc. Vérifiez le résultat auprès de l'association avant de planifier des mises à jour.",
+  "footer_disclaimer": "Outil communautaire — sans lien avec Fisker Inc. Les mises à jour sont réalisées par un partenaire de service ; validez le résultat avec lui avant toute mise à jour.",
   "alpha_title": "ALPHA — version de test",
   "alpha_text": "Ce portail est en cours de développement. Les exigences utilisées pour la comparaison sont un brouillon non confirmé : le résultat peut être erroné. Ne prenez pas encore de décisions sur la base de ce rapport.",
   "front_requirements_title": "Quelles exigences sont vérifiées ?",
@@ -147,7 +147,7 @@
     {
       "title": "Ce que la vérification ne dit pas",
       "paragraphs": [
-        "Elle n’évalue ni les versions matérielles, ni les bootloaders, ni l’état de fonctionnement des calculateurs, et elle ne dit pas si une mise à jour réussira, seulement si les prérequis du tableau de l’association sont remplis. Servez-vous du résultat comme base de discussion avec l’association avant de planifier une mise à jour."
+        "Elle n’évalue ni les versions matérielles, ni les bootloaders, ni l’état de fonctionnement des calculateurs, et elle ne dit pas si une mise à jour réussira, seulement si les prérequis du tableau de l’association sont remplis. Les mises à jour sont réalisées par un partenaire de service. Apportez le résultat lorsque vous le contactez, pour qu’il voie quels calculateurs traiter en premier."
       ]
     }
   ]

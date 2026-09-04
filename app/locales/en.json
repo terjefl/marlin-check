@@ -44,7 +44,7 @@
   "stats_empty": "No data yet — statistics appear once members upload reports with consent.",
   "privacy_title": "Privacy",
   "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. If you do NOT tick the consent box, the report is processed in memory only and nothing is stored. If you tick the box, we store the report file, your VIN and the module versions so the association can build aggregated statistics (number of unique cars, version distribution). Statistics never show individual VINs. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have stored data removed, contact the association. For every upload we also record an anonymous usage entry — country (from Cloudflare), language, and whether the car was ready — never the VIN, the report, or your IP address.",
-  "footer_disclaimer": "Community tool — not affiliated with Fisker Inc. Verify results with the association before scheduling updates.",
+  "footer_disclaimer": "Community tool — not affiliated with Fisker Inc. Updates are carried out by a service partner; confirm the result with them before an update is performed.",
   "alpha_title": "ALPHA — test version",
   "alpha_text": "This portal is under development. The requirements it compares against are an unconfirmed draft, so the result may be wrong. Do not make decisions based on this report yet.",
   "front_requirements_title": "Which requirements are checked?",
@@ -147,7 +147,7 @@
     {
       "title": "What the check does not tell you",
       "paragraphs": [
-        "It does not assess hardware versions, bootloaders or whether units are faulty, and it does not say whether an update will succeed, only whether the prerequisites in the association’s table are met. Use the result as the basis for a conversation with the association before scheduling an update."
+        "It does not assess hardware versions, bootloaders or whether units are faulty, and it does not say whether an update will succeed, only whether the prerequisites in the association’s table are met. Updates are carried out by a service partner. Bring the result along when you contact them, so they can see which units need attention first."
       ]
     }
   ]

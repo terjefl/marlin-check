@@ -44,7 +44,7 @@
   "stats_empty": "Noch keine Daten — die Statistik erscheint, sobald Mitglieder Berichte mit Zustimmung hochladen.",
   "privacy_title": "Datenschutz",
   "privacy_text": "Dieses Portal wird von Freiwilligen für Mitglieder der Fisker Owners Association betrieben. Wenn du einen Bericht hochlädst, wird er auf unserem Server analysiert und dir das Ergebnis angezeigt. Wenn du das Zustimmungsfeld NICHT ankreuzt, wird der Bericht nur im Arbeitsspeicher verarbeitet und nichts gespeichert. Kreuzt du es an, speichern wir die Berichtsdatei, deine FIN und die Modulversionen, damit der Verein aggregierte Statistiken erstellen kann (Anzahl einzigartiger Fahrzeuge, Versionsverteilung). Die Statistik zeigt niemals einzelne FINs. Es werden keine Daten an Dritte weitergegeben und keine Tracking-Cookies verwendet (nur ein Cookie für deine Sprachwahl). Zur Löschung gespeicherter Daten wende dich an den Verein. Bei jedem Upload erfassen wir außerdem einen anonymen Nutzungseintrag — Land (von Cloudflare), Sprache und ob das Auto bereit war — niemals die FIN, den Bericht oder deine IP-Adresse.",
-  "footer_disclaimer": "Community-Tool — nicht mit Fisker Inc. verbunden. Bestätige das Ergebnis mit dem Verein, bevor du Updates vereinbarst.",
+  "footer_disclaimer": "Community-Tool — nicht mit Fisker Inc. verbunden. Updates führt ein Servicepartner durch; klären Sie das Ergebnis mit ihm, bevor ein Update durchgeführt wird.",
   "alpha_title": "ALPHA — Testversion",
   "alpha_text": "Dieses Portal befindet sich in der Entwicklung. Die Anforderungen, mit denen verglichen wird, sind ein unbestätigter Entwurf — das Ergebnis kann falsch sein. Triff noch keine Entscheidungen auf Basis dieses Berichts.",
   "front_requirements_title": "Welche Anforderungen werden geprüft?",
@@ -147,7 +147,7 @@
     {
       "title": "Worüber die Prüfung nichts sagt",
       "paragraphs": [
-        "Sie bewertet weder Hardwarestände noch Bootloader oder ob Geräte defekt sind, und sie sagt nicht, ob ein Update gelingen wird, sondern nur, ob die Voraussetzungen der Vereinstabelle erfüllt sind. Nutzen Sie das Ergebnis als Grundlage für ein Gespräch mit dem Verein, bevor Sie ein Update vereinbaren."
+        "Sie bewertet weder Hardwarestände noch Bootloader oder ob Geräte defekt sind, und sie sagt nicht, ob ein Update gelingen wird, sondern nur, ob die Voraussetzungen der Vereinstabelle erfüllt sind. Updates führt ein Servicepartner durch. Nehmen Sie das Ergebnis mit, wenn Sie ihn kontaktieren, damit er sieht, welche Geräte zuerst dran sind."
       ]
     }
   ]

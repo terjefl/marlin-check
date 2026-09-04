@@ -44,7 +44,7 @@
   "stats_empty": "Ingen data endnu — statistikken vises, når medlemmer uploader rapporter med samtykke.",
   "privacy_title": "Privatliv",
   "privacy_text": "Denne portal drives af frivillige for medlemmer af Fisker Owners Association. Når du uploader en rapport, analyseres den på vores server, og resultatet vises for dig. Hvis du IKKE sætter kryds i samtykkefeltet, behandles rapporten kun i hukommelsen, og intet gemmes. Sætter du kryds, gemmer vi rapportfilen, dit VIN og modulversionerne, så foreningen kan lave aggregeret statistik (antal unikke biler, versionsfordeling). Statistikken viser aldrig enkelte VIN. Ingen data deles med tredjepart, og der bruges ingen sporingscookies (kun en cookie, der husker dit sprogvalg). Kontakt foreningen for at få gemte data slettet. For hver upload registrerer vi også en anonym brugstælling — land (fra Cloudflare), sprog og om bilen var klar — aldrig VIN, rapporten eller din IP-adresse.",
-  "footer_disclaimer": "Frivilligt værktøj — ikke tilknyttet Fisker Inc. Bekræft resultatet med foreningen, før du aftaler opdateringer.",
+  "footer_disclaimer": "Frivilligt værktøj — ikke tilknyttet Fisker Inc. Opdateringer udføres af en servicepartner; afklar resultatet med dem, før en opdatering udføres.",
   "alpha_title": "ALFA — testversion",
   "alpha_text": "Denne portal er under udvikling. Kravene, den sammenligner med, er et ubekræftet udkast, så resultatet kan være forkert. Træf ikke beslutninger baseret på denne rapport endnu.",
   "front_requirements_title": "Hvilke krav kontrolleres?",
@@ -147,7 +147,7 @@
     {
       "title": "Hvad tjekket ikke siger noget om",
       "paragraphs": [
-        "Det vurderer ikke hardwareversioner, bootloadere eller om enheder er defekte, og det siger ikke, om en opdatering vil lykkes, kun om forudsætningerne i foreningens tabel er opfyldt. Brug resultatet som grundlag for en samtale med foreningen, før du aftaler opdatering."
+        "Det vurderer ikke hardwareversioner, bootloadere eller om enheder er defekte, og det siger ikke, om en opdatering vil lykkes, kun om forudsætningerne i foreningens tabel er opfyldt. Opdateringer udføres af en servicepartner. Tag resultatet med, når du kontakter dem, så de kan se, hvilke enheder der skal tages først."
       ]
     }
   ]
