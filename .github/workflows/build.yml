@@ -1,4 +1,4 @@
-name: Build and publish image
+name: Build, publish and deploy image
 
 on:
   push:
@@ -42,3 +42,17 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/marlin-check:latest
             ghcr.io/${{ github.repository_owner }}/marlin-check:${{ github.sha }}
+
+  deploy:
+    # Tell Portainer to re-pull :latest and redeploy the `marlin` git stack.
+    # The secret holds the stack's webhook URL (Portainer -> stack -> webhook).
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Portainer stack webhook
+        env:
+          WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then echo "PORTAINER_WEBHOOK_URL not set, skipping"; exit 0; fi
+          curl -fsS -X POST --max-time 120 "$WEBHOOK"
+          echo "webhook accepted"
