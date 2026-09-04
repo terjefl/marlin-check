@@ -1,4 +1,4 @@
-"""Simple multi-user authentication (HTTP Basic) for the admin pages.
+"""Admin credentials and login lockout for the form-based /admin login.
 
 Users live in a YAML file on the host (bind-mounted, read on every call):
 
@@ -7,12 +7,13 @@ Users live in a YAML file on the host (bind-mounted, read on every call):
       styremedlem: pbkdf2_sha256$600000$...
 
 Hashes are created with scripts/hash_password.py. Only hashes are stored —
-never plaintext. Failed attempts are rate limited per IP (10 per 15 min).
+never plaintext. Failed attempts are rate limited per IP AND per username
+(10 per 15 min each). Sessions themselves live in SQLite (see db.py) and are
+managed by the login routes in main.py.
 """
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
 import os
@@ -20,7 +21,7 @@ import time
 from pathlib import Path
 
 import yaml
-from fastapi import HTTPException, Request
+from fastapi import Request
 
 USERS_PATH = Path(os.environ.get("MARLIN_ADMIN_USERS_PATH", "/config/admin_users.yaml"))
 
@@ -37,7 +38,16 @@ PBKDF2_ITERATIONS = 600_000
 MAX_FAILED = 10
 FAILED_WINDOW = 15 * 60
 
+SESSION_COOKIE = "marlin_admin"
+SESSION_IDLE_SECONDS = 8 * 3600       # logged out after 8 h without activity
+SESSION_MAX_SECONDS = 24 * 3600       # ...and after 24 h regardless
+
+# Failed-login timestamps keyed by "ip:<addr>" and "user:<name>"
 _failed_attempts: dict[str, list[float]] = {}
+
+
+class LoginRequired(Exception):
+    """Raised by the admin dependency when no valid session cookie is present."""
 
 
 def hash_password(password: str, salt: bytes | None = None) -> str:
@@ -59,6 +69,11 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
+# Verified against when the username does not exist, so a login attempt costs
+# one PBKDF2 run whether or not the user exists (no user-enumeration timing).
+_DUMMY_HASH = hash_password("dummy")
+
+
 def load_users() -> dict[str, str]:
     if not USERS_PATH.exists():
         return {}
@@ -75,45 +90,36 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _too_many_failures(ip: str) -> bool:
+def _recent_failures(key: str) -> list[float]:
     now = time.time()
-    attempts = [t for t in _failed_attempts.get(ip, []) if t > now - FAILED_WINDOW]
+    attempts = [t for t in _failed_attempts.get(key, []) if t > now - FAILED_WINDOW]
     if attempts:
-        _failed_attempts[ip] = attempts
+        _failed_attempts[key] = attempts
     else:
-        _failed_attempts.pop(ip, None)  # do not keep a key per IP forever
-    return len(attempts) >= MAX_FAILED
+        _failed_attempts.pop(key, None)  # do not keep a key per IP/user forever
+    return attempts
 
 
-def _register_failure(ip: str) -> None:
-    _failed_attempts.setdefault(ip, []).append(time.time())
-
-
-def _unauthorized(detail: str) -> HTTPException:
-    return HTTPException(
-        status_code=401, detail=detail,
-        headers={"WWW-Authenticate": 'Basic realm="marlin-admin", charset="UTF-8"'},
+def is_locked_out(ip: str, username: str) -> bool:
+    return (
+        len(_recent_failures(f"ip:{ip}")) >= MAX_FAILED
+        or len(_recent_failures(f"user:{username}")) >= MAX_FAILED
     )
 
 
-def require_admin(request: Request) -> str:
-    """FastAPI dependency: returns the logged-in username or raises 401/429."""
-    ip = client_ip(request)
-    if _too_many_failures(ip):
-        raise HTTPException(status_code=429, detail="Too many failed login attempts. Try again later.")
+def _register_failure(ip: str, username: str) -> None:
+    now = time.time()
+    _failed_attempts.setdefault(f"ip:{ip}", []).append(now)
+    if username:
+        _failed_attempts.setdefault(f"user:{username}", []).append(now)
 
-    header = request.headers.get("authorization", "")
-    if not header.lower().startswith("basic "):
-        raise _unauthorized("Authentication required")
-    try:
-        username, _, password = base64.b64decode(header[6:]).decode("utf-8").partition(":")
-    except Exception:
-        raise _unauthorized("Invalid authorization header")
 
+def authenticate(username: str, password: str, ip: str) -> bool:
+    """True if the credentials are valid. Records a failure otherwise. Callers
+    must check `is_locked_out` first."""
     stored = load_users().get(username)
-    # Always run a hash verification so timing does not reveal whether the user exists
-    dummy = hash_password("dummy") if stored is None else stored
-    if stored is None or not verify_password(password, dummy):
-        _register_failure(ip)
-        raise _unauthorized("Invalid username or password")
-    return username
+    ok = verify_password(password, stored if stored is not None else _DUMMY_HASH)
+    if stored is None or not ok:
+        _register_failure(ip, username)
+        return False
+    return True

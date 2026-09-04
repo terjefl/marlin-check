@@ -13,3 +13,5 @@ services:
       - ./dev-config:/config
     environment:
       TZ: Europe/Oslo
+      # Local dev runs over plain http, so the admin session cookie must not be Secure
+      MARLIN_COOKIE_SECURE: "0"

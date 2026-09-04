@@ -1,4 +1,4 @@
-# Users for the admin page (/admin) — HTTP Basic login.
+# Users for the admin page (/admin) — form login at /admin/login.
 # Only password hashes are stored. Create a hash with:
 #     python3 scripts/hash_password.py
 # and paste it below. The file is read on every request, so changes take

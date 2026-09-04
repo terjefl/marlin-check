@@ -126,3 +126,6 @@ button.danger { background: var(--warn); }
 .usagegrid h3 { margin: 0.2rem 0 0.5rem; }
 .auditentry { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.5rem; }
 pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding: 0.6rem; border-radius: 6px; white-space: pre; }
+
+.adminbar { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.loginbox { max-width: 32rem; }

@@ -11,15 +11,17 @@ import secrets
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, Request, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from . import auth
 from . import db as db_module
-from .auth import client_ip, require_admin
+from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
 from .rules import (
@@ -37,6 +39,10 @@ REQUIREMENTS_PATH = Path(
 )
 
 RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
+# The admin session cookie is marked Secure unless explicitly disabled (local
+# dev over plain http). Behind the Cloudflare tunnel the origin only sees http,
+# so this cannot be derived from the request.
+COOKIE_SECURE = os.environ.get("MARLIN_COOKIE_SECURE", "1").strip().lower() not in ("0", "false", "no", "")
 RATE_LIMIT_UPLOADS = 10       # per IP per window
 RATE_LIMIT_WINDOW = 60        # seconds
 
@@ -260,7 +266,103 @@ def privacy(request: Request):
     return _render(request, "privacy.html", {})
 
 
-# --- Admin: web editing of the requirements spec, with audit log -----------
+# --- Admin: form login (SQLite sessions), requirements editing, audit log ---
+
+def _safe_next(value: str | None) -> str:
+    """Only redirect back to admin pages on the same site after login."""
+    if value and value.startswith("/admin") and not value.startswith("//"):
+        return value
+    return "/admin"
+
+
+def require_admin(request: Request) -> str:
+    """FastAPI dependency: username of the logged-in admin, or LoginRequired
+    (turned into a redirect to the login form by the handler below)."""
+    session = database.get_session(
+        request.cookies.get(auth.SESSION_COOKIE, ""),
+        idle_seconds=auth.SESSION_IDLE_SECONDS,
+        max_age_seconds=auth.SESSION_MAX_SECONDS,
+    )
+    if session is None:
+        raise LoginRequired()
+    request.state.csrf = session["csrf_token"]
+    return session["username"]
+
+
+async def require_csrf(request: Request, username: str = Depends(require_admin)) -> str:
+    """For state-changing admin POSTs: the browser must say the request is
+    same-site (Sec-Fetch-Site, unforgeable by other sites) AND the form must
+    carry the session's CSRF token. Cookies are SameSite=Lax as a third layer."""
+    fetch_site = request.headers.get("sec-fetch-site", "")
+    if fetch_site and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request rejected.")
+    form = await request.form()
+    submitted = str(form.get("csrf", ""))
+    if not submitted or not secrets.compare_digest(submitted, request.state.csrf):
+        raise HTTPException(status_code=403, detail="Invalid or missing CSRF token — reload the page and try again.")
+    return username
+
+
+@app.exception_handler(LoginRequired)
+def _login_redirect(request: Request, exc: LoginRequired):
+    return RedirectResponse(
+        f"/admin/login?next={quote(request.url.path, safe='/')}", status_code=303
+    )
+
+
+def _render_login(request: Request, *, error: str = "", next_path: str = "/admin",
+                  status_code: int = 200) -> Response:
+    return _render(request, "admin_login.html",
+                   {"error": error, "next": next_path}, status_code=status_code)
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login_form(request: Request):
+    if database.get_session(
+        request.cookies.get(auth.SESSION_COOKIE, ""),
+        idle_seconds=auth.SESSION_IDLE_SECONDS, max_age_seconds=auth.SESSION_MAX_SECONDS,
+    ):
+        return RedirectResponse(_safe_next(request.query_params.get("next")), status_code=303)
+    return _render_login(request, next_path=_safe_next(request.query_params.get("next")))
+
+
+@app.post("/admin/login")
+async def admin_login(request: Request):
+    form = await request.form()
+    username = str(form.get("username", "")).strip()
+    password = str(form.get("password", ""))
+    next_path = _safe_next(str(form.get("next", "")))
+    ip = client_ip(request)
+
+    if auth.is_locked_out(ip, username):
+        return _render_login(
+            request, error="Too many failed login attempts. Try again in 15 minutes.",
+            next_path=next_path, status_code=429,
+        )
+    # PBKDF2 is CPU-bound: keep it off the event loop
+    if not username or not await run_in_threadpool(auth.authenticate, username, password, ip):
+        return _render_login(
+            request, error="Invalid username or password.", next_path=next_path, status_code=401
+        )
+
+    token, _csrf = database.create_session(username)
+    database.add_audit(username, ip, "login", "")
+    response = RedirectResponse(next_path, status_code=303)
+    response.set_cookie(
+        auth.SESSION_COOKIE, token, max_age=auth.SESSION_MAX_SECONDS, path="/admin",
+        httponly=True, secure=COOKIE_SECURE, samesite="lax",
+    )
+    return response
+
+
+@app.post("/admin/logout")
+async def admin_logout(request: Request, username: str = Depends(require_csrf)):
+    database.delete_session(request.cookies.get(auth.SESSION_COOKIE, ""))
+    database.add_audit(username, client_ip(request), "logout", "")
+    response = RedirectResponse("/admin/login", status_code=303)
+    response.delete_cookie(auth.SESSION_COOKIE, path="/admin")
+    return response
+
 
 def _render_admin(request: Request, username: str, *, message: str = "",
                   error: str = "", yaml_text: str | None = None,
@@ -275,6 +377,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
         "admin.html",
         {
             "username": username,
+            "csrf": request.state.csrf,
             "message": message,
             "error": error,
             "requirements": requirements,
@@ -327,14 +430,14 @@ def admin(request: Request, username: str = Depends(require_admin)):
 
 
 @app.post("/admin/save")
-async def admin_save(request: Request, username: str = Depends(require_admin)):
+async def admin_save(request: Request, username: str = Depends(require_csrf)):
     form = await request.form()
     new_text = str(form.get("yaml_text", "")).replace("\r\n", "\n")
     return _save_requirements(request, username, new_text)
 
 
 @app.post("/admin/save-form")
-async def admin_save_form(request: Request, username: str = Depends(require_admin)):
+async def admin_save_form(request: Request, username: str = Depends(require_csrf)):
     form = await request.form()
     try:
         new_text = _form_to_yaml(form, username)

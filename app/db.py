@@ -6,7 +6,9 @@ Without consent NOTHING is written here — the whole analysis happens in memory
 from __future__ import annotations
 
 import hashlib
+import secrets
 import sqlite3
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,7 +61,21 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action TEXT NOT NULL,
     detail TEXT NOT NULL
 );
+
+-- Admin login sessions (form login). Only a hash of the cookie token is
+-- stored, so a copy of the database does not yield usable sessions.
+CREATE TABLE IF NOT EXISTS admin_sessions (
+    token_hash TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    csrf_token TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    last_seen_at REAL NOT NULL
+);
 """
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 class Database:
@@ -187,6 +203,49 @@ class Database:
                     (limit,),
                 )
             ]
+
+    # --- admin sessions -------------------------------------------------
+
+    def create_session(self, username: str) -> tuple[str, str]:
+        """Creates a login session; returns (cookie token, CSRF token)."""
+        token = secrets.token_urlsafe(32)
+        csrf = secrets.token_urlsafe(32)
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO admin_sessions (token_hash, username, csrf_token,"
+                " created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
+                (_token_hash(token), username, csrf, now, now),
+            )
+        return token, csrf
+
+    def get_session(self, token: str, *, idle_seconds: float, max_age_seconds: float) -> dict | None:
+        """Returns {"username", "csrf_token"} for a live session, else None.
+        Expired sessions (idle or absolute) are deleted on sight."""
+        if not token:
+            return None
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM admin_sessions WHERE last_seen_at < ? OR created_at < ?",
+                (now - idle_seconds, now - max_age_seconds),
+            )
+            row = conn.execute(
+                "SELECT username, csrf_token, last_seen_at FROM admin_sessions WHERE token_hash = ?",
+                (_token_hash(token),),
+            ).fetchone()
+            if row is None:
+                return None
+            if now - row["last_seen_at"] > 60:  # throttle writes to once a minute
+                conn.execute(
+                    "UPDATE admin_sessions SET last_seen_at = ? WHERE token_hash = ?",
+                    (now, _token_hash(token)),
+                )
+        return {"username": row["username"], "csrf_token": row["csrf_token"]}
+
+    def delete_session(self, token: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM admin_sessions WHERE token_hash = ?", (_token_hash(token),))
 
     def stats(self) -> dict:
         """Aggregated statistics. Only the latest submission per VIN counts."""

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Admin login — {{ t('site_title') }}{% endblock %}
+{% block content %}
+<h1>Admin login</h1>
+<p class="meta">Requirements administration for the association. Sign in with the username and password you were given.</p>
+
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<form class="uploadbox loginbox" method="post" action="/admin/login" autocomplete="on">
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="globalfields">
+    <label>Username
+      <input type="text" name="username" autocomplete="username" autofocus required>
+    </label>
+    <label>Password
+      <input type="password" name="password" autocomplete="current-password" required>
+    </label>
+  </div>
+  <button type="submit">Sign in</button>
+</form>
+{% endblock %}

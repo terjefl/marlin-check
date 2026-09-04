@@ -59,18 +59,25 @@ either directly on the host or via the admin page.
 
 Protected page for web editing of the requirements spec:
 
-- **Login:** HTTP Basic with multiple users. Users live in
+- **Login:** form login at `/admin/login` with multiple users. Users live in
   `/config/admin_users.yaml` (see `admin_users.example.yaml`) as
   `username: pbkdf2-hash` — create hashes with
   `python3 scripts/hash_password.py`. Only hashes are stored. Failed attempts
-  are rate limited (10 per 15 min per IP).
+  are rate limited (10 per 15 min per IP and per username). A successful
+  login creates a session in SQLite (`admin_sessions`, only a hash of the
+  cookie token is stored) behind an `HttpOnly; Secure; SameSite=Lax` cookie
+  scoped to `/admin`; sessions expire after 8 h idle or 24 h total, and
+  "Log out" deletes them. State-changing admin requests are protected against
+  CSRF three ways: the SameSite cookie, a `Sec-Fetch-Site` check, and a
+  per-session token in every form. Logins and logouts appear in the activity
+  log.
 - **Editing:** a form editor (one row per module) plus a raw YAML editor as an
   advanced option. Everything is validated (syntax, structure, regexes,
   profiles) before saving; invalid content is rejected without touching the
   file. Saves are atomic and take effect on the next analysis.
 - **Audit log:** every save is logged in SQLite (`audit_log`) with timestamp,
-  username, client IP (from `CF-Connecting-IP`) and a unified diff. The log is
-  shown at the bottom of the admin page.
+  username, client IP (from `CF-Connecting-IP`) and a unified diff; logins and
+  logouts are logged too. The log is shown at the bottom of the admin page.
 - **Usage statistics:** anonymous per-upload counters (country from
   Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
   unique users — see "Privacy model"). Never VIN, report content or raw IP.
@@ -102,6 +109,7 @@ uvicorn app.main:app --reload
 | `MARLIN_UPLOADS_DIR` | `/data/uploads` | Stored report files (only with consent) |
 | `MARLIN_REQUIREMENTS_PATH` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | Admin users (PBKDF2 hashes) |
+| `MARLIN_COOKIE_SECURE` | `1` | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
 | `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). `X-Forwarded-For` is never used because Cloudflare appends to a client-supplied value. Set to empty to use the socket address when no proxy is in front. |
 
 ## Build and deploy

@@ -3,13 +3,20 @@
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <h1>Requirements administration</h1>
-<p class="meta">Logged in as <strong>{{ username }}</strong>. Changes are validated before saving, take effect on the next analysis, and are logged with username, IP and diff.</p>
+<div class="meta adminbar">
+  <span>Logged in as <strong>{{ username }}</strong>. Changes are validated before saving, take effect on the next analysis, and are logged with username, IP and diff.</span>
+  <form method="post" action="/admin/logout">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="small secondary">Log out</button>
+  </form>
+</div>
 
 {% if message %}<div class="alert">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
 
 {% if requirements %}
 <form method="post" action="/admin/save-form">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="globalfields">
     <label>Requirements version (name of this revision)
       <input type="text" name="version" value="{{ requirements.version }}" required>
@@ -88,6 +95,7 @@ function addRow() {
 <details class="extra" {% if not requirements %}open{% endif %}>
   <summary>Advanced: edit the YAML directly</summary>
   <form method="post" action="/admin/save">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
     <textarea name="yaml_text" class="yamledit" rows="26" spellcheck="false">{{ yaml_text }}</textarea>
     <div class="actions">
       <button type="submit">Validate and save YAML</button>
@@ -124,14 +132,14 @@ function addRow() {
 </div>
 {% endif %}
 
-<h2>Change log ({{ audit | length }} most recent)</h2>
+<h2>Activity log ({{ audit | length }} most recent — saves, logins, logouts)</h2>
 {% if not audit %}
 <p class="meta">No changes logged yet.</p>
 {% else %}
 {% for entry in audit %}
 <details class="extra auditentry">
   <summary>{{ entry.ts[:19] }} UTC — <strong>{{ entry.username }}</strong> from {{ entry.ip }} ({{ entry.action }})</summary>
-  <pre class="diff">{{ entry.detail }}</pre>
+  {% if entry.detail %}<pre class="diff">{{ entry.detail }}</pre>{% endif %}
 </details>
 {% endfor %}
 {% endif %}
