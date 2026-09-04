@@ -72,49 +72,86 @@ def test_parse_rejects_garbage():
 
 
 def test_evaluate_zebra_car():
+    """With the corrected V2-workbook numbers, the fixture car (a One trim)
+    meets 2.1 on everything except BCM (21 < 30)."""
     requirements = load_requirements(REQUIREMENTS)
     evaluation = evaluate(_report(), requirements)
 
     by_id = {r.requirement.id: r for r in evaluation.results}
-    # 2.1 level satisfied
     assert by_id["ECC"].status == OK and by_id["ECC"].extracted == 24
     assert by_id["BMS"].status == OK and by_id["BMS"].extracted == 21
-    # 2.0 level — below the 2.1 requirement
-    assert by_id["VCU"].status == OUTDATED
-    assert (by_id["VCU"].extracted, by_id["VCU"].required, by_id["VCU"].level) == (21, 23, "2.0")
-    assert by_id["MCU_F"].status == OUTDATED and by_id["MCU_F"].extracted == 19
-    assert by_id["MCU_R"].status == OUTDATED and by_id["MCU_R"].extracted == 19
-    assert by_id["ESP"].status == OUTDATED
-    assert (by_id["ESP"].extracted, by_id["ESP"].required) == (402, 500)
-    # BCM: assumed extraction gives 21 — below both 2.0 (30) and 2.1 (42)
+    assert by_id["BMS"].variant == "NMC (One/Extreme/Ultra)"
+    assert by_id["VCU"].status == OK and by_id["VCU"].level == "2.1"
+    assert by_id["MCU_F"].status == OK and by_id["MCU_F"].extracted == 19
+    assert by_id["MCU_R"].status == OK
+    assert by_id["ESP"].status == OK
+    assert (by_id["ESP"].extracted, by_id["ESP"].required) == (402, 401)
+    # BCM 21 is below even the 2.0 level (30)
     assert by_id["BCM"].status == OUTDATED
-    assert (by_id["BCM"].extracted, by_id["BCM"].level) == (21, None)
+    assert (by_id["BCM"].extracted, by_id["BCM"].required, by_id["BCM"].level) == (21, 30, None)
 
     assert evaluation.verdict == VERDICT_ZEBRA
-    assert {r.requirement.id for r in evaluation.failing_critical} == {
-        "BCM", "ESP", "VCU", "MCU_F", "MCU_R",
-    }
+    assert {r.requirement.id for r in evaluation.failing_critical} == {"BCM"}
     # 37 modules in the report, 7 with requirements -> 30 without
     assert len(evaluation.extra_modules) == 30
 
 
 def test_evaluate_full_21_car():
-    """Lift all modules to 2.1 level -> directly Marlin-ready."""
+    """Lift BCM (the only failing module) to 2.1 level -> directly Marlin-ready."""
     requirements = load_requirements(REQUIREMENTS)
     report = _report()
-    upgrades = {
-        "BCM": "BCM395042",
-        "ESP": "89324V050000990131",
-        "VCU": "VCU039023",
-        "MCU_F": "MCU5000021",
-        "MCU_R": "MCU5000021",
-    }
     for module in report.modules:
-        if module.code in upgrades:
-            module.supplier_sw = upgrades[module.code]
+        if module.code == "BCM":
+            module.supplier_sw = "BCM395030"
     evaluation = evaluate(report, requirements)
     assert evaluation.verdict == VERDICT_READY
     assert all(r.status == OK for r in evaluation.results)
+
+
+def test_sport_trim_variants_and_missing_rear_mcu():
+    """A Sport (VIN trim letter S): LFP BMS (BMSL39015) is OK via its variant,
+    and the absent MCU_R is not treated as missing."""
+    requirements = load_requirements(REQUIREMENTS)
+    report = _report()
+    report.vin = report.vin[:4] + "S" + report.vin[5:]
+    report.modules = [m for m in report.modules if m.code != "MCU_R"]
+    for module in report.modules:
+        if module.code == "BMS":
+            module.supplier_sw = "BMSL39015"
+        if module.code == "BCM":
+            module.supplier_sw = "BCM395030"
+    evaluation = evaluate(report, requirements)
+
+    by_id = {r.requirement.id: r for r in evaluation.results}
+    assert "MCU_R" not in by_id  # not required for Sport
+    assert by_id["BMS"].status == OK
+    assert (by_id["BMS"].extracted, by_id["BMS"].required) == (15, 15)
+    assert by_id["BMS"].variant == "LFP (Sport)"
+    assert evaluation.verdict == VERDICT_READY
+
+    # ...but on an Extreme (E), a missing MCU_R is still a failure
+    report.vin = report.vin[:4] + "E" + report.vin[5:]
+    evaluation = evaluate(report, requirements)
+    by_id = {r.requirement.id: r for r in evaluation.results}
+    assert by_id["MCU_R"].status == MISSING
+    assert evaluation.verdict == VERDICT_ZEBRA
+
+
+def test_ecc_alternate_format_and_unknown_bms_line():
+    """ECC appears both as "ECC395 24" and "ECC39519"; an unknown BMS software
+    line (neither BMSN nor BMSL) must surface as unparseable, not as a pass."""
+    requirements = load_requirements(REQUIREMENTS)
+    report = _report()
+    for module in report.modules:
+        if module.code == "ECC":
+            module.supplier_sw = "ECC39519"  # 2.0-level, no-space form
+        if module.code == "BMS":
+            module.supplier_sw = "BMSX99999"
+    evaluation = evaluate(report, requirements)
+    by_id = {r.requirement.id: r for r in evaluation.results}
+    assert by_id["ECC"].status == OUTDATED
+    assert (by_id["ECC"].extracted, by_id["ECC"].required) == (19, 24)
+    assert by_id["BMS"].status == "unparseable"
 
 
 def test_missing_critical_module_gives_zebra():

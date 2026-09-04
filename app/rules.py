@@ -40,6 +40,18 @@ _DEFAULT_EXTRACT = re.compile(r"(\d+)\s*$")
 
 
 @dataclass
+class Variant:
+    """A trim/region-specific flavor of a module (e.g. BMS for LFP vs NMC packs,
+    or RHD vs LHD steering). The first variant whose `pattern` matches the
+    Supplier SW Version is used; its extract/levels override the module's."""
+
+    name: str
+    pattern: str                  # regex matched against Supplier SW Version
+    levels: dict[str, int]
+    extract: str | None = None
+
+
+@dataclass
 class Requirement:
     id: str
     match: list[str]              # ECU codes in the report (e.g. ["MCU_R", "MCU_RR"])
@@ -47,6 +59,11 @@ class Requirement:
     extract: str | None = None    # regex with a capture group, applied to Supplier SW Version
     critical: bool = True
     label: str = ""
+    variants: list[Variant] = field(default_factory=list)
+    # Trim letters (5th VIN character: Z/E/U/S = One/Extreme/Ultra/Sport) this
+    # module is required for. None = required for all trims. Example: MCU_R is
+    # absent on the single-motor Sport, so only_trims: [Z, E, U].
+    only_trims: list[str] | None = None
 
 
 @dataclass
@@ -66,6 +83,7 @@ class ModuleResult:
     extracted: int | None = None  # the extracted number
     required: int | None = None   # the target profile minimum level
     level: str | None = None      # highest profile the module satisfies, None = below all
+    variant: str = ""             # name of the matched variant, if any
 
 
 @dataclass
@@ -110,20 +128,36 @@ def parse_requirements_text(text: str) -> RequirementSet:
             f"target_profile {result.target_profile!r} is not in profiles {result.profiles}."
         )
     for module in result.modules:
-        if module.extract:
+        for owner, extract in [(module.id, module.extract)] + [
+            (f"{module.id}/{v.name}", v.extract) for v in module.variants
+        ]:
+            if not extract:
+                continue
             try:
-                pattern = re.compile(module.extract)
+                pattern = re.compile(extract)
             except re.error as exc:
                 raise RequirementsValidationError(
-                    f"Module {module.id}: invalid extract regex: {exc}"
+                    f"Module {owner}: invalid extract regex: {exc}"
                 ) from exc
             if pattern.groups < 1:
                 raise RequirementsValidationError(
-                    f"Module {module.id}: the extract regex has no capture group."
+                    f"Module {owner}: the extract regex has no capture group."
                 )
-        if module.levels.get(result.target_profile) is None:
+        for variant in module.variants:
+            try:
+                re.compile(variant.pattern)
+            except re.error as exc:
+                raise RequirementsValidationError(
+                    f"Module {module.id}/{variant.name}: invalid pattern: {exc}"
+                ) from exc
+        has_base_target = module.levels.get(result.target_profile) is not None
+        variants_cover_target = bool(module.variants) and all(
+            v.levels.get(result.target_profile) is not None for v in module.variants
+        )
+        if not has_base_target and not variants_cover_target:
             raise RequirementsValidationError(
-                f"Module {module.id}: missing level for target_profile {result.target_profile!r}."
+                f"Module {module.id}: missing level for target_profile {result.target_profile!r}"
+                " (set it on the module or on every variant)."
             )
     return result
 
@@ -137,10 +171,20 @@ def _build_requirement_set(raw: dict) -> RequirementSet:
         Requirement(
             id=m["id"],
             match=[s.upper() for s in m.get("match", [m["id"]])],
-            levels={str(k): int(v) for k, v in m["levels"].items()},
+            levels={str(k): int(v) for k, v in m.get("levels", {}).items()},
             extract=m.get("extract"),
             critical=bool(m.get("critical", True)),
             label=m.get("label", m["id"]),
+            variants=[
+                Variant(
+                    name=v["name"],
+                    pattern=v["pattern"],
+                    levels={str(k): int(val) for k, val in v.get("levels", {}).items()},
+                    extract=v.get("extract"),
+                )
+                for v in m.get("variants", [])
+            ],
+            only_trims=[str(t).upper() for t in m["only_trims"]] if m.get("only_trims") else None,
         )
         for m in raw.get("modules", [])
     ]
@@ -152,8 +196,8 @@ def _build_requirement_set(raw: dict) -> RequirementSet:
     )
 
 
-def _extract_number(supplier_sw: str, req: Requirement) -> int | None:
-    pattern = re.compile(req.extract) if req.extract else _DEFAULT_EXTRACT
+def _extract_number(supplier_sw: str, extract: str | None) -> int | None:
+    pattern = re.compile(extract) if extract else _DEFAULT_EXTRACT
     m = pattern.search(supplier_sw)
     if not m:
         return None
@@ -163,37 +207,67 @@ def _extract_number(supplier_sw: str, req: Requirement) -> int | None:
         return None
 
 
-def _profile_level(extracted: int, req: Requirement, profiles: list[str]) -> str | None:
+def _profile_level(extracted: int, levels: dict[str, int], profiles: list[str]) -> str | None:
     """Highest profile (in ascending order) whose requirement is satisfied."""
     level = None
     for profile in profiles:
-        minimum = req.levels.get(profile)
+        minimum = levels.get(profile)
         if minimum is not None and extracted >= minimum:
             level = profile
     return level
+
+
+TRIM_NAMES = {"Z": "One", "E": "Extreme", "U": "Ultra", "S": "Sport"}
+
+
+def vin_trim(vin: str) -> str:
+    """Trim letter from the VIN (5th character): Z/E/U/S = One/Extreme/Ultra/Sport."""
+    return vin[4].upper() if len(vin) > 4 else ""
 
 
 def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
     results: list[ModuleResult] = []
     matched_codes: set[str] = set()
     target = requirements.target_profile
+    trim = vin_trim(report.vin)
 
     for req in requirements.modules:
         reading = next(
             (m for m in report.modules if m.code.upper() in req.match), None
         )
-        required = req.levels.get(target)
         if reading is None:
-            results.append(ModuleResult(requirement=req, status=MISSING, required=required))
+            # A module absent from the report is only a failure if this trim is
+            # supposed to have it (e.g. the single-motor Sport has no MCU_R).
+            if req.only_trims and trim not in req.only_trims:
+                continue
+            results.append(
+                ModuleResult(requirement=req, status=MISSING, required=req.levels.get(target))
+            )
             continue
         matched_codes.add(reading.code.upper())
-        extracted = _extract_number(reading.supplier_sw, req)
+
+        # Variant selection: first variant whose pattern matches the value wins
+        extract_regex = req.extract
+        levels = req.levels
+        variant_name = ""
+        if req.variants:
+            variant = next(
+                (v for v in req.variants if re.search(v.pattern, reading.supplier_sw)),
+                None,
+            )
+            if variant is not None:
+                extract_regex = variant.extract or extract_regex
+                levels = variant.levels or levels
+                variant_name = variant.name
+
+        required = levels.get(target)
+        extracted = _extract_number(reading.supplier_sw, extract_regex)
         if extracted is None or required is None:
             results.append(
                 ModuleResult(
                     requirement=req, status=UNPARSEABLE,
                     raw_name=reading.raw_name, version=reading.supplier_sw,
-                    required=required,
+                    required=required, variant=variant_name,
                 )
             )
             continue
@@ -205,7 +279,8 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 version=reading.supplier_sw,
                 extracted=extracted,
                 required=required,
-                level=_profile_level(extracted, req, requirements.profiles),
+                level=_profile_level(extracted, levels, requirements.profiles),
+                variant=variant_name,
             )
         )
 

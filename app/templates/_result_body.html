@@ -29,7 +29,7 @@
     <tr class="status-{{ r.status }}">
       <td>{{ r.requirement.label }}{% if r.requirement.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
       <td>≥ {{ r.required if r.required is not none else '—' }}</td>
-      <td>{{ r.version or '—' }}{% if r.extracted is not none %} <span class="crit">→ {{ r.extracted }}</span>{% endif %}</td>
+      <td>{{ r.version or '—' }}{% if r.extracted is not none %} <span class="crit">→ {{ r.extracted }}</span>{% endif %}{% if r.variant %} <span class="crit">[{{ r.variant }}]</span>{% endif %}</td>
       <td>
         {% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}
         {% if r.level and r.status != 'ok' %} <span class="crit">({{ t('level_label') }} {{ r.level }})</span>{% endif %}

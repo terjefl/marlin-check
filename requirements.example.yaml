@@ -1,86 +1,100 @@
 # Marlin requirements: minimum levels per ECU and software profile.
 #
-# Source: the association's table shown at the 2026-08 members' web meeting
-# ("MINIMUM ECU requirements your car has to meet to have your 2.1 car be able
-# to call it a 100% 2.1 — otherwise it is a Zebra"). DRAFT — the numbers must
-# be confirmed once the association publishes the official requirements.
+# Sources (in the association's "V2 WIP ECU COMPARISON FOR MARLIN" workbook,
+# received 2026-08-30):
+#   - "Addl Source 1" (Jens Guthe, Sep 2026): the corrected minimum table with
+#     three columns (2.0 / 2.1 / 2.2). NOTE: the earlier web-meeting screenshot
+#     had its columns shifted — its "2.0/2.1" were actually these 2.1/2.2.
+#   - The MAIN sheet: full OLP reference reports per OS version, which confirm
+#     the numbers independently and reveal trim/region VARIANTS.
 #
 # Model:
 #   - A car is "100% 2.1" when ALL of the modules below reach at least the
 #     2.1 level. It can then be updated directly to Marlin
 #     (target_profile: "2.1").
 #   - Otherwise the car is a "zebra" and must first go via SW 2.2 / targeted
-#     module updates. (According to the meeting, updating via 2.2 also lifts
-#     ECC, ESP, PVIU and iBooster.)
+#     module updates.
 #
 # The number being compared is extracted from the report field
-# "Supplier SW Version" using `extract` (regex, capture group 1) — the field's
-# shape differs per supplier, e.g. BCM395021, "ECC395 24", MCU5000019,
-# 89324V040200990131.
+# "Supplier SW Version" using `extract` (regex, capture group 1).
 #
-# ASSUMPTIONS THAT MUST BE CONFIRMED WITH THE ASSOCIATION (marked [?] below):
-#   - BCM: table requirement 30/42 vs "BCM395021" — we assume the suffix (21)
-#     is the level, same pattern as BMS/VCU. That makes BCM=21 < 30, i.e.
-#     below even 2.0!
-#   - ESP: table requirement 400/500 vs "89324V040200990131" — we assume the
-#     digits after the V are the level (0402 -> 402).
+# Variants: some ECUs have legitimate parallel software lines. `variants` picks
+# the first entry whose `pattern` matches the value and uses its own
+# extract/levels (e.g. BMS: BMSN* = NMC pack in One/Extreme/Ultra,
+# BMSL* = LFP pack in Sport).
+#
+# Trims: the 5th VIN character encodes the trim (Z/E/U/S = One/Extreme/Ultra/
+# Sport). `only_trims` limits a requirement to those trims — the single-motor
+# Sport has no rear motor controller, so MCU_R is only required for Z/E/U.
+#
+# STILL DRAFT ("WIP" workbook): to be confirmed by the association. Known open
+# points: ECC at 2.2 is 24 in the table but 25 in the 2.2 reference car; the
+# Sport/LFP BMS level (15) and the RHD variants are read from reference
+# reports, not from an official minimum table.
 #
 # In production this file is bind-mounted as /config/requirements.yaml and
-# re-read on every analysis — it can be edited on the host (or via /admin)
-# without a rebuild.
+# re-read on every analysis — edit it on the host or via /admin (no rebuild).
 
-version: "2026-08-web-meeting-draft"
+version: "2026-09-workbook-v2-draft"
 
 # Profiles in ascending order, and the profile required for direct Marlin
-profiles: ["2.0", "2.1"]
+profiles: ["2.0", "2.1", "2.2"]
 target_profile: "2.1"
 
 modules:
   - id: BCM
     label: Body Control Module
     match: [BCM]
-    extract: 'BCM\d{3}0*(\d+)$'     # BCM395021 -> 21  [?]
-    levels: {"2.0": 30, "2.1": 42}
+    extract: 'BCM\d{3}0*(\d+)$'     # BCM395030 -> 30
+    levels: {"2.0": 30, "2.1": 30, "2.2": 42}
     critical: true
 
   - id: ESP
     label: Electronic Stability Program
     match: [ESP]
-    extract: 'V0*(\d{3})'           # 89324V040200990131 -> 402  [?]
-    levels: {"2.0": 400, "2.1": 500}
+    extract: 'V0*(\d{3})'           # 89324V040100960131 -> 401; 89819V0501... -> 501
+    levels: {"2.0": 401, "2.1": 401, "2.2": 501}
     critical: true
 
   - id: ECC
     label: Electrical Climate Controller
     match: [ECC]
-    extract: '(\d+)\s*$'            # "ECC395 24" -> 24
-    levels: {"2.0": 24, "2.1": 24}
+    extract: 'ECC395\s*0*(\d+)$'    # both "ECC395 24" and "ECC39519" forms
+    levels: {"2.0": 19, "2.1": 24, "2.2": 24}
     critical: true
 
   - id: BMS
     label: Battery Management System
     match: [BMS]
-    extract: 'BMSN\d{3}0*(\d+)$'    # BMSN39021 -> 21
-    levels: {"2.0": 19, "2.1": 21}
     critical: true
+    variants:
+      - name: NMC (One/Extreme/Ultra)
+        pattern: '^BMSN'
+        extract: 'BMSN\d{3}0*(\d+)$'   # BMSN39021 -> 21
+        levels: {"2.0": 21, "2.1": 21, "2.2": 21}
+      - name: LFP (Sport)
+        pattern: '^BMSL'
+        extract: 'BMSL\d{3}0*(\d+)$'   # BMSL39015 -> 15
+        levels: {"2.0": 15, "2.1": 15, "2.2": 15}
 
   - id: MCU_R
     label: Motor Control Unit Rear
-    match: [MCU_R, MCU_RR]          # the report uses MCU_R, the meeting table MCU_RR
+    match: [MCU_R, MCU_RR]          # the report uses MCU_R, the tables MCU_RR
     extract: 'MCU\d{5}0*(\d+)$'     # MCU5000019 -> 19
-    levels: {"2.0": 19, "2.1": 21}
+    levels: {"2.0": 17, "2.1": 19, "2.2": 21}
     critical: true
+    only_trims: [Z, E, U]           # the single-motor Sport has no rear MCU
 
   - id: MCU_F
     label: Motor Control Unit Front
     match: [MCU_F, MCU_FR]
     extract: 'MCU\d{5}0*(\d+)$'
-    levels: {"2.0": 19, "2.1": 21}
+    levels: {"2.0": 17, "2.1": 19, "2.2": 21}
     critical: true
 
   - id: VCU
     label: Vehicle Control Unit
     match: [VCU]
     extract: 'VCU\d{3}0*(\d+)$'     # VCU039021 -> 21
-    levels: {"2.0": 21, "2.1": 23}
+    levels: {"2.0": 20, "2.1": 21, "2.2": 23}
     critical: true

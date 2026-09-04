@@ -82,7 +82,7 @@ def test_save_rejects_invalid_yaml_without_writing(client):
 def test_save_writes_and_audits_with_user_ip_and_diff(client):
     c, main = client
     new_text = main.REQUIREMENTS_PATH.read_text().replace(
-        'version: "2026-08-web-meeting-draft"', 'version: "2026-09-official"'
+        'version: "2026-09-workbook-v2-draft"', 'version: "2026-09-official"'
     )
     response = c.post(
         "/admin/save",
@@ -99,7 +99,7 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
     assert entry["username"] == "styremedlem"
     assert entry["ip"] == "203.0.113.7"
     assert entry["action"] == "requirements_update"
-    assert '-version: "2026-08-web-meeting-draft"' in entry["detail"]
+    assert '-version: "2026-09-workbook-v2-draft"' in entry["detail"]
     assert '+version: "2026-09-official"' in entry["detail"]
 
     # The analysis uses the new requirements version immediately
@@ -192,6 +192,11 @@ def test_form_roundtrip_from_rendered_html(client):
     assert {m.id: m.levels for m in after.modules} == {m.id: m.levels for m in before.modules}
     assert {m.id: m.extract for m in after.modules} == {m.id: m.extract for m in before.modules}
     assert after.target_profile == before.target_profile
+    # variants/only_trims survive a form save (the form cannot edit them)
+    assert {m.id: m.only_trims for m in after.modules} == {m.id: m.only_trims for m in before.modules}
+    assert {m.id: [(v.name, v.pattern, v.levels) for v in m.variants] for m in after.modules} == {
+        m.id: [(v.name, v.pattern, v.levels) for v in m.variants] for m in before.modules
+    }
 
 
 def test_rate_limit_on_failed_logins(client):

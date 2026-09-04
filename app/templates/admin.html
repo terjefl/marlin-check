@@ -58,7 +58,7 @@
     <button type="button" class="small secondary button" onclick="addRow()">+ Add module</button>
     &nbsp; "Match ECU codes" is matched against the codes in the report (e.g. <code>MCU_R, MCU_RR</code>).
     The extract regex must have one capture group catching the number to compare; empty = last number in the string.
-    An empty level field = no requirement for that profile (the required profile must have a level).
+    An empty level field = no requirement for that profile (the required profile must have a level). Modules with <code>variants</code> or <code>only_trims</code> (e.g. BMS, MCU_R) keep those settings on form save — edit them in the YAML editor below.
   </p>
   <div class="actions">
     <button type="submit">Validate and save</button>
