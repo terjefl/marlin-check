@@ -68,5 +68,6 @@
   "verdict_marlin": "Allerede på Marlin",
   "verdict_marlin_text": "Denne bil kører allerede Marlin (VCU 2.4 eller nyere). Marlin-tjekket gælder ikke for den; tabellen nedenfor er kun til orientering.",
   "marlin_below_top_note": "Bemærk: Marlin opdaterer ikke alle moduler. Disse moduler ligger stadig under 2.2-niveauet:",
-  "stats_marlin": "Allerede på Marlin"
+  "stats_marlin": "Allerede på Marlin",
+  "status_empty": "Versionsfeltet er tomt i rapporten"
 }

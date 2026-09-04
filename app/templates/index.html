@@ -41,7 +41,7 @@
       <tr>
         <td>{{ m.label }}{% if m.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
         <td class="mono">{{ m.match | join(', ') }}</td>
-        <td>≥ {{ m.levels.get(requirements.target_profile, '—') }}</td>
+        <td>{% if m.levels.get(requirements.target_profile) is not none %}≥ {{ m.levels[requirements.target_profile] }}{% elif m.variants %}{% for v in m.variants %}{% if not loop.first %} / {% endif %}≥ {{ v.levels.get(requirements.target_profile, '—') }} <span class="crit">[{{ v.name }}]</span>{% endfor %}{% else %}—{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -24,13 +24,14 @@ from pathlib import Path
 
 import yaml
 
-from .parser import ParsedReport
+from .parser import ModuleReading, ParsedReport
 
 # Module status
 OK = "ok"                    # level >= target profile requirement
 OUTDATED = "outdated"        # level < target profile requirement
 MISSING = "missing"          # required module not found in the report
 UNPARSEABLE = "unparseable"  # could not extract a number from Supplier SW Version
+EMPTY = "empty"              # the Supplier SW Version field was blank in the report
 
 VERDICT_READY = "ready"
 VERDICT_ZEBRA = "zebra"
@@ -44,7 +45,9 @@ _DEFAULT_EXTRACT = re.compile(r"(\d+)\s*$")
 class Variant:
     """A trim/region-specific flavor of a module (e.g. BMS for LFP vs NMC packs,
     or RHD vs LHD steering). The first variant whose `pattern` matches the
-    Supplier SW Version is used; its extract/levels override the module's."""
+    Supplier SW Version is used; its extract replaces the module's and its
+    levels override the module's profile by profile (a profile the variant
+    does not mention keeps the module's level)."""
 
     name: str
     pattern: str                  # regex matched against Supplier SW Version
@@ -80,6 +83,7 @@ class RequirementSet:
     target_profile: str           # profile required for direct Marlin (currently "2.1")
     profiles: list[str]           # ascending order, e.g. ["2.0", "2.1"]
     modules: list[Requirement]
+    notes: str = ""               # free text: sources and open points, kept by the admin form
 
 
 @dataclass
@@ -301,11 +305,15 @@ def _build_requirement_set(raw: dict) -> RequirementSet:
                 ),
             )
         )
+    notes = raw.get("notes", "")
+    if notes is not None and not isinstance(notes, str):
+        raise RequirementsValidationError("`notes` must be a string.")
     return RequirementSet(
         version=str(raw.get("version", "unknown")),
         target_profile=str(raw.get("target_profile")),
         profiles=_str_list(raw.get("profiles"), "`profiles`"),
         modules=modules,
+        notes=notes or "",
     )
 
 
@@ -340,7 +348,7 @@ def vin_trim(vin: str) -> str:
 
 def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
     results: list[ModuleResult] = []
-    matched_codes: set[str] = set()
+    matched: list[ModuleReading] = []  # the exact readings used, so duplicates stay visible
     target = requirements.target_profile
     trim = vin_trim(report.vin)
     trim_known = trim in TRIM_NAMES
@@ -360,7 +368,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 ModuleResult(requirement=req, status=MISSING, required=req.levels.get(target))
             )
             continue
-        matched_codes.add(reading.code.upper())
+        matched.append(reading)
 
         # Variant selection: first variant whose pattern matches the value wins
         extract_regex = req.extract
@@ -373,11 +381,19 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
             )
             if variant is not None:
                 extract_regex = variant.extract or extract_regex
-                levels = variant.levels or levels
+                levels = {**req.levels, **variant.levels}
                 variant_name = variant.name
 
         required = levels.get(target)
         top_required = levels.get(requirements.profiles[-1]) if requirements.profiles else None
+        if not reading.supplier_sw.strip():
+            results.append(
+                ModuleResult(
+                    requirement=req, status=EMPTY, raw_name=reading.raw_name,
+                    required=required, variant=variant_name,
+                )
+            )
+            continue
         extracted = _extract_number(reading.supplier_sw, extract_regex)
         if extracted is None or required is None:
             results.append(
@@ -402,7 +418,9 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
             )
         )
 
-    extra = [m for m in report.modules if m.code.upper() not in matched_codes]
+    # Everything not used above, including a second block with an already
+    # matched code (a duplicate would otherwise vanish from the page silently)
+    extra = [m for m in report.modules if not any(m is used for used in matched)]
     failing_critical = [r for r in results if r.status != OK and r.requirement.critical]
 
     # Already on Marlin: every marker module reached its marlin_level

@@ -1,6 +1,7 @@
 """End-to-end tests of the web flow, including the consent logic."""
 
 import importlib
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -202,7 +203,7 @@ def test_usage_ip_hash_is_keyed_and_not_reversible(client):
     """The daily unique-user hash must not be a plain sha256 over a public salt
     (that is brute-forceable over the IPv4 space)."""
     import hashlib
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     c, main = client
     c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
@@ -212,7 +213,7 @@ def test_usage_ip_hash_is_keyed_and_not_reversible(client):
     stored = sqlite3.connect(main.database.path).execute(
         "SELECT ip_hash FROM usage_events"
     ).fetchone()[0]
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
     public_scheme = hashlib.sha256(f"marlin-{day}|203.0.113.77".encode()).hexdigest()[:16]
     assert stored != public_scheme
     assert len(stored) == 16
@@ -287,7 +288,7 @@ def client_with_config(tmp_path, monkeypatch):
 
 
 def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_config):
-    c, main, path = client_with_config
+    c, _main, path = client_with_config
     good = path.read_text()
     assert c.get("/healthz").status_code == 200
     assert "2026-09-workbook-v2-draft" in _upload(c, consent=False).text
@@ -383,3 +384,33 @@ def test_marlin_car_result_page_and_statistics(client):
     page = c.get("/stats?lang=en")
     assert "Already on Marlin" in page.text
     assert main.database.usage_stats()["outcomes"] == {"marlin": 1}
+
+
+def test_security_headers_and_no_inline_scripts(client):
+    c, _ = client
+    for path in ("/", "/stats", "/privacy"):
+        response = c.get(path)
+        assert response.status_code == 200
+        csp = response.headers["content-security-policy"]
+        assert "script-src 'self'" in csp and "frame-ancestors 'none'" in csp
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers["x-frame-options"] == "DENY"
+        assert "onclick=" not in response.text and "onchange=" not in response.text
+        assert "<script>" not in response.text  # only /static/app.js
+    assert c.get("/static/app.js").status_code == 200
+
+
+def test_front_page_shows_variant_levels_for_bms(client):
+    c, _ = client
+    page = c.get("/?lang=en").text
+    assert "≥ —" not in page
+    assert "≥ 21 <span class=\"crit\">[NMC (One/Extreme/Ultra)]</span> / ≥ 15 <span class=\"crit\">[LFP (Sport)]</span>" in page
+
+
+def test_empty_version_field_is_explained_on_the_result_page(client):
+    c, _ = client
+    text = FIXTURE.read_text().replace("Supplier SW Version: VCU039021", "Supplier SW Version:")
+    response = c.post("/analyze?lang=en", files={"report": ("r.txt", text.encode(), "text/plain")})
+    assert response.status_code == 200
+    assert "Version field empty in the report" in response.text
+    assert "Version not recognized" not in response.text

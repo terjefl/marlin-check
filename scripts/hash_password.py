@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from app.auth import hash_password  # noqa: E402
+from app.auth import hash_password
 
 if __name__ == "__main__":
     password = getpass.getpass("Password: ")

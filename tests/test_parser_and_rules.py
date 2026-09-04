@@ -347,3 +347,53 @@ def test_marlin_level_must_be_an_integer():
     with pytest.raises(RequirementsValidationError) as excinfo:
         parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", "marlin_level: soon"))
     assert "marlin_level" in str(excinfo.value)
+
+
+def test_duplicate_ecu_block_stays_visible_as_extra_module():
+    """Two blocks with the same code: the first is evaluated, the second must
+    show up under 'other modules' instead of vanishing."""
+    import copy
+
+    requirements = load_requirements(REQUIREMENTS)
+    report = _report()
+    bms = next(m for m in report.modules if m.code == "BMS")
+    duplicate = copy.copy(bms)
+    duplicate.supplier_sw = "BMSN39001"
+    report.modules.append(duplicate)
+    evaluation = evaluate(report, requirements)
+    assert next(r for r in evaluation.results if r.requirement.id == "BMS").version == "BMSN39021"
+    assert any(m.supplier_sw == "BMSN39001" for m in evaluation.extra_modules)
+    assert len(evaluation.extra_modules) == 31
+
+
+def test_variant_levels_override_per_profile_not_wholesale():
+    """A variant that only sets the 2.2 level keeps the module's 2.1 level;
+    it used to replace the whole mapping and produce 'unparseable'."""
+    text = _MINIMAL.replace(
+        'levels: {"2.0": 20, "2.1": 21}',
+        'levels: {"2.0": 20, "2.1": 21}\n    variants:\n      - name: X\n        pattern: "^VCU"\n        levels: {"2.2": 23}',
+    )
+    requirements = parse_requirements_text(text)
+    result = evaluate(_report(), requirements).results[0]
+    assert (result.variant, result.status, result.required, result.top_required) == ("X", OK, 21, 23)
+
+
+def test_empty_supplier_version_gets_its_own_status():
+    from app.rules import EMPTY
+
+    requirements = load_requirements(REQUIREMENTS)
+    report = _report()
+    for m in report.modules:
+        if m.code == "VCU":
+            m.supplier_sw = "   "
+    evaluation = evaluate(report, requirements)
+    vcu = next(r for r in evaluation.results if r.requirement.id == "VCU")
+    assert vcu.status == EMPTY and vcu.required == 21
+    assert evaluation.verdict == VERDICT_ZEBRA
+
+
+def test_notes_field_is_parsed_and_must_be_a_string():
+    requirements = load_requirements(REQUIREMENTS)
+    assert "Open points" in requirements.notes
+    with pytest.raises(RequirementsValidationError):
+        parse_requirements_text(_MINIMAL + "notes: [not, a, string]\n")

@@ -34,22 +34,35 @@
 # Verified against two Marlin cars (Sep 2026): VCU 24, MCU 21, BMS 21, ESP 501,
 # ECC 25, BCM 42 (one car had BCM 41 — open question).
 #
-# STILL DRAFT ("WIP" workbook): to be confirmed by the association. Known open
-# points: ECC at 2.2 is 24 in the table, but all three 2.2/Marlin reference
-# cars show 25; one Marlin car has BCM 41 where the table says 42; the
-# Sport/LFP BMS level (15) is read from a Sport reference report
-# ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
-# table, so it may not be the true 2.1 minimum for the LFP line.
-#
-# Right-hand drive: the workbook shows RHD-specific software lines only on
-# EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
-# (ADAS039021 vs ADAS039020). None of these is a required module, and ESP
-# has no RHD variant, so RHD cars need no special handling here.
+# Sources and open points live in the `notes:` field below (not in comments):
+# the admin form editor regenerates this file and drops comments, but keeps
+# `notes` — so provenance survives a form save.
 #
 # In production this file is bind-mounted as /config/requirements.yaml and
 # re-read on every analysis — edit it on the host or via /admin (no rebuild).
 
 version: "2026-09-workbook-v2-draft"
+
+notes: |
+  STILL DRAFT ("V2 WIP ECU COMPARISON FOR MARLIN" workbook, received 2026-08-30).
+  To be confirmed by the association.
+
+  Open points:
+  - ECC at 2.2 is 24 in the table, but all three 2.2/Marlin reference cars
+    (Sep 2026 uploads) show 25.
+  - One Marlin car has BCM 41 where the table says 42 for 2.2.
+  - The Sport/LFP BMS level (15) is read from a Sport reference report
+    ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
+    table, so it may not be the true 2.1 minimum for the LFP line.
+
+  Verified against uploads (Sep 2026): a car exactly at the 2.1 minimums,
+  a full 2.2 car (VCU 23, MCU 21, BCM 42, ESP 501, ECC 25), and two Marlin
+  cars (VCU 24, otherwise as 2.2).
+
+  Right-hand drive: the workbook shows RHD-specific software lines only on
+  EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
+  (ADAS039021 vs ADAS039020). None of these is a required module, and ESP has
+  no RHD variant, so RHD cars need no special handling.
 
 # Profiles in ascending order, and the profile required for direct Marlin.
 # NOTE: the result-page texts in the portal (7 languages) are written for

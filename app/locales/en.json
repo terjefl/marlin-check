@@ -68,5 +68,6 @@
   "verdict_marlin": "Already on Marlin",
   "verdict_marlin_text": "This car already runs Marlin (VCU 2.4 or newer). The Marlin readiness check does not apply to it; the table below is for information only.",
   "marlin_below_top_note": "Note: Marlin does not update every module. These modules are still below the 2.2 level:",
-  "stats_marlin": "Already on Marlin"
+  "stats_marlin": "Already on Marlin",
+  "status_empty": "Version field empty in the report"
 }

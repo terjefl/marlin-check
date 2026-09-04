@@ -45,10 +45,12 @@ The parser reads the OLP "ECU Software Version Report" PDF (or its extracted
 text): sections (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS), ECU blocks
 (`CODE - Name`) and the **Supplier SW Version** field, which is what gets
 compared against the requirements. The requirements model is profile-based
-(2.0/2.1): a car that reaches the 2.1 level on all required modules is
+(2.0/2.1/2.2): a car that reaches the 2.1 level on all required modules is
 "100% 2.1" and can be updated directly to Marlin; otherwise it is a "zebra"
-and must go via SW 2.2 / targeted updates first. See the comments in
-`requirements.example.yaml` for the assumptions.
+and must go via SW 2.2 / targeted updates first. A car whose VCU is already
+at the Marlin level (VCU 2.4) gets the informational "already on Marlin"
+verdict instead. See the comments and the `notes:` field in
+`requirements.example.yaml` for the sources and open points.
 
 ## The requirements file
 
@@ -112,21 +114,27 @@ extraction with an anonymized VIN). For the admin page, copy
 Without Docker (PDF download requires pango/cairo installed):
 
 ```bash
-pip install -r requirements.txt pytest httpx
+pip install -r requirements.lock pytest httpx ruff
+ruff check .
 pytest
 uvicorn app.main:app --reload
 ```
 
+`requirements.txt` is the loose dependency spec; `requirements.lock` is the
+fully pinned, hash-checked set that the Docker image and CI install. After
+changing `requirements.txt`, regenerate the lock with
+`uv pip compile requirements.txt --python-version 3.12 --python-platform linux --generate-hashes -o requirements.lock`.
+
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `MARLIN_DATA_DIR` | `/data` | SQLite database (`marlin.sqlite3`) |
-| `MARLIN_UPLOADS_DIR` | `/data/uploads` | Stored report files (only with consent) |
-| `MARLIN_REQUIREMENTS_PATH` | `/config/requirements.yaml` | The requirements file |
-| `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | Admin users (PBKDF2 hashes) |
-| `MARLIN_COOKIE_SECURE` | `1` | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
-| `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). `X-Forwarded-For` is never used because Cloudflare appends to a client-supplied value. Set to empty to use the socket address when no proxy is in front. |
+| Variable | Default in code | In the Docker image | Description |
+|---|---|---|---|
+| `MARLIN_DATA_DIR` | `./data` | `/data` | SQLite database (`marlin.sqlite3`) |
+| `MARLIN_UPLOADS_DIR` | `./data/uploads` | `/data/uploads` | Stored report files (only with consent) |
+| `MARLIN_REQUIREMENTS_PATH` | `./requirements.example.yaml` | `/config/requirements.yaml` | The requirements file |
+| `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
+| `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
+| `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | same | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). `X-Forwarded-For` is never used because Cloudflare appends to a client-supplied value. Set to empty to use the socket address when no proxy is in front. |
 
 ## Build and deploy
 

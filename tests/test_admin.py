@@ -277,7 +277,7 @@ def test_form_roundtrip_from_rendered_html(client):
     _login(c, "terje", "hemmelig123")
     page = c.get("/admin").text
     form_html = re_module.search(
-        r'<form method="post" action="/admin/save-form">(.*?)</form>', page, re_module.S
+        r'<form method="post" action="/admin/save-form">(.*?)</form>', page, re_module.DOTALL
     ).group(1)
     fields: list[tuple[str, str]] = []
     for m in re_module.finditer(r"<input([^>]*)>", form_html):
@@ -358,3 +358,23 @@ def test_admin_warns_when_profiles_deviate_from_the_texts(client):
     assert response.status_code == 200 and "Saved" in response.text
     assert "result-page texts (all 7 languages) are written for target profile 2.1" in response.text
     assert "This file has target 2.2 and highest 2.2" in response.text
+
+
+def test_form_save_keeps_notes_and_admin_shows_them(client):
+    c, main = client
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin").text
+    assert "Open points" in page  # notes rendered
+    assert 'data-profiles="[&#34;2.0&#34;' in page  # profiles handed to app.js, no inline script
+    form = {
+        "csrf": _csrf(page),
+        "version": "notes-test", "profiles": "2.0, 2.1, 2.2", "target_profile": "2.1",
+        "mod-0-id": "VCU", "mod-0-match": "VCU", "mod-0-level-2.1": "21",
+    }
+    response = c.post("/admin/save-form", data=form)
+    assert response.status_code == 200 and "Saved" in response.text
+    from app.rules import load_requirements
+
+    saved = load_requirements(main.REQUIREMENTS_PATH)
+    assert "Open points" in saved.notes
+    assert saved.modules[0].marlin_level == 24  # per-module extras still preserved too

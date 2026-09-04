@@ -10,7 +10,7 @@ import os
 import re
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -25,8 +25,8 @@ from . import db as db_module
 from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
-from .rules import RequirementSet
 from .rules import (
+    RequirementSet,
     RequirementsValidationError,
     evaluate,
     load_requirements,
@@ -130,7 +130,7 @@ _usage_key: dict = {"day": "", "key": b""}
 def _usage_ip_hash(request: Request) -> str:
     """Daily-rotating keyed hash of the client IP — counts unique users per day
     without storing anything that can be linked back to the IP."""
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
     if _usage_key["day"] != day:
         _usage_key["day"], _usage_key["key"] = day, secrets.token_bytes(32)
     return hmac.new(_usage_key["key"], client_ip(request).encode(), hashlib.sha256).hexdigest()[:16]
@@ -147,7 +147,7 @@ def _log_usage(request: Request, lang: str, outcome: str, consent: bool) -> None
             consent=consent,
             ip_hash=_usage_ip_hash(request),
         )
-    except Exception:  # usage stats must never break the analysis itself
+    except Exception:
         log.exception("Could not record usage event")
 
 
@@ -186,6 +186,26 @@ def healthz():
             status_code=503,
         )
     return {"status": "ok"}
+
+
+# Content-Security-Policy: everything is served from this origin; the only
+# inline pieces are the favicon data: URI and the width styles on the stats
+# bars. All JavaScript lives in /static so no inline scripts are allowed.
+_CSP = (
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; "
+    "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+)
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("Content-Security-Policy", _CSP)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    return response
 
 
 @app.middleware("http")
@@ -271,7 +291,7 @@ async def analyze(request: Request, report: UploadFile):
         UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         safe_ext = ".pdf" if data[:5] == b"%PDF-" else ".txt"
         stored_filename = (
-            f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+            f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
             f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}{safe_ext}"
         )
         (UPLOADS_DIR / stored_filename).write_bytes(data)
@@ -325,7 +345,7 @@ def download_pdf(request: Request, token: str):
         t=translator(lang),
         report=cached["report"],
         evaluation=cached["evaluation"],
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
     from weasyprint import HTML  # heavy import — deferred until the first PDF
 
@@ -564,7 +584,7 @@ def _form_to_yaml(form, username: str) -> str:
 
     modules = []
     indices = sorted(
-        {m.group(1) for k in form.keys() if (m := re.match(r"mod-(\d+)-id$", k))},
+        {m.group(1) for k in form if (m := re.match(r"mod-(\d+)-id$", k))},
         key=int,
     )
     for i in indices:
@@ -580,7 +600,7 @@ def _form_to_yaml(form, username: str) -> str:
                 except ValueError:
                     raise ValueError(
                         f"module {module_id}: level for {profile} must be an integer (got {value!r})."
-                    )
+                    ) from None
         module: dict = {
             "id": module_id,
             "label": str(form.get(f"mod-{i}-label", "")).strip() or module_id,
@@ -598,13 +618,15 @@ def _form_to_yaml(form, username: str) -> str:
     # over from the current file so a form save does not silently drop them.
     try:
         current_raw = yaml_module.safe_load(REQUIREMENTS_PATH.read_text(encoding="utf-8")) or {}
+        if not isinstance(current_raw, dict):
+            current_raw = {}
         preserved = {
             m["id"]: {k: m[k] for k in ("variants", "only_trims", "marlin_level") if k in m}
             for m in current_raw.get("modules", [])
             if isinstance(m, dict) and "id" in m
         }
-    except Exception:
-        preserved = {}
+    except (OSError, yaml_module.YAMLError):
+        current_raw, preserved = {}, {}
     for module in modules:
         extras = preserved.get(module["id"], {})
         module.update(extras)
@@ -616,12 +638,16 @@ def _form_to_yaml(form, username: str) -> str:
         "version": str(form.get("version", "")).strip(),
         "profiles": profiles,
         "target_profile": str(form.get("target_profile", "")).strip(),
-        "modules": modules,
     }
+    # Free-text `notes` (sources, open points) are carried over untouched:
+    # YAML comments do not survive a form save, this field does.
+    if isinstance(current_raw.get("notes"), str) and current_raw["notes"].strip():
+        data["notes"] = current_raw["notes"]
+    data["modules"] = modules
     header = (
         "# Marlin requirements: minimum levels per ECU and software profile.\n"
-        "# NOTE: `variants`, `only_trims` and `marlin_level` are preserved from the previous file\n"
-        "# (the form editor cannot change them — use the YAML editor for that).\n"
+        "# NOTE: `variants`, `only_trims`, `marlin_level` and `notes` are preserved from the\n"
+        "# previous file (the form editor cannot change them — use the YAML editor for that).\n"
         f"# Generated by the admin form on the Marlin portal (user: {username}).\n"
         "# Field documentation: requirements.example.yaml in the source repo\n"
         "# https://github.com/terjefl/marlin-check\n\n"

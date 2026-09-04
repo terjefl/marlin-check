@@ -15,6 +15,13 @@
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
 {% if profile_warning %}<div class="alert error">⚠️ {{ profile_warning }}</div>{% endif %}
 
+{% if requirements and requirements.notes %}
+<details class="extra" open>
+  <summary>Notes (sources and open points — edit in the YAML editor, field <code>notes</code>)</summary>
+  <pre class="diff">{{ requirements.notes }}</pre>
+</details>
+{% endif %}
+
 {% if requirements %}
 <form method="post" action="/admin/save-form">
   <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -56,14 +63,14 @@
         <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"></td>
         {% endfor %}
         <td class="crit"><input type="checkbox" name="mod-{{ mi }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
-        <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Delete</button></td>
+        <td class="del"><button type="button" class="small danger" data-delete-row>Delete</button></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
   <p class="fieldhelp">
-    <button type="button" class="small secondary button" onclick="addRow()">+ Add module</button>
+    <button type="button" class="small secondary button" id="addrow" data-profiles="{{ requirements.profiles | tojson | forceescape }}">+ Add module</button>
     &nbsp; "Match ECU codes" is matched against the codes in the report (e.g. <code>MCU_R, MCU_RR</code>).
     The extract regex must have one capture group catching the number to compare; empty = last number in the string.
     An empty level field = no requirement for that profile (the required profile must have a level). Modules with <code>variants</code>, <code>only_trims</code> or <code>marlin_level</code> (e.g. BMS, MCU_R, VCU) keep those settings on form save — edit them in the YAML editor below.
@@ -74,23 +81,6 @@
   </div>
 </form>
 
-<script>
-function addRow() {
-  const tbody = document.querySelector('#modtable tbody');
-  const idx = Date.now() % 1000000;  // unique index; the server does not care about numeric order
-  const profiles = {{ requirements.profiles | tojson }};
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input class="mono" type="text" name="mod-${idx}-id"></td>
-    <td><input type="text" name="mod-${idx}-label"></td>
-    <td><input class="mono" type="text" name="mod-${idx}-match"></td>
-    <td><input class="mono" type="text" name="mod-${idx}-extract" placeholder="(last number in the string)"></td>
-    ${profiles.map(p => `<td class="num"><input type="number" name="mod-${idx}-level-${p}"></td>`).join('')}
-    <td class="crit"><input type="checkbox" name="mod-${idx}-critical" value="yes" checked></td>
-    <td class="del"><button type="button" class="small danger" onclick="this.closest('tr').remove()">Delete</button></td>`;
-  tbody.appendChild(tr);
-}
-</script>
 {% endif %}
 
 <details class="extra" {% if not requirements %}open{% endif %}>

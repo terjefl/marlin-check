@@ -68,5 +68,6 @@
   "verdict_marlin": "Ya en Marlin",
   "verdict_marlin_text": "Este coche ya funciona con Marlin (VCU 2.4 o posterior). La comprobación de preparación para Marlin no se aplica; la tabla siguiente es solo informativa.",
   "marlin_below_top_note": "Nota: Marlin no actualiza todos los módulos. Estos módulos siguen por debajo del nivel 2.2:",
-  "stats_marlin": "Ya en Marlin"
+  "stats_marlin": "Ya en Marlin",
+  "status_empty": "Campo de versión vacío en el informe"
 }

@@ -68,5 +68,6 @@
   "verdict_marlin": "Bereits auf Marlin",
   "verdict_marlin_text": "Dieses Fahrzeug läuft bereits mit Marlin (VCU 2.4 oder neuer). Die Marlin-Bereitschaftsprüfung gilt dafür nicht; die Tabelle unten dient nur der Information.",
   "marlin_below_top_note": "Hinweis: Marlin aktualisiert nicht alle Module. Diese Module liegen weiterhin unter dem 2.2-Stand:",
-  "stats_marlin": "Bereits auf Marlin"
+  "stats_marlin": "Bereits auf Marlin",
+  "status_empty": "Versionsfeld im Bericht leer"
 }

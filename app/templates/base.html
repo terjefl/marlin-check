@@ -18,7 +18,7 @@
     </nav>
     <form class="langpicker" method="get" action="">
       <label class="visually-hidden" for="lang">{{ t('lang_label') }}</label>
-      <select id="lang" name="lang" onchange="this.form.submit()">
+      <select id="lang" name="lang" data-autosubmit>
         {% for code, name in languages.items() %}
         <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
         {% endfor %}
@@ -35,5 +35,6 @@
 <footer>
   <div class="wrap">{{ t('footer_disclaimer') }}</div>
 </footer>
+<script src="/static/app.js?v={{ static_v }}"></script>
 </body>
 </html>

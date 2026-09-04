@@ -10,7 +10,9 @@ import secrets
 import sqlite3
 import time
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .parser import ParsedReport
@@ -83,14 +85,21 @@ class Database:
         self.path = str(path)
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as conn:
+            conn.execute("PRAGMA journal_mode=WAL")  # persistent; set once per database file
             conn.executescript(SCHEMA)
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """One connection per unit of work: commits on success, rolls back on
+        error, and always closes (sqlite3's own context manager only commits)."""
         conn = sqlite3.connect(self.path, timeout=10)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.row_factory = sqlite3.Row
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def store_submission(
         self,
@@ -110,7 +119,7 @@ class Database:
                     submission_id,
                     report.vin.upper(),
                     vin_hash,
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                     evaluation.verdict,
                     evaluation.requirements_version,
                     lang,
@@ -134,7 +143,7 @@ class Database:
 
     def add_usage(self, *, country: str, ui_lang: str, browser_lang: str,
                   outcome: str, consent: bool, ip_hash: str) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO usage_events (ts, day, country, ui_lang, browser_lang,"
@@ -190,7 +199,7 @@ class Database:
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO audit_log (ts, username, ip, action, detail) VALUES (?, ?, ?, ?, ?)",
-                (datetime.now(timezone.utc).isoformat(), username, ip, action, detail),
+                (datetime.now(UTC).isoformat(), username, ip, action, detail),
             )
 
     def audit_entries(self, limit: int = 50) -> list[dict]:

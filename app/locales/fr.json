@@ -68,5 +68,6 @@
   "verdict_marlin": "Déjà sous Marlin",
   "verdict_marlin_text": "Cette voiture fonctionne déjà sous Marlin (VCU 2.4 ou plus récent). La vérification de compatibilité Marlin ne s'applique pas ; le tableau ci-dessous est fourni à titre indicatif.",
   "marlin_below_top_note": "Remarque : Marlin ne met pas à jour tous les modules. Ces modules restent en dessous du niveau 2.2 :",
-  "stats_marlin": "Déjà sous Marlin"
+  "stats_marlin": "Déjà sous Marlin",
+  "status_empty": "Champ de version vide dans le rapport"
 }

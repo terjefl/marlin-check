@@ -1,0 +1,11 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+extend-exclude = ["data", "dev-data", "dev-config"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]
+ignore = ["E501"]  # long lines in templates-as-strings and comments are tolerated
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

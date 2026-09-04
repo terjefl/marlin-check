@@ -4,3 +4,4 @@ __pycache__/
 dev-data/
 data/
 .venv/
+dev-config/

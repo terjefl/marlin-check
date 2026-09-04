@@ -9,8 +9,10 @@ RUN apt-get update \
 
 WORKDIR /srv/marlin
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements.lock is generated from requirements.txt with
+#   uv pip compile requirements.txt --python-version 3.12 --python-platform linux --generate-hashes -o requirements.lock
+COPY requirements.lock .
+RUN pip install --no-cache-dir --require-hashes -r requirements.lock
 
 COPY app/ ./app/
 COPY requirements.example.yaml .
