@@ -92,7 +92,17 @@ class Evaluation:
     requirements_version: str
     target_profile: str
     results: list[ModuleResult]
+    profiles: list[str] = field(default_factory=list)
     extra_modules: list = field(default_factory=list)  # report modules without a requirement
+
+    @property
+    def ok_below_top(self) -> list[ModuleResult]:
+        """Modules that meet the target profile but not the highest profile —
+        i.e. what a direct 2.1→Marlin update will leave behind (2.2-only ECUs)."""
+        if not self.profiles:
+            return []
+        top = self.profiles[-1]
+        return [r for r in self.results if r.status == OK and r.level != top]
 
     @property
     def failing(self) -> list[ModuleResult]:
@@ -291,5 +301,6 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
         requirements_version=requirements.version,
         target_profile=target,
         results=results,
+        profiles=list(requirements.profiles),
         extra_modules=extra,
     )

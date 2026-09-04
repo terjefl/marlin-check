@@ -10,6 +10,8 @@
 <div class="alert error">{{ error }}</div>
 {% endif %}
 
+<div class="alert">⚠️ {{ t('vcu24_notice') }}</div>
+
 <form class="uploadbox" method="post" action="/analyze" enctype="multipart/form-data">
   <label class="filelabel" for="report">{{ t('upload_label') }}</label>
   <input type="file" id="report" name="report" required

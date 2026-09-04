@@ -18,7 +18,7 @@
   "verdict_ready": "Listo para Marlin",
   "verdict_zebra": "No listo — se necesitan actualizaciones específicas",
   "verdict_ready_text": "Todos los módulos requeridos alcanzan los niveles mínimos de 2.1 — tu coche es un 100 % 2.1 completo y puede actualizarse directamente a Marlin.",
-  "verdict_zebra_text": "Uno o más módulos requeridos están por debajo del nivel mínimo de 2.1, por lo que el coche está en un estado mixto (\"cebra\"). Primero debe actualizarse a SW 2.2 / recibir actualizaciones específicas de estos módulos antes de poder instalar Marlin:",
+  "verdict_zebra_text": "Tu coche es una cebra y no podrá actualizarse correctamente a Marlin — las versiones de software de las ECU listadas abajo pertenecen a SW 2.1, 2.0 o incluso anteriores. Haz que realicen la actualización 2.2 completa antes de intentar la actualización Marlin:",
   "requirements_version_label": "Versión de los requisitos",
   "target_profile_label": "Perfil requerido",
   "level_label": "en el nivel",
@@ -56,5 +56,7 @@
   "parse_unreadable": "El archivo no es un PDF ni texto legible.",
   "parse_no_header": "No se encontró el encabezado «ECU Software Version Report» — ¿es esto un informe de diagnóstico exportado desde OceanLink Pro?",
   "parse_no_vin": "No se encontró ninguna línea VIN (VIN: <17 caracteres>) en el informe.",
-  "parse_no_modules": "No se encontraron secciones de ECU en el informe."
+  "parse_no_modules": "No se encontraron secciones de ECU en el informe.",
+  "ready_22_note": "Nota: una actualización directa de 2.1 a Marlin seguirá SIN actualizar las ECU de abajo — pertenecen a la actualización 2.2 (una llamada a revisión obligatoria de la NHTSA en Norteamérica que la mayoría de los coches europeos nunca recibió). El coche funcionará bien, pero estas ECU se quedarán en sus versiones actuales:",
+  "vcu24_notice": "Aviso para todos los que ya tienen VCU 2.4 (por Marlin u otra vía): asegúrate de informar a quien actualice tu coche a 2.2 de que YA la tienes. No hay vuelta atrás ni compatibilidad de VCU 2.4 (Marlin) a VCU 2.3 (2.2/2.2.3)."
 }

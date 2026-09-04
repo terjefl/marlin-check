@@ -106,6 +106,12 @@ def test_evaluate_full_21_car():
     evaluation = evaluate(report, requirements)
     assert evaluation.verdict == VERDICT_READY
     assert all(r.status == OK for r in evaluation.results)
+    # Jens' note 2: a direct 2.1->Marlin jump leaves the 2.2-only ECUs behind.
+    # This car meets 2.1 but not 2.2 on BCM (30<42), ESP (402<501),
+    # MCU_F/R (19<21) and VCU (21<23); ECC (24) and BMS (21) already meet 2.2.
+    assert {r.requirement.id for r in evaluation.ok_below_top} == {
+        "BCM", "ESP", "MCU_F", "MCU_R", "VCU",
+    }
 
 
 def test_sport_trim_variants_and_missing_rear_mcu():

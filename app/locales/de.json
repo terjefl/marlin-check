@@ -18,7 +18,7 @@
   "verdict_ready": "Marlin-bereit",
   "verdict_zebra": "Nicht bereit — gezielte Updates erforderlich",
   "verdict_ready_text": "Alle erforderlichen Module erreichen die 2.1-Mindestniveaus — dein Auto ist ein volles 100%-2.1-Auto und kann direkt auf Marlin aktualisiert werden.",
-  "verdict_zebra_text": "Ein oder mehrere erforderliche Module liegen unter dem 2.1-Mindestniveau, das Auto ist also in einem gemischten Zustand (\"Zebra\"). Es muss zuerst auf SW 2.2 aktualisiert werden / gezielte Updates dieser Module erhalten, bevor Marlin installiert werden kann:",
+  "verdict_zebra_text": "Dein Auto ist ein Zebra und lässt sich nicht erfolgreich auf Marlin aktualisieren — die unten gelisteten ECU-Softwareversionen gehören zu SW 2.1, 2.0 oder noch älter. Lass zuerst das vollständige 2.2-Update durchführen, bevor du das Marlin-Update versuchst:",
   "requirements_version_label": "Anforderungsversion",
   "target_profile_label": "Erforderliches Profil",
   "level_label": "auf Niveau",
@@ -56,5 +56,7 @@
   "parse_unreadable": "Die Datei ist weder ein PDF noch lesbarer Text.",
   "parse_no_header": "Die Überschrift „ECU Software Version Report“ wurde nicht gefunden — ist dies ein aus OceanLink Pro exportierter Diagnosebericht?",
   "parse_no_vin": "Keine VIN-Zeile (VIN: <17 Zeichen>) im Bericht gefunden.",
-  "parse_no_modules": "Keine ECU-Abschnitte im Bericht gefunden."
+  "parse_no_modules": "Keine ECU-Abschnitte im Bericht gefunden.",
+  "ready_22_note": "Hinweis: Ein direktes Update von 2.1 auf Marlin aktualisiert die unten gelisteten ECUs trotzdem NICHT — sie gehören zum 2.2-Update (ein verpflichtender NHTSA-Rückruf in Nordamerika, den die meisten europäischen Autos nie erhielten). Das Auto funktioniert einwandfrei, aber diese ECUs bleiben auf ihren aktuellen Versionen:",
+  "vcu24_notice": "Hinweis für alle, die bereits VCU 2.4 haben (durch Marlin oder anderweitig): Informiere unbedingt jeden, der dein Auto auf 2.2 aktualisiert, dass du sie BEREITS hast. Es gibt keinen Weg zurück und keine Kompatibilität von VCU 2.4 (Marlin) zu VCU 2.3 (2.2/2.2.3)."
 }

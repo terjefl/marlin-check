@@ -11,6 +11,14 @@
     {% endfor %}
   </ul>
   {% endif %}
+  {% if evaluation.verdict == 'ready' and evaluation.ok_below_top %}
+  <p>{{ t('ready_22_note') }}</p>
+  <ul>
+    {% for r in evaluation.ok_below_top %}
+    <li>{{ r.requirement.label }} — {{ r.version }}{% if r.level %} ({{ t('level_label') }} {{ r.level }}){% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 </div>
 
 <p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }} · {{ t('target_profile_label') }}: {{ evaluation.target_profile }}</p>

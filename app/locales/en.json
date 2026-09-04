@@ -18,7 +18,7 @@
   "verdict_ready": "Marlin ready",
   "verdict_zebra": "Not ready — targeted updates needed",
   "verdict_ready_text": "All required modules meet the 2.1 minimum levels — your car is a full 100% 2.1 car and can be updated directly to Marlin.",
-  "verdict_zebra_text": "One or more required modules are below the 2.1 minimum level, so the car is in a mixed (\"zebra\") state. It must first be updated to SW 2.2 / get targeted updates of these modules before Marlin can be installed:",
+  "verdict_zebra_text": "Your car is a zebra and will not successfully be updated to Marlin — the ECU software versions listed below belong to SW 2.1, 2.0 or even earlier. Have the full 2.2 SW update performed before attempting the Marlin update:",
   "requirements_version_label": "Requirements version",
   "target_profile_label": "Required profile",
   "level_label": "at level",
@@ -56,5 +56,7 @@
   "parse_unreadable": "The file is neither a PDF nor readable text.",
   "parse_no_header": "Could not find the heading “ECU Software Version Report” — is this a diagnostics report exported from OceanLink Pro?",
   "parse_no_vin": "No VIN line (VIN: <17 characters>) was found in the report.",
-  "parse_no_modules": "No ECU sections were found in the report."
+  "parse_no_modules": "No ECU sections were found in the report.",
+  "ready_22_note": "Note: a direct update from 2.1 to Marlin will still NOT update the ECUs below — they belong to the 2.2 update (a mandatory NHTSA recall in North America that most European cars never received). The car will function fine, but these ECUs will remain on their current versions:",
+  "vcu24_notice": "Notice for all users already on VCU 2.4 (from Marlin or otherwise): make sure you inform anyone updating your car to 2.2 that you ALREADY have it. There is no backward option or compatibility from VCU 2.4 (Marlin) to VCU 2.3 (2.2/2.2.3)."
 }

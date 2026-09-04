@@ -18,7 +18,7 @@
   "verdict_ready": "Marlin-redo",
   "verdict_zebra": "Inte redo — riktade uppdateringar krävs",
   "verdict_ready_text": "Alla obligatoriska moduler uppfyller 2.1-mininivåerna — din bil är en full 100 % 2.1-bil och kan uppdateras direkt till Marlin.",
-  "verdict_zebra_text": "En eller flera obligatoriska moduler ligger under 2.1-mininivån, så bilen är i blandat läge (\"zebra\"). Den måste först uppdateras till SW 2.2 / få riktade uppdateringar av dessa moduler innan Marlin kan installeras:",
+  "verdict_zebra_text": "Din bil är en zebra och kommer inte att kunna uppdateras till Marlin — ECU-mjukvaruversionerna nedan tillhör SW 2.1, 2.0 eller ännu äldre. Låt utföra den fullständiga 2.2-uppdateringen innan du försöker med Marlin-uppdateringen:",
   "requirements_version_label": "Kravversion",
   "target_profile_label": "Krävd profil",
   "level_label": "på nivå",
@@ -56,5 +56,7 @@
   "parse_unreadable": "Filen är varken PDF eller läsbar text.",
   "parse_no_header": "Hittade inte rubriken ”ECU Software Version Report” — är detta en diagnosrapport exporterad från OceanLink Pro?",
   "parse_no_vin": "Ingen VIN-rad (VIN: <17 tecken>) hittades i rapporten.",
-  "parse_no_modules": "Inga ECU-avsnitt hittades i rapporten."
+  "parse_no_modules": "Inga ECU-avsnitt hittades i rapporten.",
+  "ready_22_note": "Obs: en direkt uppdatering från 2.1 till Marlin uppdaterar ändå INTE ECU:erna nedan — de tillhör 2.2-uppdateringen (en obligatorisk NHTSA-återkallelse i Nordamerika som de flesta europeiska bilar aldrig fick). Bilen fungerar fint, men dessa ECU:er blir kvar på sina nuvarande versioner:",
+  "vcu24_notice": "Meddelande till alla som redan har VCU 2.4 (från Marlin eller på annat sätt): se till att informera den som ska uppdatera din bil till 2.2 om att du REDAN har den. Det finns ingen väg tillbaka eller kompatibilitet från VCU 2.4 (Marlin) till VCU 2.3 (2.2/2.2.3)."
 }
