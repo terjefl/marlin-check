@@ -69,5 +69,86 @@
   "verdict_marlin_text": "Dieses Fahrzeug läuft bereits mit Marlin (VCU 2.4 oder neuer). Die Marlin-Bereitschaftsprüfung gilt dafür nicht; die Tabelle unten dient nur der Information.",
   "marlin_below_top_note": "Hinweis: Marlin aktualisiert nicht alle Module. Diese Module liegen weiterhin unter dem 2.2-Stand:",
   "stats_marlin": "Bereits auf Marlin",
-  "status_empty": "Versionsfeld im Bericht leer"
+  "status_empty": "Versionsfeld im Bericht leer",
+  "nav_how": "So funktioniert es",
+  "how_title": "So funktioniert die Prüfung",
+  "how_intro": "Diese Seite beschreibt, wie das Portal Ihren Bericht auswertet und zu seinem Urteil kommt, welche Entscheidungen dabei getroffen wurden und worüber es keine Aussage macht.",
+  "how_sections": [
+    {
+      "title": "Was wir aus dem Bericht lesen",
+      "paragraphs": [
+        "Der hochgeladene Bericht ist ein „ECU Software Version Report“, exportiert aus der OceanLink-Pro-App. Er listet die Steuergeräte des Fahrzeugs, gruppiert nach Bereich (Karosserie, Infotainment, Antrieb, Fahrwerk und Fahrerassistenz), und nennt für jedes Gerät vier Versionsfelder. Ein typischer Bericht enthält rund 37 Geräte.",
+        "Die Prüfung verwendet eines dieser Felder: Supplier SW Version. Es gibt an, welchen Softwarestand der Zulieferer für das jeweilige Gerät geliefert hat, und in diesem Stand sind die Mindestanforderungen des Vereins für Marlin ausgedrückt. Die übrigen Felder werden angezeigt, zählen aber nicht. Zusätzlich wird die VIN gelesen, aus einem einzigen Grund: Das fünfte Zeichen verrät die Ausstattungsvariante, und die entscheidet, welche Geräte vorhanden sein müssen.",
+        "Ein Bericht wird nur akzeptiert, wenn er ein echter OLP-Export mit Überschrift, VIN und mindestens einem Steuergerät ist. Fehlt etwas, wird die Datei mit einer Erklärung abgelehnt, statt dass das Fahrzeug ein Urteil auf wackliger Grundlage erhält."
+      ]
+    },
+    {
+      "title": "Vom Text zur Zahl",
+      "paragraphs": [
+        "Supplier SW Version ist ein Text, der je nach Zulieferer anders aussieht, etwa „BCM395030“, „VCU039021“, „ECC395 24“ oder eine lange Zeichenkette beim Stabilitätssystem. Die Anforderungen sind dagegen Zahlen. Die Prüfung hat deshalb pro Gerät ein Muster, das festlegt, welcher Teil des Textes Produktcode und welcher Teil der eigentliche Stand ist. Beim BCM sind es die letzten Ziffern, beim ESP drei Ziffern nach dem Buchstaben V, und so weiter.",
+        "Die Muster wurden aus echten Berichten von Fahrzeugen auf 2.1, 2.2 und Marlin abgeleitet, und alle bisher gesehenen Werte werden korrekt gelesen. Taucht ein Text auf, den das Muster nicht erkennt, erhält das Gerät den Status „Version nicht erkannt“, und das gilt als nicht bestanden. Das ist eine bewusste Entscheidung: Die Prüfung darf niemals „bereit“ sagen aufgrund von etwas, das sie nicht versteht. Ist das Feld im Bericht leer, erhält das Gerät einen eigenen Status, der genau das sagt, damit Sie sehen, dass das Problem im Bericht liegt und nicht im Fahrzeug."
+      ]
+    },
+    {
+      "title": "Die Anforderungen und das Urteil",
+      "paragraphs": [
+        "Die Anforderungen sind nach den Softwareständen 2.0, 2.1 und 2.2 gegliedert. Für jedes der sieben Geräte, die für Marlin zählen, Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Klimasteuerung (ECC), Batteriemanagement (BMS), Motorsteuerung vorn und hinten (MCU) und Fahrzeugsteuerung (VCU), nennt die Tabelle den Mindeststand, den ein Gerät haben muss, um zum jeweiligen Softwarestand zu gehören.",
+        "Die Marlin-Regel ist einfach: Ein Fahrzeug kann direkt aktualisiert werden, wenn alle sieben Geräte auf dem Stand 2.1 oder höher sind, ein sogenanntes „100-%-2.1-Fahrzeug“. Liegt auch nur eines darunter, ist das Fahrzeug ein Zebra, ein Fahrzeug mit gemischten Ständen, und muss zuerst das vollständige 2.2-Update erhalten, das alle Geräte gemeinsam anhebt. Die Ergebnisseite zeigt, welche Geräte durchfallen, welche Zahl gelesen wurde und welche gefordert ist.",
+        "Für bereite Fahrzeuge zeigt die Prüfung zusätzlich, welche Geräte unter dem Stand 2.2 liegen. Ein direktes Update von 2.1 auf Marlin lässt diese nämlich unberührt; sie bleiben, wo sie sind. Das Fahrzeug funktioniert, aber man sollte es wissen."
+      ]
+    },
+    {
+      "title": "Ein Gerät, zwei Softwarelinien",
+      "paragraphs": [
+        "Das Batteriemanagement gibt es in zwei unabhängigen Varianten, weil die Fahrzeuge zwei verschiedene Batterietypen haben: eine Linie für den NMC-Akku in One, Extreme und Ultra und eine für den LFP-Akku im Sport. Die Zahlen der beiden Linien lassen sich nicht miteinander vergleichen, daher hat jede Linie ihr eigenes Minimum. Die Prüfung wählt die Linie danach, was der Bericht tatsächlich zeigt, nicht danach, welches Fahrzeug sie vermutet. Beginnt der Text mit etwas anderem als den beiden bekannten Linien, gilt das Gerät als „nicht erkannt“."
+      ]
+    },
+    {
+      "title": "Die Ausstattung aus der VIN",
+      "paragraphs": [
+        "Das fünfte Zeichen der VIN nennt die Ausstattungsvariante: Z für One, E für Extreme, U für Ultra und S für Sport. Die Prüfung nutzt es für genau eine Sache. Der Sport hat nur einen Motor und damit keine hintere Motorsteuerung, deshalb gilt es beim Sport nicht als Fehler, wenn dieses Gerät fehlt. Bei allen anderen Varianten ist eine fehlende hintere Motorsteuerung ein Fehler.",
+        "Ist das fünfte Zeichen ein Buchstabe, den die Prüfung nicht kennt, werden alle Geräte verlangt. Sie rät niemals in die Richtung, dass etwas fehlen darf. Die Variante wird auf der Ergebnisseite angezeigt, damit Sie reagieren können, falls sie falsch ist."
+      ]
+    },
+    {
+      "title": "Fahrzeuge, die bereits Marlin haben",
+      "paragraphs": [
+        "Marlin bringt die Fahrzeugsteuerung (VCU) auf Stand 24, „VCU 2.4“, den kein früherer Softwarestand hat. Zeigt der Bericht VCU 24 oder höher, erhält das Fahrzeug das Urteil „bereits auf Marlin“ statt bereit oder Zebra, weil sich die Frage nach einem Update nicht mehr stellt. Die Tabelle wird zur Information angezeigt, zusammen mit einer Liste der Geräte, die noch unter dem Stand 2.2 liegen. Marlin aktualisiert nämlich nicht jedes Gerät, und es kann nützlich sein zu wissen, welche zurückbleiben."
+      ]
+    },
+    {
+      "title": "Geräte ohne Anforderung",
+      "paragraphs": [
+        "Die rund dreißig Geräte, die nicht zu den sieben gehören, werden unter „weitere Geräte“ mit ihren Werten angezeigt, beeinflussen das Urteil aber nicht. Dazu gehören die Radarsensoren, die Frontkamera und das Fahrerassistenz-Steuergerät, die keine Voraussetzung für Marlin sind und die wir auf älteren Ständen bei Fahrzeugen gesehen haben, bei denen Marlin und die Fahrerassistenz einwandfrei funktionieren. Rechtsgelenkte Fahrzeuge haben bei einigen Geräten eigene Softwarelinien, aber keine davon gehört zu den sieben, daher werden sie gleich behandelt."
+      ]
+    },
+    {
+      "title": "Die Grundsätze dahinter",
+      "paragraphs": [],
+      "bullets": [
+        {
+          "lead": "Zweifel ergibt niemals „bereit“.",
+          "text": "Alles, was die Prüfung nicht versteht, ein unbekanntes Format, ein leeres Feld, ein fehlendes Gerät oder eine unbekannte Variante, zählt gegen das Fahrzeug. Lieber ein Zebra zu viel als ein falsches „bereit“."
+        },
+        {
+          "lead": "Die Anforderungen kommen vom Verein.",
+          "text": "Die Mindeststände sind die Marlin-Tabelle des Vereins, geprüft gegen echte Berichte von Fahrzeugen, die genau auf den 2.1-Minima, auf vollem 2.2 und auf Marlin liegen. Einzelne Werte, darunter der für den Sport-Akku, beruhen auf weniger Fahrzeugen und werden laufend bestätigt, wenn weitere Berichte eingehen. Die Anforderungen lassen sich aktualisieren, ohne die Prüfung umzubauen, und die verwendete Anforderungsversion steht auf jedem Ergebnis."
+        },
+        {
+          "lead": "Keine künstliche Intelligenz.",
+          "text": "Die gesamte Auswertung besteht aus festen Regeln und Mustern. Derselbe Bericht ergibt immer dieselbe Antwort, und jede Zahl auf der Ergebnisseite lässt sich auf eine Zeile im Bericht und eine Zahl in den Anforderungen zurückführen."
+        },
+        {
+          "lead": "Ohne Einwilligung wird nichts gespeichert.",
+          "text": "Der Bericht wird im Arbeitsspeicher ausgewertet, und das Ergebnis ist 30 Minuten lang hinter einem nicht erratbaren Link abrufbar. Setzen Sie das Häkchen zur Einwilligung, werden Bericht und VIN für die Statistik des Vereins gespeichert, die niemals einzelne Fahrzeuge zeigt."
+        }
+      ]
+    },
+    {
+      "title": "Worüber die Prüfung nichts sagt",
+      "paragraphs": [
+        "Sie bewertet weder Hardwarestände noch Bootloader oder ob Geräte defekt sind, und sie sagt nicht, ob ein Update gelingen wird, sondern nur, ob die Voraussetzungen der Vereinstabelle erfüllt sind. Nutzen Sie das Ergebnis als Grundlage für ein Gespräch mit dem Verein, bevor Sie ein Update vereinbaren."
+      ]
+    }
+  ]
 }

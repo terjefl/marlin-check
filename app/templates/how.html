@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ t('how_title') }} — {{ t('site_title') }}{% endblock %}
+{% block content %}
+<article class="how">
+  <h1>{{ t('how_title') }}</h1>
+  <p class="prose lead">{{ t('how_intro') }}</p>
+  {% for s in sections %}
+  <section>
+    <h2>{{ s.title }}</h2>
+    {% for p in s.paragraphs %}
+    <p class="prose">{{ p }}</p>
+    {% endfor %}
+    {% if s.bullets %}
+    <ul class="principles">
+      {% for b in s.bullets %}
+      <li><strong>{{ b.lead }}</strong> {{ b.text }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% endfor %}
+</article>
+{% endblock %}

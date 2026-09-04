@@ -414,3 +414,30 @@ def test_empty_version_field_is_explained_on_the_result_page(client):
     assert response.status_code == 200
     assert "Version field empty in the report" in response.text
     assert "Version not recognized" not in response.text
+
+
+def test_how_it_works_page_in_every_language(client):
+    """The public 'how it works' page: linked from the top menu, rendered
+    from structured locale content, complete in all seven languages."""
+    import json
+
+    from app.i18n import LOCALES_DIR, SUPPORTED
+
+    c, _ = client
+    en = json.loads((LOCALES_DIR / "en.json").read_text(encoding="utf-8"))
+    shape = [(len(s["paragraphs"]), len(s.get("bullets", []))) for s in en["how_sections"]]
+    assert len(shape) == 9
+
+    for lang in SUPPORTED:
+        table = json.loads((LOCALES_DIR / f"{lang}.json").read_text(encoding="utf-8"))
+        for key in ("nav_how", "how_title", "how_intro", "how_sections"):
+            assert key in table, (lang, key)
+        # same structure in every language: no section, paragraph or bullet lost in translation
+        assert [(len(s["paragraphs"]), len(s.get("bullets", []))) for s in table["how_sections"]] == shape, lang
+
+        page = c.get(f"/how-it-works?lang={lang}")
+        assert page.status_code == 200
+        assert table["how_title"] in page.text
+        assert table["how_sections"][-1]["paragraphs"][0][:40] in page.text
+        assert f'href="/how-it-works">{table["nav_how"]}</a>' in c.get(f"/?lang={lang}").text
+        assert "<script>" not in page.text  # CSP: no inline scripts

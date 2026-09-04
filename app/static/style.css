@@ -131,3 +131,10 @@ pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding:
 
 .adminbar { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .loginbox { max-width: 32rem; }
+
+.how { max-width: 46rem; }
+.how h2 { margin-top: 1.8rem; font-size: 1.2rem; }
+.how .lead { font-size: 1.05rem; }
+.how .prose { line-height: 1.55; }
+.principles { padding-left: 1.2rem; }
+.principles li { margin: 0.5rem 0; line-height: 1.5; }

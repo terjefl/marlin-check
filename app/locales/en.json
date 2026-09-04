@@ -69,5 +69,86 @@
   "verdict_marlin_text": "This car already runs Marlin (VCU 2.4 or newer). The Marlin readiness check does not apply to it; the table below is for information only.",
   "marlin_below_top_note": "Note: Marlin does not update every module. These modules are still below the 2.2 level:",
   "stats_marlin": "Already on Marlin",
-  "status_empty": "Version field empty in the report"
+  "status_empty": "Version field empty in the report",
+  "nav_how": "How it works",
+  "how_title": "How the check works",
+  "how_intro": "This page describes how the portal interprets your report and arrives at its verdict, which choices were made along the way, and what it does not tell you.",
+  "how_sections": [
+    {
+      "title": "What we read from the report",
+      "paragraphs": [
+        "The report you upload is an “ECU Software Version Report” exported from the OceanLink Pro app. It lists the car’s control units, grouped by area (body, infotainment, powertrain, chassis and driver assistance), and gives four version fields for each unit. A typical report contains about 37 units.",
+        "The check uses one of those fields: Supplier SW Version. It is the field that states which software level the supplier delivered to each unit, and it is the level the association’s minimum requirements for Marlin are expressed in. The other fields are shown but do not count. The VIN is also read, for one reason only: its fifth character tells which trim the car is, and that decides which units are expected to be present.",
+        "A report is accepted only if it is a genuine OLP export with the heading, a VIN and at least one control unit. If anything is missing, the file is rejected with an explanation instead of the car getting a verdict on shaky ground."
+      ]
+    },
+    {
+      "title": "From text to numbers",
+      "paragraphs": [
+        "Supplier SW Version is a text that looks different from supplier to supplier, for example “BCM395030”, “VCU039021”, “ECC395 24” or a long string for the stability system. The requirements, however, are numbers. The check therefore has a pattern per unit that says which part of the text is the product code and which part is the actual level. For BCM the level is the last digits, for ESP it is three digits after the letter V, and so on.",
+        "The patterns were built from real reports from cars on 2.1, 2.2 and Marlin, and every value we have seen is interpreted correctly. If a text turns up that the pattern does not recognise, the unit gets the status “version not recognised”, which counts as not approved. That is a deliberate choice: the check must never say “ready” on the basis of something it does not understand. If the field is empty in the report, the unit gets its own status saying exactly that, so you can see the problem is in the report, not in the car."
+      ]
+    },
+    {
+      "title": "The requirements and the verdict",
+      "paragraphs": [
+        "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the seven units that matter for Marlin, body control (BCM), stability system (ESP), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release.",
+        "The Marlin rule is simple: a car can be updated directly if all seven units are at the 2.1 level or higher, a so-called “100% 2.1 car”. If even one of them is below, the car is a zebra, a car with mixed levels, and must first receive the full 2.2 update, which lifts all units together. The result page shows which units fail, the number that was read, and the number required.",
+        "For cars that are ready, the check also lists the units that are below the 2.2 level. A direct update from 2.1 to Marlin does not touch these; they stay where they are. The car works, but it is worth knowing."
+      ]
+    },
+    {
+      "title": "One unit, two software lines",
+      "paragraphs": [
+        "Battery management comes in two independent variants, because the cars have two different battery types: one line for the NMC pack in One, Extreme and Ultra, and one for the LFP pack in Sport. The numbers in the two lines cannot be compared with each other, so each line has its own minimum. The check picks the line from what the report actually shows, not from what kind of car it assumes. If the text starts with anything other than the two known lines, the unit is “not recognised”."
+      ]
+    },
+    {
+      "title": "The trim from the VIN",
+      "paragraphs": [
+        "The fifth character of the VIN tells which trim the car is: Z for One, E for Extreme, U for Ultra and S for Sport. The check uses it for one thing. The Sport has a single motor and therefore no rear motor controller, so for a Sport it is not an error that this unit is missing. For every other trim, a missing rear motor controller is an error.",
+        "If the fifth character is a letter the check does not know, every unit is required. It never guesses in the direction that something is fine to be missing. The trim is shown on the result page so you can react if it is wrong."
+      ]
+    },
+    {
+      "title": "Cars that already run Marlin",
+      "paragraphs": [
+        "Marlin gives the vehicle controller (VCU) level 24, “VCU 2.4”, which no earlier release has. If the report shows VCU 24 or higher, the car gets the verdict “already on Marlin” instead of ready or zebra, since the question of updating no longer applies. The table is shown for information, together with a list of units that are still below the 2.2 level. Marlin does not update every unit, and it can be useful to know which ones are left behind."
+      ]
+    },
+    {
+      "title": "Units without requirements",
+      "paragraphs": [
+        "The roughly thirty units that are not among the seven are shown under “other units” with their values, but do not affect the verdict. That includes the radars, the front camera and the driver-assistance unit, which are not a prerequisite for Marlin and which we have seen at older levels on cars where Marlin and driver assistance work fine. Right-hand-drive cars have their own software lines on some units, but none of them are among the seven, so they are treated the same."
+      ]
+    },
+    {
+      "title": "The principles behind it",
+      "paragraphs": [],
+      "bullets": [
+        {
+          "lead": "Doubt never gives “ready”.",
+          "text": "Everything the check does not understand, an unknown format, an empty field, a missing unit or an unknown trim, counts against the car. Better one zebra too many than one false “ready”."
+        },
+        {
+          "lead": "The requirements come from the association.",
+          "text": "The minimum levels are the association’s Marlin table, checked against real reports from cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Some values, among them the Sport battery, rest on fewer cars and are being confirmed as more reports come in. The requirements can be updated without rebuilding the check, and the requirements version used is printed on every result."
+        },
+        {
+          "lead": "No artificial intelligence.",
+          "text": "The whole interpretation is fixed rules and patterns. The same report always gives the same answer, and every number on the result page can be traced to one line in the report and one number in the requirements."
+        },
+        {
+          "lead": "Nothing is stored without consent.",
+          "text": "The report is analysed in memory, and the result is available for 30 minutes behind a link nobody can guess. If you tick the consent box, the report and the VIN are stored for the association’s statistics, which never show individual cars."
+        }
+      ]
+    },
+    {
+      "title": "What the check does not tell you",
+      "paragraphs": [
+        "It does not assess hardware versions, bootloaders or whether units are faulty, and it does not say whether an update will succeed, only whether the prerequisites in the association’s table are met. Use the result as the basis for a conversation with the association before scheduling an update."
+      ]
+    }
+  ]
 }

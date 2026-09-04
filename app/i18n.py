@@ -51,6 +51,12 @@ def negotiate_language(request: Request) -> str:
     return "en"
 
 
+def block(lang: str, key: str):
+    """A structured (non-string) locale entry, e.g. the how-it-works sections,
+    with English as fallback."""
+    return _load(lang).get(key) or _load("en").get(key)
+
+
 def translator(lang: str):
     table = _load(lang)
     fallback = _load("en")

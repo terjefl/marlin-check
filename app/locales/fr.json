@@ -69,5 +69,86 @@
   "verdict_marlin_text": "Cette voiture fonctionne déjà sous Marlin (VCU 2.4 ou plus récent). La vérification de compatibilité Marlin ne s'applique pas ; le tableau ci-dessous est fourni à titre indicatif.",
   "marlin_below_top_note": "Remarque : Marlin ne met pas à jour tous les modules. Ces modules restent en dessous du niveau 2.2 :",
   "stats_marlin": "Déjà sous Marlin",
-  "status_empty": "Champ de version vide dans le rapport"
+  "status_empty": "Champ de version vide dans le rapport",
+  "nav_how": "Comment ça marche",
+  "how_title": "Comment fonctionne la vérification",
+  "how_intro": "Cette page décrit comment le portail interprète votre rapport et parvient à son verdict, quels choix ont été faits en chemin, et ce qu’il ne dit pas.",
+  "how_sections": [
+    {
+      "title": "Ce que nous lisons dans le rapport",
+      "paragraphs": [
+        "Le rapport que vous téléversez est un « ECU Software Version Report » exporté depuis l’application OceanLink Pro. Il liste les calculateurs de la voiture, groupés par domaine (carrosserie, infodivertissement, chaîne de traction, châssis et aide à la conduite), et indique quatre champs de version pour chacun. Un rapport typique contient environ 37 calculateurs.",
+        "La vérification n’utilise qu’un seul de ces champs : Supplier SW Version. C’est lui qui indique le niveau logiciel livré par le fournisseur pour chaque calculateur, et c’est dans ce niveau que sont exprimées les exigences minimales de l’association pour Marlin. Les autres champs sont affichés mais ne comptent pas. Le VIN est lu lui aussi, pour une seule raison : son cinquième caractère indique la finition de la voiture, ce qui détermine quels calculateurs doivent être présents.",
+        "Un rapport n’est accepté que s’il s’agit d’un véritable export OLP avec l’en-tête, un VIN et au moins un calculateur. S’il manque quelque chose, le fichier est refusé avec une explication plutôt que de donner à la voiture un verdict sur des bases fragiles."
+      ]
+    },
+    {
+      "title": "Du texte aux nombres",
+      "paragraphs": [
+        "Supplier SW Version est un texte dont la forme varie d’un fournisseur à l’autre, par exemple « BCM395030 », « VCU039021 », « ECC395 24 » ou une longue chaîne pour le système de stabilité. Les exigences, elles, sont des nombres. La vérification dispose donc d’un motif par calculateur qui indique quelle partie du texte est le code produit et quelle partie est le niveau proprement dit. Pour le BCM, ce sont les derniers chiffres ; pour l’ESP, trois chiffres après la lettre V ; et ainsi de suite.",
+        "Ces motifs ont été construits à partir de rapports réels de voitures en 2.1, 2.2 et Marlin, et toutes les valeurs rencontrées sont interprétées correctement. Si un texte apparaît que le motif ne reconnaît pas, le calculateur reçoit le statut « version non reconnue », ce qui compte comme non validé. C’est un choix délibéré : la vérification ne doit jamais dire « prête » sur la base de quelque chose qu’elle ne comprend pas. Si le champ est vide dans le rapport, le calculateur reçoit un statut propre qui le dit explicitement, pour que vous voyiez que le problème vient du rapport et non de la voiture."
+      ]
+    },
+    {
+      "title": "Les exigences et le verdict",
+      "paragraphs": [
+        "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des sept calculateurs qui comptent pour Marlin, commande de carrosserie (BCM), système de stabilité (ESP), climatisation (ECC), gestion de batterie (BMS), commande moteur avant et arrière (MCU) et commande véhicule (VCU), le tableau indique le niveau minimal qu’un calculateur doit atteindre pour appartenir à chaque version.",
+        "La règle Marlin est simple : une voiture peut être mise à jour directement si les sept calculateurs sont au niveau 2.1 ou plus, ce qu’on appelle une « voiture 100 % 2.1 ». Si un seul est en dessous, la voiture est un zèbre, une voiture aux niveaux mélangés, et doit d’abord recevoir la mise à jour 2.2 complète, qui relève tous les calculateurs ensemble. La page de résultat montre quels calculateurs échouent, le nombre lu et le nombre exigé.",
+        "Pour les voitures prêtes, la vérification indique en plus quels calculateurs sont en dessous du niveau 2.2. Une mise à jour directe de 2.1 vers Marlin ne les touche pas ; ils restent où ils sont. La voiture fonctionne, mais il est bon de le savoir."
+      ]
+    },
+    {
+      "title": "Un calculateur, deux lignées logicielles",
+      "paragraphs": [
+        "La gestion de batterie existe en deux variantes indépendantes, parce que les voitures ont deux types de batterie : une lignée pour le pack NMC des One, Extreme et Ultra, et une pour le pack LFP de la Sport. Les nombres des deux lignées ne se comparent pas entre eux, chaque lignée a donc son propre minimum. La vérification choisit la lignée d’après ce que montre réellement le rapport, pas d’après le type de voiture qu’elle suppose. Si le texte commence par autre chose que les deux lignées connues, le calculateur est « non reconnu »."
+      ]
+    },
+    {
+      "title": "La finition d’après le VIN",
+      "paragraphs": [
+        "Le cinquième caractère du VIN indique la finition : Z pour One, E pour Extreme, U pour Ultra et S pour Sport. La vérification s’en sert pour une seule chose. La Sport n’a qu’un moteur et donc pas de commande moteur arrière ; pour une Sport, l’absence de ce calculateur n’est pas une erreur. Pour toutes les autres finitions, une commande moteur arrière absente est une erreur.",
+        "Si le cinquième caractère est une lettre inconnue de la vérification, tous les calculateurs sont exigés. Elle ne suppose jamais qu’un élément peut manquer. La finition est affichée sur la page de résultat pour que vous puissiez réagir si elle est fausse."
+      ]
+    },
+    {
+      "title": "Les voitures déjà sous Marlin",
+      "paragraphs": [
+        "Marlin porte la commande véhicule (VCU) au niveau 24, « VCU 2.4 », qu’aucune version antérieure ne possède. Si le rapport montre VCU 24 ou plus, la voiture reçoit le verdict « déjà sous Marlin » au lieu de prête ou zèbre, puisque la question de la mise à jour ne se pose plus. Le tableau est affiché à titre d’information, avec la liste des calculateurs encore en dessous du niveau 2.2. Marlin ne met pas à jour tous les calculateurs, et il peut être utile de savoir lesquels restent en arrière."
+      ]
+    },
+    {
+      "title": "Les calculateurs sans exigence",
+      "paragraphs": [
+        "La trentaine de calculateurs qui ne font pas partie des sept sont affichés sous « autres calculateurs » avec leurs valeurs, mais n’influencent pas le verdict. C’est le cas des radars, de la caméra avant et du calculateur d’aide à la conduite, qui ne sont pas un prérequis pour Marlin et que nous avons vus à des niveaux plus anciens sur des voitures où Marlin et l’aide à la conduite fonctionnent parfaitement. Les voitures à conduite à droite ont leurs propres lignées logicielles sur certains calculateurs, mais aucun ne fait partie des sept, elles sont donc traitées de la même façon."
+      ]
+    },
+    {
+      "title": "Les principes",
+      "paragraphs": [],
+      "bullets": [
+        {
+          "lead": "Le doute ne donne jamais « prête ».",
+          "text": "Tout ce que la vérification ne comprend pas, format inconnu, champ vide, calculateur manquant ou finition inconnue, compte contre la voiture. Mieux vaut un zèbre de trop qu’un faux « prête »."
+        },
+        {
+          "lead": "Les exigences viennent de l’association.",
+          "text": "Les niveaux minimaux sont le tableau Marlin de l’association, contrôlé sur des rapports réels de voitures exactement aux minima 2.1, en 2.2 complète et sous Marlin. Certaines valeurs, dont celle de la batterie Sport, reposent sur moins de voitures et sont confirmées au fur et à mesure que de nouveaux rapports arrivent. Les exigences peuvent être mises à jour sans reconstruire la vérification, et la version des exigences utilisée figure sur chaque résultat."
+        },
+        {
+          "lead": "Aucune intelligence artificielle.",
+          "text": "Toute l’interprétation repose sur des règles et des motifs fixes. Le même rapport donne toujours la même réponse, et chaque nombre de la page de résultat peut être retracé jusqu’à une ligne du rapport et un nombre des exigences."
+        },
+        {
+          "lead": "Rien n’est conservé sans consentement.",
+          "text": "Le rapport est analysé en mémoire, et le résultat reste accessible 30 minutes derrière un lien impossible à deviner. Si vous cochez la case de consentement, le rapport et le VIN sont conservés pour les statistiques de l’association, qui ne montrent jamais de voiture individuelle."
+        }
+      ]
+    },
+    {
+      "title": "Ce que la vérification ne dit pas",
+      "paragraphs": [
+        "Elle n’évalue ni les versions matérielles, ni les bootloaders, ni l’état de fonctionnement des calculateurs, et elle ne dit pas si une mise à jour réussira, seulement si les prérequis du tableau de l’association sont remplis. Servez-vous du résultat comme base de discussion avec l’association avant de planifier une mise à jour."
+      ]
+    }
+  ]
 }

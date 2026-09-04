@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from . import auth
 from . import db as db_module
 from .auth import LoginRequired, client_ip
-from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
+from .i18n import LANGUAGE_NAMES, SUPPORTED, block, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
 from .rules import (
     RequirementSet,
@@ -369,6 +369,12 @@ def stats(request: Request):
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy(request: Request):
     return _render(request, "privacy.html", {})
+
+
+@app.get("/how-it-works", response_class=HTMLResponse)
+def how_it_works(request: Request):
+    lang = negotiate_language(request)
+    return _render(request, "how.html", {"sections": block(lang, "how_sections")})
 
 
 # --- Admin: form login (SQLite sessions), requirements editing, audit log ---

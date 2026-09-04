@@ -69,5 +69,86 @@
   "verdict_marlin_text": "Este coche ya funciona con Marlin (VCU 2.4 o posterior). La comprobación de preparación para Marlin no se aplica; la tabla siguiente es solo informativa.",
   "marlin_below_top_note": "Nota: Marlin no actualiza todos los módulos. Estos módulos siguen por debajo del nivel 2.2:",
   "stats_marlin": "Ya en Marlin",
-  "status_empty": "Campo de versión vacío en el informe"
+  "status_empty": "Campo de versión vacío en el informe",
+  "nav_how": "Cómo funciona",
+  "how_title": "Cómo funciona la comprobación",
+  "how_intro": "Esta página describe cómo el portal interpreta su informe y llega a su veredicto, qué decisiones se han tomado por el camino y sobre qué no se pronuncia.",
+  "how_sections": [
+    {
+      "title": "Qué leemos del informe",
+      "paragraphs": [
+        "El informe que sube es un «ECU Software Version Report» exportado desde la aplicación OceanLink Pro. Enumera las unidades de control del coche, agrupadas por área (carrocería, infoentretenimiento, tren motriz, chasis y asistencia a la conducción), e indica cuatro campos de versión para cada unidad. Un informe típico contiene unas 37 unidades.",
+        "La comprobación utiliza uno de esos campos: Supplier SW Version. Es el campo que indica qué nivel de software ha entregado el proveedor para cada unidad, y es el nivel en el que se expresan los requisitos mínimos de la asociación para Marlin. Los demás campos se muestran, pero no cuentan. También se lee el VIN, por una sola razón: su quinto carácter indica la versión del coche, y eso determina qué unidades deben estar presentes.",
+        "Un informe solo se acepta si es una exportación OLP auténtica con el encabezado, un VIN y al menos una unidad de control. Si falta algo, el archivo se rechaza con una explicación en lugar de dar al coche un veredicto sobre una base frágil."
+      ]
+    },
+    {
+      "title": "Del texto a los números",
+      "paragraphs": [
+        "Supplier SW Version es un texto que varía de un proveedor a otro, por ejemplo «BCM395030», «VCU039021», «ECC395 24» o una cadena larga para el sistema de estabilidad. Los requisitos, en cambio, son números. Por eso la comprobación tiene un patrón por unidad que indica qué parte del texto es el código de producto y qué parte es el nivel propiamente dicho. Para el BCM son las últimas cifras; para el ESP, tres cifras tras la letra V; y así sucesivamente.",
+        "Los patrones se construyeron a partir de informes reales de coches en 2.1, 2.2 y Marlin, y todos los valores vistos hasta ahora se interpretan correctamente. Si aparece un texto que el patrón no reconoce, la unidad recibe el estado «versión no reconocida», que cuenta como no aprobada. Es una decisión deliberada: la comprobación nunca debe decir «lista» basándose en algo que no entiende. Si el campo está vacío en el informe, la unidad recibe un estado propio que lo indica, para que vea que el problema está en el informe y no en el coche."
+      ]
+    },
+    {
+      "title": "Los requisitos y el veredicto",
+      "paragraphs": [
+        "Los requisitos están organizados por versiones de software: 2.0, 2.1 y 2.2. Para cada una de las siete unidades que importan para Marlin, control de carrocería (BCM), sistema de estabilidad (ESP), control de climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU), la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión.",
+        "La regla de Marlin es sencilla: un coche puede actualizarse directamente si las siete unidades están en el nivel 2.1 o superior, un llamado «coche 100 % 2.1». Si una sola está por debajo, el coche es una cebra, un coche con niveles mezclados, y debe recibir primero la actualización 2.2 completa, que eleva todas las unidades a la vez. La página de resultados muestra qué unidades fallan, el número leído y el número exigido.",
+        "Para los coches listos, la comprobación muestra además qué unidades están por debajo del nivel 2.2. Una actualización directa de 2.1 a Marlin no las toca; se quedan donde están. El coche funciona, pero conviene saberlo."
+      ]
+    },
+    {
+      "title": "Una unidad, dos líneas de software",
+      "paragraphs": [
+        "La gestión de batería existe en dos variantes independientes, porque los coches tienen dos tipos de batería: una línea para el paquete NMC de One, Extreme y Ultra, y otra para el paquete LFP del Sport. Los números de las dos líneas no son comparables entre sí, así que cada línea tiene su propio mínimo. La comprobación elige la línea según lo que muestra realmente el informe, no según el tipo de coche que supone. Si el texto empieza por algo distinto de las dos líneas conocidas, la unidad queda «no reconocida»."
+      ]
+    },
+    {
+      "title": "La versión según el VIN",
+      "paragraphs": [
+        "El quinto carácter del VIN indica la versión del coche: Z para One, E para Extreme, U para Ultra y S para Sport. La comprobación lo usa para una sola cosa. El Sport tiene un solo motor y, por tanto, no tiene control de motor trasero, así que en un Sport no es un error que falte esa unidad. En todas las demás versiones, la ausencia del control de motor trasero es un error.",
+        "Si el quinto carácter es una letra que la comprobación no conoce, se exigen todas las unidades. Nunca supone que algo puede faltar sin problema. La versión se muestra en la página de resultados para que pueda reaccionar si es incorrecta."
+      ]
+    },
+    {
+      "title": "Coches que ya tienen Marlin",
+      "paragraphs": [
+        "Marlin lleva el control del vehículo (VCU) al nivel 24, «VCU 2.4», que ninguna versión anterior tiene. Si el informe muestra VCU 24 o superior, el coche recibe el veredicto «ya en Marlin» en lugar de listo o cebra, ya que la cuestión de actualizar deja de tener sentido. La tabla se muestra a título informativo, junto con una lista de las unidades que siguen por debajo del nivel 2.2. Marlin no actualiza todas las unidades, y puede ser útil saber cuáles se quedan atrás."
+      ]
+    },
+    {
+      "title": "Unidades sin requisito",
+      "paragraphs": [
+        "La treintena de unidades que no están entre las siete se muestra bajo «otras unidades» con sus valores, pero no influye en el veredicto. Es el caso de los radares, la cámara frontal y la unidad de asistencia a la conducción, que no son un requisito para Marlin y que hemos visto en niveles antiguos en coches donde Marlin y la asistencia funcionan sin problema. Los coches con volante a la derecha tienen líneas de software propias en algunas unidades, pero ninguna está entre las siete, así que se tratan igual."
+      ]
+    },
+    {
+      "title": "Los principios",
+      "paragraphs": [],
+      "bullets": [
+        {
+          "lead": "La duda nunca da «listo».",
+          "text": "Todo lo que la comprobación no entiende, un formato desconocido, un campo vacío, una unidad ausente o una versión desconocida, cuenta contra el coche. Mejor una cebra de más que un falso «listo»."
+        },
+        {
+          "lead": "Los requisitos vienen de la asociación.",
+          "text": "Los niveles mínimos son la tabla de Marlin de la asociación, contrastada con informes reales de coches exactamente en los mínimos de 2.1, en 2.2 completo y en Marlin. Algunos valores, entre ellos el de la batería del Sport, se apoyan en menos coches y se van confirmando a medida que llegan más informes. Los requisitos pueden actualizarse sin reconstruir la comprobación, y la versión de requisitos utilizada figura en cada resultado."
+        },
+        {
+          "lead": "Sin inteligencia artificial.",
+          "text": "Toda la interpretación son reglas y patrones fijos. El mismo informe da siempre la misma respuesta, y cada número de la página de resultados puede rastrearse hasta una línea del informe y un número de los requisitos."
+        },
+        {
+          "lead": "Nada se guarda sin consentimiento.",
+          "text": "El informe se analiza en memoria y el resultado está disponible durante 30 minutos tras un enlace que nadie puede adivinar. Si marca la casilla de consentimiento, el informe y el VIN se guardan para las estadísticas de la asociación, que nunca muestran coches individuales."
+        }
+      ]
+    },
+    {
+      "title": "Sobre qué no se pronuncia la comprobación",
+      "paragraphs": [
+        "No evalúa versiones de hardware, cargadores de arranque ni si las unidades están averiadas, y no dice si una actualización tendrá éxito, solo si se cumplen los requisitos de la tabla de la asociación. Use el resultado como base para hablar con la asociación antes de programar una actualización."
+      ]
+    }
+  ]
 }

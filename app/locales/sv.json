@@ -69,5 +69,86 @@
   "verdict_marlin_text": "Den här bilen kör redan Marlin (VCU 2.4 eller nyare). Marlin-kontrollen gäller inte för den; tabellen nedan är endast information.",
   "marlin_below_top_note": "Obs: Marlin uppdaterar inte alla moduler. Dessa moduler ligger fortfarande under 2.2-nivån:",
   "stats_marlin": "Redan på Marlin",
-  "status_empty": "Versionsfältet är tomt i rapporten"
+  "status_empty": "Versionsfältet är tomt i rapporten",
+  "nav_how": "Så fungerar det",
+  "how_title": "Så fungerar kontrollen",
+  "how_intro": "Den här sidan beskriver hur portalen tolkar din rapport och kommer fram till sitt utlåtande, vilka val som gjorts på vägen, och vad den inte säger något om.",
+  "how_sections": [
+    {
+      "title": "Vad vi läser ur rapporten",
+      "paragraphs": [
+        "Rapporten du laddar upp är en ”ECU Software Version Report” exporterad från OceanLink Pro-appen. Den listar bilens styrenheter, grupperade efter område (kaross, infotainment, drivlina, chassi och förarassistans), och anger fyra versionsfält för varje enhet. En vanlig rapport innehåller omkring 37 enheter.",
+        "Kontrollen använder ett av fälten: Supplier SW Version. Det är fältet som anger vilken programvarunivå leverantören har levererat till varje enhet, och det är den nivå föreningens minimikrav för Marlin är uttryckta i. De andra fälten visas men räknas inte. Dessutom läses VIN-numret, av ett enda skäl: femte tecknet anger vilket utförande bilen har, och det avgör vilka enheter som förväntas finnas.",
+        "Rapporten godtas bara om den är en äkta OLP-export med rubrik, VIN och minst en styrenhet. Saknas något avvisas filen med en förklaring i stället för att bilen får ett utlåtande på osäker grund."
+      ]
+    },
+    {
+      "title": "Från text till siffror",
+      "paragraphs": [
+        "Supplier SW Version är en text som ser olika ut från leverantör till leverantör, till exempel ”BCM395030”, ”VCU039021”, ”ECC395 24” eller en lång sträng för stabilitetssystemet. Kraven är däremot siffror. Kontrollen har därför ett mönster per enhet som anger vilken del av texten som är produktkod och vilken del som är själva nivån. För BCM är nivån de sista siffrorna, för ESP är det tre siffror efter bokstaven V, och så vidare.",
+        "Mönstren är byggda utifrån riktiga rapporter från bilar på 2.1, 2.2 och Marlin, och alla värden vi sett tolkas rätt. Dyker det upp en text som mönstret inte känner igen får enheten status ”version känns inte igen”, vilket räknas som inte godkänd. Det är ett medvetet val: kontrollen ska aldrig säga ”klar” på grundval av något den inte förstår. Är fältet tomt i rapporten får enheten en egen status som säger just det, så att du ser att problemet ligger i rapporten och inte i bilen."
+      ]
+    },
+    {
+      "title": "Kraven och utlåtandet",
+      "paragraphs": [
+        "Kraven är ordnade efter programvaruversionerna 2.0, 2.1 och 2.2. För var och en av de sju enheter som har betydelse för Marlin, karosstyrning (BCM), stabilitetssystem (ESP), klimatstyrning (ECC), batteristyrning (BMS), motorstyrning fram och bak (MCU) och fordonsstyrning (VCU), anger tabellen vilken nivå enheten minst måste ha för att tillhöra varje version.",
+        "Regeln för Marlin är enkel: en bil kan uppdateras direkt om alla sju enheterna ligger på 2.1-nivå eller högre, en så kallad ”100 % 2.1-bil”. Ligger en enda av dem under är bilen en zebra, en bil med blandade nivåer, och måste först få den fullständiga 2.2-uppdateringen, som lyfter alla enheter samlat. Resultatsidan visar vilka enheter som inte klarar sig, vilket tal som lästes och vilket som krävs.",
+        "För bilar som är klara visar kontrollen dessutom vilka enheter som ligger under 2.2-nivån. En direkt uppdatering från 2.1 till Marlin rör nämligen inte dessa; de stannar där de är. Bilen fungerar, men det är bra att veta."
+      ]
+    },
+    {
+      "title": "En enhet, två programvarulinjer",
+      "paragraphs": [
+        "Batteristyrningen finns i två oberoende varianter, eftersom bilarna har två olika batterityper: en linje för NMC-batteriet i One, Extreme och Ultra, och en för LFP-batteriet i Sport. Talen i de två linjerna kan inte jämföras med varandra, så varje linje har sitt eget minimum. Kontrollen väljer linje utifrån vad rapporten faktiskt visar, inte utifrån vilken sorts bil den antar att det är. Börjar texten med något annat än de två kända linjerna blir enheten ”känns inte igen”."
+      ]
+    },
+    {
+      "title": "Utförandet från VIN",
+      "paragraphs": [
+        "Femte tecknet i VIN anger vilket utförande bilen har: Z för One, E för Extreme, U för Ultra och S för Sport. Kontrollen använder det till en enda sak. Sport har bara en motor och därmed ingen bakre motorstyrning, så för en Sport räknas det inte som fel att den enheten saknas. För alla andra utföranden är en saknad bakre motorstyrning ett fel.",
+        "Är femte tecknet en bokstav kontrollen inte känner till krävs alla enheter. Den gissar aldrig i riktning mot att något är okej att sakna. Utförandet visas på resultatsidan så att du kan reagera om det är fel."
+      ]
+    },
+    {
+      "title": "Bilar som redan har Marlin",
+      "paragraphs": [
+        "Marlin ger fordonsstyrningen (VCU) nivå 24, ”VCU 2.4”, som ingen tidigare version har. Visar rapporten VCU 24 eller högre får bilen utlåtandet ”redan på Marlin” i stället för klar eller zebra, eftersom frågan om uppdatering inte längre är relevant. Tabellen visas som information, tillsammans med en lista över enheter som fortfarande ligger under 2.2-nivån. Marlin uppdaterar nämligen inte alla enheter, och det kan vara bra att veta vilka som blir kvar."
+      ]
+    },
+    {
+      "title": "Enheter utan krav",
+      "paragraphs": [
+        "De omkring trettio enheter som inte hör till de sju visas under ”övriga enheter” med sina värden, men påverkar inte utlåtandet. Det gäller bland annat radarerna, frontkameran och förarassistansenheten, som inte är en förutsättning för Marlin och som vi sett på äldre nivåer på bilar där Marlin och förarassistansen fungerar bra. Högerstyrda bilar har egna programvarulinjer på vissa enheter, men ingen av dem hör till de sju, så de behandlas lika."
+      ]
+    },
+    {
+      "title": "Principerna bakom",
+      "paragraphs": [],
+      "bullets": [
+        {
+          "lead": "Tvivel ger aldrig ”klar”.",
+          "text": "Allt kontrollen inte förstår, okänt format, tomt fält, saknad enhet eller okänt utförande, räknas mot bilen. Hellre en zebra för mycket än en falsk ”klar”."
+        },
+        {
+          "lead": "Kraven kommer från föreningen.",
+          "text": "Miniminivåerna är föreningens tabell för Marlin, kontrollerad mot riktiga rapporter från bilar som ligger exakt på 2.1-minimum, på fullständig 2.2 och på Marlin. Vissa värden, bland annat för Sport-batteriet, bygger på färre bilar och bekräftas löpande i takt med att fler rapporter kommer in. Kraven kan uppdateras utan att kontrollen behöver byggas om, och vilken kravversion som använts står på varje resultat."
+        },
+        {
+          "lead": "Ingen artificiell intelligens.",
+          "text": "Hela tolkningen är fasta regler och mönster. Samma rapport ger alltid samma svar, och varje tal på resultatsidan kan spåras till en rad i rapporten och ett tal i kraven."
+        },
+        {
+          "lead": "Inget sparas utan samtycke.",
+          "text": "Rapporten analyseras i minnet, och resultatet är tillgängligt i 30 minuter bakom en länk ingen kan gissa. Kryssar du i samtycke sparas rapporten och VIN för föreningens statistik, som aldrig visar enskilda bilar."
+        }
+      ]
+    },
+    {
+      "title": "Vad kontrollen inte säger något om",
+      "paragraphs": [
+        "Den bedömer inte hårdvaruversioner, bootloaders eller om enheter är trasiga, och den säger inte om en uppdatering kommer att lyckas, bara om förutsättningarna i föreningens tabell är uppfyllda. Använd resultatet som underlag för ett samtal med föreningen innan du bokar uppdatering."
+      ]
+    }
+  ]
 }
