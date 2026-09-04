@@ -168,3 +168,41 @@ def test_missing_critical_module_gives_zebra():
     assert evaluation.verdict == VERDICT_ZEBRA
     by_id = {r.requirement.id: r for r in evaluation.results}
     assert by_id["BMS"].status == MISSING
+
+
+def test_unknown_trim_letter_still_requires_rear_mcu():
+    """A VIN whose 5th character is not a known trim letter must NOT exempt
+    MCU_R: treating an unknown trim as 'Sport-like' would let a two-motor car
+    with a missing rear MCU pass as Marlin-ready."""
+    requirements = load_requirements(REQUIREMENTS)
+    report = _report()
+    report.vin = report.vin[:4] + "X" + report.vin[5:]
+    report.modules = [m for m in report.modules if m.code != "MCU_R"]
+    for module in report.modules:
+        if module.code == "BCM":
+            module.supplier_sw = "BCM395030"
+    evaluation = evaluate(report, requirements)
+
+    assert evaluation.trim == "X" and evaluation.trim_name == ""
+    by_id = {r.requirement.id: r for r in evaluation.results}
+    assert by_id["MCU_R"].status == MISSING
+    assert evaluation.verdict == VERDICT_ZEBRA
+
+    # ...whereas a known One (Z) exposes trim name and passes with MCU_R present
+    evaluation = evaluate(_report(), requirements)
+    assert (evaluation.trim, evaluation.trim_name) == ("Z", "One")
+
+
+def test_pdf_with_too_many_pages_is_rejected():
+    """Text extraction is CPU-bound and linear in page count; a PDF far larger
+    than any real OLP report is rejected before extraction starts."""
+    weasyprint = pytest.importorskip("weasyprint")
+    from app.parser import MAX_REPORT_PAGES
+
+    html = "".join(
+        f"<p style='page-break-after: always'>page {i}</p>" for i in range(MAX_REPORT_PAGES + 5)
+    )
+    pdf_bytes = weasyprint.HTML(string=html).write_pdf()
+    with pytest.raises(ReportParseError) as excinfo:
+        parse_report(pdf_bytes, "big.pdf")
+    assert excinfo.value.key == "too_many_pages"

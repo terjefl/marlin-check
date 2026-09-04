@@ -72,8 +72,8 @@ Protected page for web editing of the requirements spec:
   username, client IP (from `CF-Connecting-IP`) and a unified diff. The log is
   shown at the bottom of the admin page.
 - **Usage statistics:** anonymous per-upload counters (country from
-  Cloudflare's `CF-IPCountry`, language, outcome, daily-rotating IP hash for
-  unique users). Never VIN, report content or raw IP.
+  Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
+  unique users — see "Privacy model"). Never VIN, report content or raw IP.
 
 ## Running locally
 
@@ -102,6 +102,7 @@ uvicorn app.main:app --reload
 | `MARLIN_UPLOADS_DIR` | `/data/uploads` | Stored report files (only with consent) |
 | `MARLIN_REQUIREMENTS_PATH` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | Admin users (PBKDF2 hashes) |
+| `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). `X-Forwarded-For` is never used because Cloudflare appends to a client-supplied value. Set to empty to use the socket address when no proxy is in front. |
 
 ## Build and deploy
 
@@ -113,6 +114,12 @@ config directory on `/config` (with `requirements.yaml` and
 proxy. Country statistics use Cloudflare's `CF-IPCountry` header and degrade
 gracefully without it.
 
+Run exactly **one** uvicorn worker/replica: result tokens, upload rate limits
+and the admin login lockout live in process memory. A restart invalidates all
+open result/PDF links (visitors are sent back to the front page). The origin
+must only be reachable through the proxy that sets the trusted client-IP
+header (see `MARLIN_CLIENT_IP_HEADER`).
+
 ## Privacy model
 
 - Without the consent checkbox nothing from the report is stored — the
@@ -121,5 +128,8 @@ gracefully without it.
 - With consent: report file + VIN + module versions are stored for aggregated
   fleet statistics (`/stats` never shows individual VINs).
 - Anonymous usage counting per upload (admin-only view): country, language,
-  outcome, daily-rotating IP hash. No VIN, no report data, no raw IP.
+  outcome, and a keyed daily hash of the IP for unique-user counts. The HMAC
+  key is random, lives only in process memory and is replaced at the UTC day
+  rollover and on restart, so a stored hash cannot be brute-forced back to an
+  IP. No VIN, no report data, no raw IP.
 - Email delivery was deliberately left out (abuse surface).

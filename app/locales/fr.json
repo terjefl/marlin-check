@@ -58,5 +58,9 @@
   "parse_no_vin": "Aucune ligne VIN (VIN : <17 caractères>) trouvée dans le rapport.",
   "parse_no_modules": "Aucune section ECU trouvée dans le rapport.",
   "ready_22_note": "Remarque : une mise à jour directe de 2.1 vers Marlin ne mettra toujours PAS à jour les calculateurs ci-dessous — ils appartiennent à la mise à jour 2.2 (un rappel NHTSA obligatoire en Amérique du Nord que la plupart des voitures européennes n'ont jamais reçu). La voiture fonctionnera très bien, mais ces calculateurs resteront sur leurs versions actuelles :",
-  "vcu24_notice": "Avis à tous ceux qui ont déjà le VCU 2.4 (via Marlin ou autrement) : veillez à informer quiconque met votre voiture à jour vers 2.2 que vous l'avez DÉJÀ. Il n'existe aucun retour en arrière ni compatibilité du VCU 2.4 (Marlin) vers le VCU 2.3 (2.2/2.2.3)."
+  "vcu24_notice": "Avis à tous ceux qui ont déjà le VCU 2.4 (via Marlin ou autrement) : veillez à informer quiconque met votre voiture à jour vers 2.2 que vous l'avez DÉJÀ. Il n'existe aucun retour en arrière ni compatibilité du VCU 2.4 (Marlin) vers le VCU 2.3 (2.2/2.2.3).",
+  "trim_label": "Finition (d'après le VIN)",
+  "trim_unknown": "inconnue",
+  "trim_unknown_note": "La finition n'a pas pu être déterminée à partir du VIN ; tous les modules sont donc considérés comme requis (y compris le contrôleur du moteur arrière).",
+  "parse_too_many_pages": "Le PDF contient trop de pages pour être un rapport de diagnostic OLP."
 }

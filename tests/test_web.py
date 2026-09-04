@@ -161,3 +161,105 @@ def test_language_negotiation(client):
     deutsch = c.get("/?lang=de")
     assert "Mein Auto prüfen" in deutsch.text
     assert deutsch.cookies.get("lang") == "de"
+
+
+def test_upload_rate_limit_ignores_client_supplied_forwarded_for(client):
+    """Only the configured proxy header (CF-Connecting-IP) identifies the
+    client. Cloudflare appends to a client-supplied X-Forwarded-For, so its
+    first element must never be used for rate limiting."""
+    c, main = client
+    fixture = FIXTURE.read_bytes()
+
+    codes = []
+    for i in range(main.RATE_LIMIT_UPLOADS + 2):
+        response = c.post(
+            "/analyze",
+            files={"report": ("r.txt", fixture, "text/plain")},
+            headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.5"},
+            follow_redirects=False,
+        )
+        codes.append(response.status_code)
+    assert codes[: main.RATE_LIMIT_UPLOADS] == [303] * main.RATE_LIMIT_UPLOADS
+    assert codes[main.RATE_LIMIT_UPLOADS:] == [429, 429]
+
+    # A different CF-Connecting-IP is a different client and is not blocked
+    response = c.post(
+        "/analyze",
+        files={"report": ("r.txt", fixture, "text/plain")},
+        headers={"CF-Connecting-IP": "198.51.100.42"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    # ...and expired/blocked entries do not accumulate one key per spoofed value
+    assert set(main._upload_hits) <= {"testclient", "198.51.100.42"}
+
+
+def test_usage_ip_hash_is_keyed_and_not_reversible(client):
+    """The daily unique-user hash must not be a plain sha256 over a public salt
+    (that is brute-forceable over the IPv4 space)."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    c, main = client
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+           headers={"CF-Connecting-IP": "203.0.113.77"})
+    import sqlite3
+
+    stored = sqlite3.connect(main.database.path).execute(
+        "SELECT ip_hash FROM usage_events"
+    ).fetchone()[0]
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    public_scheme = hashlib.sha256(f"marlin-{day}|203.0.113.77".encode()).hexdigest()[:16]
+    assert stored != public_scheme
+    assert len(stored) == 16
+    # Same client on the same day -> same hash (unique-user counting still works)
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+           headers={"CF-Connecting-IP": "203.0.113.77"})
+    assert main.database.usage_stats()["per_day"][0]["unique_users"] == 1
+    # A new key (restart / day rollover) yields a different hash for the same IP
+    main._usage_key["day"] = ""
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+           headers={"CF-Connecting-IP": "203.0.113.77"})
+    assert main.database.usage_stats()["per_day"][0]["unique_users"] == 2
+
+
+def test_slow_pdf_does_not_block_other_requests(client, monkeypatch):
+    """Parsing runs in the threadpool: while one upload is being parsed, the
+    event loop must still serve /healthz. The TestClient is used as a context
+    manager so both requests share ONE event loop (otherwise each request gets
+    its own portal and blocking would go unnoticed)."""
+    import threading
+    import time
+
+    _, main = client
+    started = threading.Event()
+    release = threading.Event()
+    original_parse = main.parse_report
+
+    def slow_parse(data, filename):
+        started.set()
+        release.wait(timeout=5)
+        return original_parse(data, filename)
+
+    monkeypatch.setattr(main, "parse_report", slow_parse)
+
+    result = {}
+    with TestClient(main.app) as shared:
+
+        def upload():
+            result["status"] = shared.post(
+                "/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+                follow_redirects=False,
+            ).status_code
+
+        worker = threading.Thread(target=upload)
+        worker.start()
+        assert started.wait(timeout=5)
+        t0 = time.perf_counter()
+        health = shared.get("/healthz")
+        elapsed = time.perf_counter() - t0
+        release.set()
+        worker.join(timeout=10)
+    assert health.status_code == 200
+    assert elapsed < 2, f"/healthz was blocked for {elapsed:.1f}s while a PDF was being parsed"
+    assert result["status"] == 303

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
+import hmac
 import os
 import re
 import secrets
@@ -11,13 +13,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db as db_module
-from .auth import client_ip as auth_client_ip
-from .auth import require_admin
+from .auth import client_ip, require_admin
 from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
 from .rules import (
@@ -44,15 +46,15 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Cache busting: content hash of style.css in the URL, so Cloudflare/browsers
 # never serve stale CSS after a deploy.
-import hashlib as _hashlib
-
-STATIC_VERSION = _hashlib.md5(
+STATIC_VERSION = hashlib.md5(
     (BASE_DIR / "static" / "style.css").read_bytes()
 ).hexdigest()[:8]
 
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
 
 # Recent analyses kept in memory, so the result page can offer the PDF without re-upload.
+# NOTE: all of this state (results, rate limits, login lockout) is per process —
+# the app must run as exactly one uvicorn worker/replica.
 _recent_results: dict[str, dict] = {}
 _upload_hits: dict[str, list[float]] = {}
 
@@ -65,20 +67,18 @@ def _prune_results() -> None:
 
 def _rate_limited(ip: str) -> bool:
     now = time.time()
-    hits = [t for t in _upload_hits.get(ip, []) if t > now - RATE_LIMIT_WINDOW]
-    _upload_hits[ip] = hits
+    # Drop expired hits for every IP so the dict cannot grow without bound
+    for known_ip in list(_upload_hits):
+        recent = [t for t in _upload_hits[known_ip] if t > now - RATE_LIMIT_WINDOW]
+        if recent:
+            _upload_hits[known_ip] = recent
+        else:
+            del _upload_hits[known_ip]
+    hits = _upload_hits.setdefault(ip, [])
     if len(hits) >= RATE_LIMIT_UPLOADS:
         return True
     hits.append(now)
     return False
-
-
-def _client_ip(request: Request) -> str:
-    # Behind Cloudflare/reverse proxy: use the first X-Forwarded-For address if set
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 def _render(request: Request, template: str, context: dict, status_code: int = 200) -> Response:
@@ -95,13 +95,21 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
     return response
 
 
-def _usage_ip_hash(request: Request) -> str:
-    """Daily-rotating hash of the client IP — counts unique users per day without
-    storing the IP address. Yesterday's hashes cannot be linked back to an IP."""
-    import hashlib
+# Key for the daily usage hash: random, held only in memory, replaced at the
+# UTC day rollover (and on every restart). Because the key is never stored, a
+# hash in the database cannot be brute-forced back to an IP address — a plain
+# sha256(day|ip) with a public salt could be reversed over the IPv4 space in
+# under an hour. The cost is that a restart splits that day's unique-user count.
+_usage_key: dict = {"day": "", "key": b""}
 
-    day_salt = f"marlin-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
-    return hashlib.sha256(f"{day_salt}|{auth_client_ip(request)}".encode()).hexdigest()[:16]
+
+def _usage_ip_hash(request: Request) -> str:
+    """Daily-rotating keyed hash of the client IP — counts unique users per day
+    without storing anything that can be linked back to the IP."""
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if _usage_key["day"] != day:
+        _usage_key["day"], _usage_key["key"] = day, secrets.token_bytes(32)
+    return hmac.new(_usage_key["key"], client_ip(request).encode(), hashlib.sha256).hexdigest()[:16]
 
 
 def _log_usage(request: Request, lang: str, outcome: str, consent: bool) -> None:
@@ -146,12 +154,20 @@ def analyze_get(request: Request):
     return RedirectResponse(f"/?lang={lang}" if lang in SUPPORTED else "/", status_code=303)
 
 
+def _parse_and_evaluate(data: bytes, filename: str):
+    """CPU-bound part of an upload (pdfplumber + rule engine). Runs in the
+    threadpool so a slow PDF never blocks the event loop for other visitors."""
+    parsed = parse_report(data, filename)
+    requirements = load_requirements(REQUIREMENTS_PATH)
+    return parsed, evaluate(parsed, requirements)
+
+
 @app.post("/analyze")
 async def analyze(request: Request, report: UploadFile):
     lang = negotiate_language(request)
     t = translator(lang)
 
-    if _rate_limited(_client_ip(request)):
+    if _rate_limited(client_ip(request)):
         return _render(request, "index.html", {"error": t("error_rate_limited"), "requirements": _current_requirements()}, status_code=429)
 
     data = await report.read()
@@ -162,9 +178,9 @@ async def analyze(request: Request, report: UploadFile):
     consent = form.get("consent") == "yes"
 
     try:
-        parsed = parse_report(data, report.filename or "")
-        requirements = load_requirements(REQUIREMENTS_PATH)
-        evaluation = evaluate(parsed, requirements)
+        parsed, evaluation = await run_in_threadpool(
+            _parse_and_evaluate, data, report.filename or ""
+        )
     except ReportParseError as exc:
         _log_usage(request, lang, "parse_error", consent=False)
         reason = t(f"parse_{exc.key}")
@@ -297,7 +313,7 @@ def _save_requirements(request: Request, username: str, new_text: str) -> Respon
     tmp_path.write_text(new_text, encoding="utf-8")
     os.replace(tmp_path, REQUIREMENTS_PATH)
 
-    database.add_audit(username, auth_client_ip(request), "requirements_update", diff)
+    database.add_audit(username, client_ip(request), "requirements_update", diff)
     return _render_admin(
         request, username,
         message=f"Saved. New requirements version: {parsed.version} "

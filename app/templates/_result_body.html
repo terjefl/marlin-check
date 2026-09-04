@@ -21,7 +21,10 @@
   {% endif %}
 </div>
 
-<p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }} · {{ t('target_profile_label') }}: {{ evaluation.target_profile }}</p>
+<p class="meta">{{ t('requirements_version_label') }}: {{ evaluation.requirements_version }} · {{ t('target_profile_label') }}: {{ evaluation.target_profile }} · {{ t('trim_label') }}: {% if evaluation.trim_name %}{{ evaluation.trim_name }} ({{ evaluation.trim }}){% else %}{{ t('trim_unknown') }}{% endif %}</p>
+{% if not evaluation.trim_name %}
+<div class="alert">ℹ️ {{ t('trim_unknown_note') }}</div>
+{% endif %}
 
 <table class="modules">
   <thead>

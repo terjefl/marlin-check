@@ -24,6 +24,15 @@ from fastapi import HTTPException, Request
 
 USERS_PATH = Path(os.environ.get("MARLIN_ADMIN_USERS_PATH", "/config/admin_users.yaml"))
 
+# The ONE request header trusted to carry the real client IP (used for rate
+# limits, login lockout, the audit log and the daily usage hash). Behind
+# Cloudflare this is CF-Connecting-IP, which Cloudflare always overwrites.
+# X-Forwarded-For is deliberately NOT consulted: Cloudflare appends the visitor
+# to a client-supplied X-Forwarded-For, so its first element is attacker
+# controlled. Set the variable to an empty string to use the socket address
+# (no proxy in front).
+CLIENT_IP_HEADER = os.environ.get("MARLIN_CLIENT_IP_HEADER", "cf-connecting-ip").strip().lower()
+
 PBKDF2_ITERATIONS = 600_000
 MAX_FAILED = 10
 FAILED_WINDOW = 15 * 60
@@ -58,9 +67,9 @@ def load_users() -> dict[str, str]:
 
 
 def client_ip(request: Request) -> str:
-    # Behind Cloudflare: CF-Connecting-IP is the real client IP
-    for header in ("cf-connecting-ip", "x-forwarded-for"):
-        value = request.headers.get(header, "")
+    """Client IP from the single trusted proxy header, else the socket address."""
+    if CLIENT_IP_HEADER:
+        value = request.headers.get(CLIENT_IP_HEADER, "")
         if value:
             return value.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
@@ -69,7 +78,10 @@ def client_ip(request: Request) -> str:
 def _too_many_failures(ip: str) -> bool:
     now = time.time()
     attempts = [t for t in _failed_attempts.get(ip, []) if t > now - FAILED_WINDOW]
-    _failed_attempts[ip] = attempts
+    if attempts:
+        _failed_attempts[ip] = attempts
+    else:
+        _failed_attempts.pop(ip, None)  # do not keep a key per IP forever
     return len(attempts) >= MAX_FAILED
 
 

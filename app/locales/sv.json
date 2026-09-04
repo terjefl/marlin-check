@@ -58,5 +58,9 @@
   "parse_no_vin": "Ingen VIN-rad (VIN: <17 tecken>) hittades i rapporten.",
   "parse_no_modules": "Inga ECU-avsnitt hittades i rapporten.",
   "ready_22_note": "Obs: en direkt uppdatering från 2.1 till Marlin uppdaterar ändå INTE ECU:erna nedan — de tillhör 2.2-uppdateringen (en obligatorisk NHTSA-återkallelse i Nordamerika som de flesta europeiska bilar aldrig fick). Bilen fungerar fint, men dessa ECU:er blir kvar på sina nuvarande versioner:",
-  "vcu24_notice": "Meddelande till alla som redan har VCU 2.4 (från Marlin eller på annat sätt): se till att informera den som ska uppdatera din bil till 2.2 om att du REDAN har den. Det finns ingen väg tillbaka eller kompatibilitet från VCU 2.4 (Marlin) till VCU 2.3 (2.2/2.2.3)."
+  "vcu24_notice": "Meddelande till alla som redan har VCU 2.4 (från Marlin eller på annat sätt): se till att informera den som ska uppdatera din bil till 2.2 om att du REDAN har den. Det finns ingen väg tillbaka eller kompatibilitet från VCU 2.4 (Marlin) till VCU 2.3 (2.2/2.2.3).",
+  "trim_label": "Utförande (från VIN)",
+  "trim_unknown": "okänt",
+  "trim_unknown_note": "Utförandet kunde inte läsas ur VIN-numret, så alla moduler räknas som obligatoriska (inklusive den bakre motorstyrenheten).",
+  "parse_too_many_pages": "PDF-filen har för många sidor för att vara en OLP-diagnosrapport."
 }

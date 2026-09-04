@@ -62,7 +62,9 @@ class Requirement:
     variants: list[Variant] = field(default_factory=list)
     # Trim letters (5th VIN character: Z/E/U/S = One/Extreme/Ultra/Sport) this
     # module is required for. None = required for all trims. Example: MCU_R is
-    # absent on the single-motor Sport, so only_trims: [Z, E, U].
+    # absent on the single-motor Sport, so only_trims: [Z, E, U]. The exemption
+    # only applies to a KNOWN trim letter: a VIN whose trim cannot be decoded
+    # still requires every module (fail-safe, see `evaluate`).
     only_trims: list[str] | None = None
 
 
@@ -94,6 +96,8 @@ class Evaluation:
     results: list[ModuleResult]
     profiles: list[str] = field(default_factory=list)
     extra_modules: list = field(default_factory=list)  # report modules without a requirement
+    trim: str = ""                # trim letter read from the VIN (5th character)
+    trim_name: str = ""           # "One"/"Extreme"/"Ultra"/"Sport", or "" if the letter is unknown
 
     @property
     def ok_below_top(self) -> list[ModuleResult]:
@@ -240,6 +244,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
     matched_codes: set[str] = set()
     target = requirements.target_profile
     trim = vin_trim(report.vin)
+    trim_known = trim in TRIM_NAMES
 
     for req in requirements.modules:
         reading = next(
@@ -248,7 +253,9 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
         if reading is None:
             # A module absent from the report is only a failure if this trim is
             # supposed to have it (e.g. the single-motor Sport has no MCU_R).
-            if req.only_trims and trim not in req.only_trims:
+            # An unknown trim letter never exempts anything: treating it as
+            # "not required" would let a two-motor car pass with MCU_R missing.
+            if req.only_trims and trim_known and trim not in req.only_trims:
                 continue
             results.append(
                 ModuleResult(requirement=req, status=MISSING, required=req.levels.get(target))
@@ -303,4 +310,6 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
         results=results,
         profiles=list(requirements.profiles),
         extra_modules=extra,
+        trim=trim,
+        trim_name=TRIM_NAMES.get(trim, ""),
     )

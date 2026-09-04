@@ -34,6 +34,10 @@ FIELD_RE = re.compile(
 )
 
 MAX_REPORT_BYTES = 15 * 1024 * 1024
+# A real OLP report is a handful of pages. Text extraction is CPU-bound and
+# linear in the amount of text, so a page cap keeps a hostile PDF from tying up
+# a worker thread for minutes.
+MAX_REPORT_PAGES = 20
 
 
 class ReportParseError(Exception):
@@ -83,8 +87,15 @@ def _extract_text(data: bytes, filename: str) -> str:
             import pdfplumber
 
             with pdfplumber.open(io.BytesIO(data)) as pdf:
+                page_count = len(pdf.pages)
+                if page_count > MAX_REPORT_PAGES:
+                    raise ReportParseError(
+                        "too_many_pages", f"{page_count} pages, max {MAX_REPORT_PAGES}"
+                    )
                 pages = [page.extract_text() or "" for page in pdf.pages]
             return "\n".join(pages)
+        except ReportParseError:
+            raise
         except Exception as exc:  # corrupt/encrypted PDF etc.
             raise ReportParseError("bad_pdf", str(exc)) from exc
     try:
