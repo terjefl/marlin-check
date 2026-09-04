@@ -62,5 +62,7 @@
   "trim_label": "Utgave (fra VIN)",
   "trim_unknown": "ukjent",
   "trim_unknown_note": "Utgaven kunne ikke leses fra VIN-nummeret, så alle moduler regnes som påkrevd (inkludert bakre motorkontroller).",
-  "parse_too_many_pages": "PDF-en har for mange sider til å være en OLP-diagnoserapport."
+  "parse_too_many_pages": "PDF-en har for mange sider til å være en OLP-diagnoserapport.",
+  "error_requirements_unavailable": "Portalens kravfil er utilgjengelig akkurat nå, så rapporter kan ikke analyseres. Administratorene er varslet – prøv igjen senere.",
+  "result_expired": "Denne resultatlenken er utløpt (resultater beholdes i 30 minutter). Last opp rapporten på nytt."
 }

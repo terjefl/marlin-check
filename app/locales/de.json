@@ -62,5 +62,7 @@
   "trim_label": "Ausstattung (aus der VIN)",
   "trim_unknown": "unbekannt",
   "trim_unknown_note": "Die Ausstattungsvariante konnte nicht aus der VIN gelesen werden, daher gelten alle Module als erforderlich (einschließlich des hinteren Motorsteuergeräts).",
-  "parse_too_many_pages": "Die PDF-Datei hat zu viele Seiten, um ein OLP-Diagnosebericht zu sein."
+  "parse_too_many_pages": "Die PDF-Datei hat zu viele Seiten, um ein OLP-Diagnosebericht zu sein.",
+  "error_requirements_unavailable": "Die Anforderungsdatei des Portals ist derzeit nicht verfügbar, daher können Berichte im Moment nicht ausgewertet werden. Die Administratoren sind informiert – bitte versuchen Sie es später erneut.",
+  "result_expired": "Dieser Ergebnislink ist abgelaufen (Ergebnisse werden 30 Minuten aufbewahrt). Bitte laden Sie den Bericht erneut hoch."
 }

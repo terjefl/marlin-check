@@ -5,6 +5,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import hmac
+import logging
 import os
 import re
 import secrets
@@ -15,7 +16,7 @@ from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -24,12 +25,17 @@ from . import db as db_module
 from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
+from .rules import RequirementSet
 from .rules import (
     RequirementsValidationError,
     evaluate,
     load_requirements,
     parse_requirements_text,
 )
+
+log = logging.getLogger("marlin")
+if not logging.getLogger().handlers:  # uvicorn configures its own loggers, not the root
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = Path(os.environ.get("MARLIN_DATA_DIR", "./data"))
@@ -45,6 +51,18 @@ RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
 COOKIE_SECURE = os.environ.get("MARLIN_COOKIE_SECURE", "1").strip().lower() not in ("0", "false", "no", "")
 RATE_LIMIT_UPLOADS = 10       # per IP per window
 RATE_LIMIT_WINDOW = 60        # seconds
+
+# The result-page wording (verdict_ready_text, verdict_zebra_text, ready_22_note
+# in all seven locales) is written for the Marlin world where "2.1" is the
+# profile required for a direct update and "2.2" is the highest profile. The
+# rule engine itself is generic, so /admin warns when the file deviates from
+# these names: the texts would then no longer match what is being checked.
+TEXT_TARGET_PROFILE = "2.1"
+TEXT_TOP_PROFILE = "2.2"
+
+# Parse-error details that are safe to show visitors; everything else (e.g.
+# pdfplumber's internal exception text) is only logged.
+_USER_VISIBLE_PARSE_DETAILS = {"too_many_pages"}
 
 app = FastAPI(title="Marlin Readiness Check", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -130,14 +148,27 @@ def _log_usage(request: Request, lang: str, outcome: str, consent: bool) -> None
             ip_hash=_usage_ip_hash(request),
         )
     except Exception:  # usage stats must never break the analysis itself
-        pass
+        log.exception("Could not record usage event")
 
 
-def _current_requirements():
+# Last-known-good requirements. The file is re-read on every use so admin
+# edits apply immediately; if it is ever invalid or missing (a bad edit on the
+# host, a mount that disappeared), analyses keep using the last good set and
+# /healthz turns 503 so the problem is visible instead of every upload
+# failing with a bare 500.
+_requirements_state: dict = {"set": None, "error": None}
+
+
+def _current_requirements() -> RequirementSet | None:
     try:
-        return load_requirements(REQUIREMENTS_PATH)
-    except (RequirementsValidationError, OSError):
-        return None
+        current = load_requirements(REQUIREMENTS_PATH)
+    except (RequirementsValidationError, OSError) as exc:
+        if _requirements_state["error"] != str(exc):
+            log.error("Requirements file %s unusable: %s", REQUIREMENTS_PATH, exc)
+        _requirements_state["error"] = str(exc)
+        return _requirements_state["set"]
+    _requirements_state["set"], _requirements_state["error"] = current, None
+    return current
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -148,7 +179,31 @@ def index(request: Request):
 
 @app.get("/healthz")
 def healthz():
+    _current_requirements()
+    if _requirements_state["error"]:
+        return JSONResponse(
+            {"status": "degraded", "requirements": _requirements_state["error"]},
+            status_code=503,
+        )
     return {"status": "ok"}
+
+
+@app.middleware("http")
+async def _reject_oversized_uploads(request: Request, call_next):
+    """Refuse an oversized POST /analyze from the Content-Length alone, before
+    the multipart body is read. Multipart framing adds a little on top of the
+    file itself, hence the slack."""
+    if request.method == "POST" and request.url.path == "/analyze":
+        try:
+            declared = int(request.headers.get("content-length", "0"))
+        except ValueError:
+            declared = 0
+        if declared > MAX_REPORT_BYTES + 64 * 1024:
+            t = translator(negotiate_language(request))
+            return _render(request, "index.html",
+                           {"error": t("error_too_large"), "requirements": _current_requirements()},
+                           status_code=413)
+    return await call_next(request)
 
 
 @app.get("/analyze")
@@ -160,12 +215,22 @@ def analyze_get(request: Request):
     return RedirectResponse(f"/?lang={lang}" if lang in SUPPORTED else "/", status_code=303)
 
 
-def _parse_and_evaluate(data: bytes, filename: str):
+def _parse_and_evaluate(data: bytes, filename: str, requirements: RequirementSet):
     """CPU-bound part of an upload (pdfplumber + rule engine). Runs in the
     threadpool so a slow PDF never blocks the event loop for other visitors."""
     parsed = parse_report(data, filename)
-    requirements = load_requirements(REQUIREMENTS_PATH)
     return parsed, evaluate(parsed, requirements)
+
+
+async def _read_upload(report: UploadFile) -> bytes | None:
+    """Reads the upload in chunks; None if it exceeds MAX_REPORT_BYTES, so a
+    large file never has to sit in memory in full before being rejected."""
+    buffer = bytearray()
+    while chunk := await report.read(1024 * 1024):
+        buffer += chunk
+        if len(buffer) > MAX_REPORT_BYTES:
+            return None
+    return bytes(buffer)
 
 
 @app.post("/analyze")
@@ -176,24 +241,30 @@ async def analyze(request: Request, report: UploadFile):
     if _rate_limited(client_ip(request)):
         return _render(request, "index.html", {"error": t("error_rate_limited"), "requirements": _current_requirements()}, status_code=429)
 
-    data = await report.read()
-    if len(data) > MAX_REPORT_BYTES:
-        return _render(request, "index.html", {"error": t("error_too_large"), "requirements": _current_requirements()}, status_code=413)
+    requirements = _current_requirements()
+    if requirements is None:
+        # Invalid/missing file and nothing good seen since startup
+        return _render(request, "index.html", {"error": t("error_requirements_unavailable"), "requirements": None}, status_code=503)
+
+    data = await _read_upload(report)
+    if data is None:
+        return _render(request, "index.html", {"error": t("error_too_large"), "requirements": requirements}, status_code=413)
 
     form = await request.form()
     consent = form.get("consent") == "yes"
 
     try:
         parsed, evaluation = await run_in_threadpool(
-            _parse_and_evaluate, data, report.filename or ""
+            _parse_and_evaluate, data, report.filename or "", requirements
         )
     except ReportParseError as exc:
         _log_usage(request, lang, "parse_error", consent=False)
+        log.info("Report rejected (%s): %s", exc.key, exc.detail or "-")
         reason = t(f"parse_{exc.key}")
-        if exc.detail:
+        if exc.detail and exc.key in _USER_VISIBLE_PARSE_DETAILS:
             reason += f" ({exc.detail})"
         return _render(
-            request, "index.html", {"error": t("error_parse", reason=reason), "requirements": _current_requirements()}, status_code=422
+            request, "index.html", {"error": t("error_parse", reason=reason), "requirements": requirements}, status_code=422
         )
 
     if consent:
@@ -217,17 +288,28 @@ async def analyze(request: Request, report: UploadFile):
     return RedirectResponse(f"/result/{token}", status_code=303)
 
 
+def _expired_result(request: Request) -> Response:
+    """Unknown or expired token (30 min TTL, or the app restarted): explain
+    instead of silently bouncing to the front page."""
+    t = translator(negotiate_language(request))
+    return _render(request, "index.html",
+                   {"error": t("result_expired"), "requirements": _current_requirements()},
+                   status_code=410)
+
+
 @app.get("/result/{token}", response_class=HTMLResponse)
 def result(request: Request, token: str):
     _prune_results()
     cached = _recent_results.get(token)
     if cached is None:
-        return RedirectResponse("/", status_code=303)
-    return _render(
+        return _expired_result(request)
+    response = _render(
         request,
         "result.html",
         {"report": cached["report"], "evaluation": cached["evaluation"], "token": token},
     )
+    response.headers["Cache-Control"] = "private, no-store"  # contains the VIN
+    return response
 
 
 @app.get("/pdf/{token}")
@@ -235,7 +317,7 @@ def download_pdf(request: Request, token: str):
     _prune_results()
     cached = _recent_results.get(token)
     if cached is None:
-        return RedirectResponse("/", status_code=303)
+        return _expired_result(request)
 
     lang = negotiate_language(request)
     html = templates.get_template("pdf.html").render(
@@ -252,7 +334,10 @@ def download_pdf(request: Request, token: str):
     return Response(
         pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
     )
 
 
@@ -367,11 +452,31 @@ async def admin_logout(request: Request, username: str = Depends(require_csrf)):
 def _render_admin(request: Request, username: str, *, message: str = "",
                   error: str = "", yaml_text: str | None = None,
                   status_code: int = 200) -> Response:
-    current_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
+    try:
+        current_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
+    except OSError as exc:
+        current_text = ""
+        error = error or f"The requirements file cannot be read ({exc}). Analyses use the last valid version loaded, if any."
     try:
         requirements = parse_requirements_text(current_text)
-    except RequirementsValidationError:
+    except RequirementsValidationError as exc:
         requirements = None  # show only the YAML editor if the file is invalid
+        error = error or (
+            f"The requirements file on disk is INVALID and analyses use the last valid "
+            f"version loaded, if any. Fix and save it below. Error: {exc}"
+        )
+    profile_warning = ""
+    if requirements is not None:
+        top = requirements.profiles[-1] if requirements.profiles else ""
+        if requirements.target_profile != TEXT_TARGET_PROFILE or top != TEXT_TOP_PROFILE:
+            profile_warning = (
+                f"The result-page texts (all 7 languages) are written for target profile "
+                f"{TEXT_TARGET_PROFILE} and highest profile {TEXT_TOP_PROFILE}. This file has "
+                f"target {requirements.target_profile} and highest {top}: the verdicts are "
+                f"computed correctly, but the wording shown to members will no longer match. "
+                f"Changing the profiles requires updating the texts in the source code "
+                f"(app/locales/*.json: verdict_ready_text, verdict_zebra_text, ready_22_note)."
+            )
     return _render(
         request,
         "admin.html",
@@ -380,6 +485,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "csrf": request.state.csrf,
             "message": message,
             "error": error,
+            "profile_warning": profile_warning,
             "requirements": requirements,
             "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),

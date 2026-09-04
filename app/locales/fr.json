@@ -62,5 +62,7 @@
   "trim_label": "Finition (d'après le VIN)",
   "trim_unknown": "inconnue",
   "trim_unknown_note": "La finition n'a pas pu être déterminée à partir du VIN ; tous les modules sont donc considérés comme requis (y compris le contrôleur du moteur arrière).",
-  "parse_too_many_pages": "Le PDF contient trop de pages pour être un rapport de diagnostic OLP."
+  "parse_too_many_pages": "Le PDF contient trop de pages pour être un rapport de diagnostic OLP.",
+  "error_requirements_unavailable": "Le fichier d'exigences du portail est indisponible pour le moment ; les rapports ne peuvent donc pas être analysés. Les administrateurs ont été prévenus – veuillez réessayer plus tard.",
+  "result_expired": "Ce lien de résultat a expiré (les résultats sont conservés 30 minutes). Veuillez téléverser le rapport à nouveau."
 }

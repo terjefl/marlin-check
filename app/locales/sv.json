@@ -62,5 +62,7 @@
   "trim_label": "Utförande (från VIN)",
   "trim_unknown": "okänt",
   "trim_unknown_note": "Utförandet kunde inte läsas ur VIN-numret, så alla moduler räknas som obligatoriska (inklusive den bakre motorstyrenheten).",
-  "parse_too_many_pages": "PDF-filen har för många sidor för att vara en OLP-diagnosrapport."
+  "parse_too_many_pages": "PDF-filen har för många sidor för att vara en OLP-diagnosrapport.",
+  "error_requirements_unavailable": "Portalens kravfil är inte tillgänglig just nu, så rapporter kan inte analyseras. Administratörerna är informerade – försök igen senare.",
+  "result_expired": "Den här resultatlänken har gått ut (resultat sparas i 30 minuter). Ladda upp rapporten igen."
 }

@@ -62,5 +62,7 @@
   "trim_label": "Udgave (fra VIN)",
   "trim_unknown": "ukendt",
   "trim_unknown_note": "Udgaven kunne ikke aflæses fra stelnummeret (VIN), så alle moduler regnes som påkrævede (inklusive den bageste motorstyring).",
-  "parse_too_many_pages": "PDF-filen har for mange sider til at være en OLP-diagnoserapport."
+  "parse_too_many_pages": "PDF-filen har for mange sider til at være en OLP-diagnoserapport.",
+  "error_requirements_unavailable": "Portalens kravfil er ikke tilgængelig lige nu, så rapporter kan ikke analyseres. Administratorerne er underrettet – prøv igen senere.",
+  "result_expired": "Dette resultatlink er udløbet (resultater gemmes i 30 minutter). Upload rapporten igen."
 }

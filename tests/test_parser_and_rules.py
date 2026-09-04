@@ -16,8 +16,10 @@ from app.rules import (
     OUTDATED,
     VERDICT_READY,
     VERDICT_ZEBRA,
+    RequirementsValidationError,
     evaluate,
     load_requirements,
+    parse_requirements_text,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -206,3 +208,49 @@ def test_pdf_with_too_many_pages_is_rejected():
     with pytest.raises(ReportParseError) as excinfo:
         parse_report(pdf_bytes, "big.pdf")
     assert excinfo.value.key == "too_many_pages"
+
+
+_MINIMAL = """
+version: t
+profiles: ["2.0", "2.1", "2.2"]
+target_profile: "2.1"
+modules:
+  - id: VCU
+    match: [VCU]
+    extract: 'VCU\\d{3}0*(\\d+)$'
+    levels: {"2.0": 20, "2.1": 21}
+"""
+
+
+def test_requirements_validation_rejects_wrong_types():
+    """A bare string for `match` used to be iterated character by character
+    (VCU -> V, C, U) and silently marked the module missing on every car."""
+    cases = {
+        "match: [VCU]": ("match: VCU", "`match` must be a non-empty list"),
+        'levels: {"2.0": 20, "2.1": 21}': ('levels: {"2.0": 20, "2.1": "21a"}', "must be an integer"),
+        "    extract: 'VCU": ("    variants: nope\n    extract: 'VCU", "`variants` must be a list"),
+        'profiles: ["2.0", "2.1", "2.2"]': ('profiles: "2.0, 2.1"', "`profiles` must be a non-empty list"),
+        "  - id: VCU\n    match: [VCU]": ("  - VCU\n  - match: [VCU]", "must be a mapping"),
+    }
+    for original, (replacement, message) in cases.items():
+        text = _MINIMAL.replace(original, replacement)
+        assert text != _MINIMAL
+        with pytest.raises(RequirementsValidationError) as excinfo:
+            parse_requirements_text(text)
+        assert message in str(excinfo.value), (replacement, str(excinfo.value))
+    # And the unmodified minimal file is fine
+    assert parse_requirements_text(_MINIMAL).modules[0].match == ["VCU"]
+
+
+def test_ok_below_top_only_lists_modules_with_a_top_level():
+    """A module that defines no level for the highest profile cannot be
+    'left behind by 2.2' and must not appear in that list."""
+    requirements = parse_requirements_text(_MINIMAL)  # VCU has no 2.2 level
+    evaluation = evaluate(_report(), requirements)
+    assert evaluation.verdict == VERDICT_READY
+    assert evaluation.ok_below_top == []
+
+    with_top = parse_requirements_text(_MINIMAL.replace('"2.1": 21}', '"2.1": 21, "2.2": 23}'))
+    evaluation = evaluate(_report(), with_top)  # VCU039021 -> 21 < 23
+    assert [r.requirement.id for r in evaluation.ok_below_top] == ["VCU"]
+    assert evaluation.results[0].top_required == 23

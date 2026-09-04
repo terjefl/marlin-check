@@ -115,9 +115,13 @@ def test_result_page_survives_language_switch_and_reload(client):
     assert german.status_code == 200
     assert "Ergebnis für VIN" in german.text
 
-    # Expired/unknown token -> back to the front page
-    gone = c.get("/result/finnesikke", follow_redirects=False)
-    assert gone.status_code == 303 and gone.headers["location"] == "/"
+    # Expired/unknown token -> front page with an explanation, not a silent redirect
+    gone = c.get("/result/finnesikke?lang=en")
+    assert gone.status_code == 410
+    assert "This result link has expired" in gone.text
+    assert c.get("/pdf/finnesikke").status_code == 410
+    # Result pages carry the VIN and must not be cached anywhere
+    assert again.headers["cache-control"] == "private, no-store"
 
 
 def test_usage_logged_without_consent_and_without_ip(client):
@@ -263,3 +267,96 @@ def test_slow_pdf_does_not_block_other_requests(client, monkeypatch):
     assert health.status_code == 200
     assert elapsed < 2, f"/healthz was blocked for {elapsed:.1f}s while a PDF was being parsed"
     assert result["status"] == 303
+
+
+@pytest.fixture()
+def client_with_config(tmp_path, monkeypatch):
+    """Like `client`, but with a writable copy of the requirements file."""
+    import shutil
+
+    config = tmp_path / "config"
+    config.mkdir()
+    shutil.copy(Path(__file__).parent.parent / "requirements.example.yaml", config / "requirements.yaml")
+    monkeypatch.setenv("MARLIN_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("MARLIN_UPLOADS_DIR", str(tmp_path / "data" / "uploads"))
+    monkeypatch.setenv("MARLIN_REQUIREMENTS_PATH", str(config / "requirements.yaml"))
+    from app import main
+
+    importlib.reload(main)
+    return TestClient(main.app), main, config / "requirements.yaml"
+
+
+def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_config):
+    c, main, path = client_with_config
+    good = path.read_text()
+    assert c.get("/healthz").status_code == 200
+    assert "2026-09-workbook-v2-draft" in _upload(c, consent=False).text
+
+    path.write_text("modules: [\n")  # a bad edit on the host
+    health = c.get("/healthz")
+    assert health.status_code == 503
+    assert health.json()["status"] == "degraded"
+    # Analyses continue on the last valid set instead of failing with 500
+    response = _upload(c, consent=False)
+    assert response.status_code == 200
+    assert "2026-09-workbook-v2-draft" in response.text
+    assert c.get("/").status_code == 200
+
+    path.unlink()  # mount gone entirely
+    assert c.get("/healthz").status_code == 503
+    assert _upload(c, consent=False).status_code == 200
+
+    path.write_text(good)
+    assert c.get("/healthz").status_code == 200
+
+
+def test_corrupt_requirements_at_startup_gives_503_not_500(tmp_path, monkeypatch):
+    config = tmp_path / "config"
+    config.mkdir()
+    (config / "requirements.yaml").write_text("not: [valid")
+    monkeypatch.setenv("MARLIN_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("MARLIN_UPLOADS_DIR", str(tmp_path / "data" / "uploads"))
+    monkeypatch.setenv("MARLIN_REQUIREMENTS_PATH", str(config / "requirements.yaml"))
+    from app import main
+
+    importlib.reload(main)
+    c = TestClient(main.app, raise_server_exceptions=False)
+    assert c.get("/healthz").status_code == 503
+    response = _upload(c, consent=False)
+    assert response.status_code == 503
+    assert "requirements file is currently unavailable" in response.text
+
+
+def test_oversized_upload_rejected_by_content_length_and_by_chunked_read(client):
+    c, main = client
+    limit = main.MAX_REPORT_BYTES
+    # Far over the limit: the middleware answers from Content-Length alone
+    huge = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 200 * 1024), "text/plain")})
+    assert huge.status_code == 413
+    assert "larger than the 15 MB limit" in huge.text
+    # Just over the limit (inside the multipart slack): caught by the chunked read
+    just_over = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 1), "text/plain")})
+    assert just_over.status_code == 413
+    # Under the limit still goes through the parser (and is rejected as not a report)
+    assert c.post("/analyze", files={"report": ("r.txt", b"x" * 1024, "text/plain")}).status_code == 422
+
+
+def test_bad_pdf_error_hides_library_internals(client):
+    c, _ = client
+    response = c.post("/analyze?lang=en", files={"report": ("r.pdf", b"%PDF-1.7 garbage", "application/pdf")})
+    assert response.status_code == 422
+    assert "The PDF content could not be read." in response.text
+    assert "The PDF content could not be read. (" not in response.text
+    for leak in ("pdfminer", "pdfplumber", "Traceback", "PSEOF", "No /Root"):
+        assert leak not in response.text
+
+
+def test_pdf_download_is_not_cacheable(client):
+    pytest.importorskip("weasyprint")
+    c, _ = client
+    response = _upload(c, consent=False)
+    token = str(response.url).rsplit("/", 1)[1]
+    pdf = c.get(f"/pdf/{token}")
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.headers["cache-control"] == "private, no-store"

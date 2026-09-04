@@ -55,6 +55,19 @@ lives as `/config/requirements.yaml` (bind-mounted directory). It is re-read
 on every analysis, so requirements can be updated **without** a rebuild —
 either directly on the host or via the admin page.
 
+The profile names are effectively fixed for this portal: the result-page
+texts in all seven languages are written for target profile `2.1` (direct
+Marlin) and highest profile `2.2`. The rule engine does not care, but if the
+association ever changes the profiles, the texts in `app/locales/*.json`
+(`verdict_ready_text`, `verdict_zebra_text`, `ready_22_note`) must be
+rewritten; the admin page warns when the file deviates from these names.
+
+If the file on disk becomes invalid or unreadable (a bad edit on the host),
+analyses keep using the last valid set loaded since startup, `/healthz`
+returns 503 with the validation error (the container shows as unhealthy), and
+the admin page shows the error above the YAML editor. If no valid set has been
+loaded at all, uploads get a friendly 503 page instead of a bare 500.
+
 ## Admin page (`/admin`)
 
 Protected page for web editing of the requirements spec:

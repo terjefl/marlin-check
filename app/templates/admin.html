@@ -13,6 +13,7 @@
 
 {% if message %}<div class="alert">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+{% if profile_warning %}<div class="alert error">⚠️ {{ profile_warning }}</div>{% endif %}
 
 {% if requirements %}
 <form method="post" action="/admin/save-form">

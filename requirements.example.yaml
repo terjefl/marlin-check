@@ -37,7 +37,11 @@
 
 version: "2026-09-workbook-v2-draft"
 
-# Profiles in ascending order, and the profile required for direct Marlin
+# Profiles in ascending order, and the profile required for direct Marlin.
+# NOTE: the result-page texts in the portal (7 languages) are written for
+# target "2.1" and highest profile "2.2". The rule engine is generic, but if
+# these names ever change, the texts in app/locales/*.json must be rewritten
+# too; /admin shows a warning when the file deviates.
 profiles: ["2.0", "2.1", "2.2"]
 target_profile: "2.1"
 

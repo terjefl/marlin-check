@@ -321,3 +321,38 @@ def test_lockout_on_failed_logins_per_ip_and_per_user(client):
     assert _login(c, "terje", "hemmelig123", headers={"CF-Connecting-IP": "198.51.100.10"}).status_code == 429
     # Other IP, other user -> fine
     assert _login(c, "styremedlem", "ogsåhemmelig", headers={"CF-Connecting-IP": "198.51.100.10"}).status_code == 303
+
+
+def test_admin_page_flags_invalid_requirements_file(client):
+    """A bad edit on the host must be visible to admins: error shown, YAML
+    editor open, and the form editor hidden; saving a valid file recovers."""
+    c, main = client
+    good = main.REQUIREMENTS_PATH.read_text()
+    _login(c, "terje", "hemmelig123")
+    main.REQUIREMENTS_PATH.write_text("modules: [\n")
+    page = c.get("/admin")
+    assert page.status_code == 200
+    assert "requirements file on disk is INVALID" in page.text
+    assert 'action="/admin/save-form"' not in page.text  # form editor needs a valid file
+    assert 'name="yaml_text"' in page.text
+    assert c.get("/healthz").status_code == 503
+
+    csrf = _csrf(page.text)
+    response = c.post("/admin/save", data={"yaml_text": good, "csrf": csrf})
+    assert response.status_code == 200 and "Saved" in response.text
+    assert c.get("/healthz").status_code == 200
+
+
+def test_admin_warns_when_profiles_deviate_from_the_texts(client):
+    """The verdict texts hardcode 2.1/2.2; the engine is generic. Saving a
+    file with other profile names must succeed but show a warning."""
+    c, main = client
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin").text
+    assert "the wording shown to members will no longer match" not in page
+    csrf = _csrf(page)
+    new_text = main.REQUIREMENTS_PATH.read_text().replace('target_profile: "2.1"', 'target_profile: "2.2"')
+    response = c.post("/admin/save", data={"yaml_text": new_text, "csrf": csrf})
+    assert response.status_code == 200 and "Saved" in response.text
+    assert "result-page texts (all 7 languages) are written for target profile 2.1" in response.text
+    assert "This file has target 2.2 and highest 2.2" in response.text

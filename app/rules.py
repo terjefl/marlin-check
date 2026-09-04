@@ -86,6 +86,7 @@ class ModuleResult:
     required: int | None = None   # the target profile minimum level
     level: str | None = None      # highest profile the module satisfies, None = below all
     variant: str = ""             # name of the matched variant, if any
+    top_required: int | None = None  # minimum for the highest profile (variant-aware), if defined
 
 
 @dataclass
@@ -102,11 +103,16 @@ class Evaluation:
     @property
     def ok_below_top(self) -> list[ModuleResult]:
         """Modules that meet the target profile but not the highest profile —
-        i.e. what a direct 2.1→Marlin update will leave behind (2.2-only ECUs)."""
-        if not self.profiles:
-            return []
-        top = self.profiles[-1]
-        return [r for r in self.results if r.status == OK and r.level != top]
+        i.e. what a direct 2.1→Marlin update will leave behind (2.2-only ECUs).
+        Only modules that actually DEFINE a level for the top profile can be
+        below it; a module with no top-profile requirement is not listed."""
+        return [
+            r for r in self.results
+            if r.status == OK
+            and r.top_required is not None
+            and r.extracted is not None
+            and r.extracted < r.top_required
+        ]
 
     @property
     def failing(self) -> list[ModuleResult]:
@@ -180,32 +186,101 @@ def load_requirements(path: str | Path) -> RequirementSet:
     return parse_requirements_text(Path(path).read_text(encoding="utf-8"))
 
 
+def _str_list(value, where: str) -> list[str]:
+    """A YAML list of scalars. A bare string is rejected: iterating over
+    `match: VCU` would silently yield ["V", "C", "U"] and mark the module
+    missing on every car."""
+    if not isinstance(value, list) or not value:
+        raise RequirementsValidationError(f"{where} must be a non-empty list (e.g. [VCU]).")
+    if not all(isinstance(item, (str, int, float)) for item in value):
+        raise RequirementsValidationError(f"{where} must contain only plain values.")
+    return [str(item) for item in value]
+
+
+def _levels(value, where: str) -> dict[str, int]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise RequirementsValidationError(f"{where} must be a mapping of profile -> integer level.")
+    out: dict[str, int] = {}
+    for k, v in value.items():
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or int(v) != v:
+            raise RequirementsValidationError(
+                f"{where}: level for profile {k!r} must be an integer (got {v!r})."
+            )
+        out[str(k)] = int(v)
+    return out
+
+
+def _mapping(value, where: str) -> dict:
+    if not isinstance(value, dict):
+        raise RequirementsValidationError(f"{where} must be a mapping.")
+    return value
+
+
+def _optional_str(value, where: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise RequirementsValidationError(f"{where} must be a string.")
+    return value
+
+
 def _build_requirement_set(raw: dict) -> RequirementSet:
-    modules = [
-        Requirement(
-            id=m["id"],
-            match=[s.upper() for s in m.get("match", [m["id"]])],
-            levels={str(k): int(v) for k, v in m.get("levels", {}).items()},
-            extract=m.get("extract"),
-            critical=bool(m.get("critical", True)),
-            label=m.get("label", m["id"]),
-            variants=[
+    raw_modules = raw.get("modules", [])
+    if not isinstance(raw_modules, list):
+        raise RequirementsValidationError("`modules` must be a list.")
+    modules = []
+    for index, m in enumerate(raw_modules):
+        m = _mapping(m, f"modules[{index}]")
+        if "id" not in m or not isinstance(m["id"], str) or not m["id"].strip():
+            raise RequirementsValidationError(f"modules[{index}]: `id` is missing or not a string.")
+        module_id = m["id"].strip()
+        where = f"Module {module_id}"
+        raw_variants = m.get("variants", [])
+        if raw_variants is None:
+            raw_variants = []
+        if not isinstance(raw_variants, list):
+            raise RequirementsValidationError(f"{where}: `variants` must be a list.")
+        variants = []
+        for v_index, v in enumerate(raw_variants):
+            v = _mapping(v, f"{where}: variants[{v_index}]")
+            for key in ("name", "pattern"):
+                if not isinstance(v.get(key), str) or not v[key]:
+                    raise RequirementsValidationError(
+                        f"{where}: variants[{v_index}] needs a string `{key}`."
+                    )
+            variants.append(
                 Variant(
                     name=v["name"],
                     pattern=v["pattern"],
-                    levels={str(k): int(val) for k, val in v.get("levels", {}).items()},
-                    extract=v.get("extract"),
+                    levels=_levels(v.get("levels"), f"{where}/{v['name']}: `levels`"),
+                    extract=_optional_str(v.get("extract"), f"{where}/{v['name']}: `extract`"),
                 )
-                for v in m.get("variants", [])
-            ],
-            only_trims=[str(t).upper() for t in m["only_trims"]] if m.get("only_trims") else None,
+            )
+        modules.append(
+            Requirement(
+                id=module_id,
+                match=[
+                    code.upper()
+                    for code in _str_list(m.get("match", [module_id]), f"{where}: `match`")
+                ],
+                levels=_levels(m.get("levels"), f"{where}: `levels`"),
+                extract=_optional_str(m.get("extract"), f"{where}: `extract`"),
+                critical=bool(m.get("critical", True)),
+                label=str(m.get("label") or module_id),
+                variants=variants,
+                only_trims=(
+                    [t.upper() for t in _str_list(m["only_trims"], f"{where}: `only_trims`")]
+                    if m.get("only_trims")
+                    else None
+                ),
+            )
         )
-        for m in raw.get("modules", [])
-    ]
     return RequirementSet(
         version=str(raw.get("version", "unknown")),
         target_profile=str(raw.get("target_profile")),
-        profiles=[str(p) for p in raw.get("profiles", [])],
+        profiles=_str_list(raw.get("profiles"), "`profiles`"),
         modules=modules,
     )
 
@@ -278,6 +353,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 variant_name = variant.name
 
         required = levels.get(target)
+        top_required = levels.get(requirements.profiles[-1]) if requirements.profiles else None
         extracted = _extract_number(reading.supplier_sw, extract_regex)
         if extracted is None or required is None:
             results.append(
@@ -298,6 +374,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 required=required,
                 level=_profile_level(extracted, levels, requirements.profiles),
                 variant=variant_name,
+                top_required=top_required,
             )
         )
 
