@@ -26,7 +26,7 @@ app/
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
   templates/    Jinja2 templates (base/index/result/stats/privacy/admin/pdf)
   static/       style.css (served with a content-hash cache buster)
-tests/          pytest suite incl. an anonymized real report as fixture
+tests/          pytest suite incl. a real OLP report as fixture (PDF + text)
 scripts/        hash_password.py — create admin password hashes
 ```
 
@@ -101,8 +101,9 @@ Protected page for web editing of the requirements spec:
 docker compose up --build
 ```
 
-Open <http://localhost:8000>. Test with `tests/fixtures/olp_report.txt`
-(an anonymized real report). For the admin page, copy
+Open <http://localhost:8000>. Test with `tests/fixtures/olp_report.pdf` (a
+real OLP export from a Fisker Ocean One) or `olp_report.txt` (its text
+extraction with an anonymized VIN). For the admin page, copy
 `requirements.example.yaml` to `dev-config/requirements.yaml` and create
 `dev-config/admin_users.yaml` (see `admin_users.example.yaml`).
 

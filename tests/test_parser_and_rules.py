@@ -1,8 +1,13 @@
 """Tests against the real OLP format.
 
-The `olp_report.txt` fixture is the text extraction of a real OceanLink Pro
-report (2026-08-28) with the VIN anonymized. The car in the fixture is a real
-"zebra": BMS/ECC at 2.1 level, VCU/MCU/ESP at 2.0 level.
+Two fixtures of the same real OceanLink Pro report (2026-08-28, a Fisker Ocean
+One, a real "zebra": everything at 2.1 level except BCM):
+
+- `olp_report.pdf`: the PDF exactly as exported by the OLP app, unmodified
+  (the owner chose to keep the real VIN). This is what members upload, so it
+  exercises the pdfplumber text-extraction step with the app's real layout.
+- `olp_report.txt`: its text extraction with the VIN replaced, used by the
+  many tests that mutate module values.
 """
 
 from pathlib import Path
@@ -49,6 +54,27 @@ def test_parse_real_format():
     assert by_code["HYDRA"].section == "ADAS"
     assert by_code["ESP"].software == "FM292045S020J"
     assert by_code["ESP"].bootloader == "FM292045B020B"
+
+
+def test_parse_real_olp_pdf_end_to_end():
+    """The real PDF from the OLP app must extract to exactly the module list of
+    the text fixture and get the same verdict. A layout change in the app or a
+    pdfplumber upgrade that reads the report differently fails here."""
+    pdf_report = parse_report((FIXTURES / "olp_report.pdf").read_bytes(), "olp_report.pdf")
+    text_report = _report()
+    assert pdf_report.vin == "VCF1ZBE21PG002387"
+    assert pdf_report.meta["report_date"].startswith("2026-08-28 18:15:16")
+    assert len(pdf_report.modules) == 37
+    assert [(m.code, m.name, m.section, m.supplier_sw, m.software, m.hardware, m.bootloader)
+            for m in pdf_report.modules] == [
+        (m.code, m.name, m.section, m.supplier_sw, m.software, m.hardware, m.bootloader)
+        for m in text_report.modules
+    ]
+
+    evaluation = evaluate(pdf_report, load_requirements(REQUIREMENTS))
+    assert evaluation.verdict == VERDICT_ZEBRA
+    assert (evaluation.trim, evaluation.trim_name) == ("Z", "One")
+    assert {r.requirement.id for r in evaluation.failing_critical} == {"BCM"}
 
 
 def test_parse_pdf_roundtrip(tmp_path):
