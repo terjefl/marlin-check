@@ -3,7 +3,7 @@
 Web portal for the Fisker Owners Association: members upload an ECU diagnostics
 report exported from **OceanLink Pro (OLP)**, and the portal checks whether the
 car's control modules meet the minimum software levels required for the
-**Marlin** software update. Live at <https://marlin.flagan.net> (ALPHA banner).
+**Marlin** software update. Live at <https://marlin.flagan.net> (BETA since 2026-09-05).
 
 - Per-module result (OK / outdated / missing / version not recognised / empty
   field) and an overall verdict: **Marlin-ready**, a **zebra** (mixed levels,
