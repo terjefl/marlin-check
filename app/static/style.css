@@ -138,3 +138,4 @@ pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding:
 .how .prose { line-height: 1.55; }
 .principles { padding-left: 1.2rem; }
 .principles li { margin: 0.5rem 0; line-height: 1.5; }
+.variantlevels { display: block; font-size: 0.75rem; color: var(--muted); white-space: nowrap; margin-top: 0.15rem; }

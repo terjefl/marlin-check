@@ -54,16 +54,17 @@ notes: |
   - The Sport/LFP BMS level (15) is read from a Sport reference report
     ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
     table, so it may not be the true 2.1 minimum for the LFP line.
+  - The trim letter (5th VIN character) is verified for One (Z) only. Sport (S)
+    is unverified, and it is the letter that matters: it exempts MCU_R.
 
-  Verified against uploads (Sep 2026): a car exactly at the 2.1 minimums,
-  a full 2.2 car (VCU 23, MCU 21, BCM 42, ESP 501, ECC 25), and two Marlin
-  cars (VCU 24, otherwise as 2.2).
+  Verified against uploads (Sep 2026): a 100% 2.1 car (BCM 30, ECC 24, MCU 19,
+  VCU 21, BMS 21, ESP 402), a full 2.2 car (VCU 23, MCU 21, BCM 42, ESP 501,
+  ECC 25), and two Marlin cars (VCU 24; one as 2.2, one with BCM 41, see above).
 
   Right-hand drive: the workbook shows RHD-specific software lines only on
   EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
   (ADAS039021 vs ADAS039020). None of these is a required module, and ESP has
   no RHD variant, so RHD cars need no special handling.
-
 # Profiles in ascending order, and the profile required for direct Marlin.
 # NOTE: the result-page texts in the portal (7 languages) are written for
 # target "2.1" and highest profile "2.2". The rule engine is generic, but if

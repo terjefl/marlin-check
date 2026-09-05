@@ -378,3 +378,33 @@ def test_form_save_keeps_notes_and_admin_shows_them(client):
     saved = load_requirements(main.REQUIREMENTS_PATH)
     assert "Open points" in saved.notes
     assert saved.modules[0].marlin_level == 24  # per-module extras still preserved too
+
+
+def test_form_editor_shows_variant_levels_for_bms(client):
+    """BMS has no module-level numbers (they live on the NMC/LFP variants);
+    the form must show them instead of an empty-looking row."""
+    c, main = client
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin").text
+    assert page.count("NMC 21 / LFP 15") == 3  # one per profile column
+    assert 'name="mod-3-level-2.1" value=""' in page and 'placeholder="per variant"' in page
+    # The roundtrip still saves without inventing a base level for BMS
+    csrf = _csrf(page)
+    import html as html_module
+    import re as re_module
+
+    form_html = re_module.search(r'<form method="post" action="/admin/save-form">(.*?)</form>', page, re_module.DOTALL).group(1)
+    fields = {}
+    for m in re_module.finditer(r"<input([^>]*)>", form_html):
+        attrs = dict(re_module.findall(r'(\w+)="([^"]*)"', m.group(1)))
+        if attrs.get("type") == "checkbox":
+            if "checked" in m.group(1):
+                fields[attrs["name"]] = attrs.get("value", "on")
+        elif "name" in attrs:
+            fields[attrs["name"]] = html_module.unescape(attrs.get("value", ""))
+    fields["csrf"] = csrf
+    assert c.post("/admin/save-form", data=fields).status_code == 200
+    from app.rules import load_requirements
+
+    bms = next(m for m in load_requirements(main.REQUIREMENTS_PATH).modules if m.id == "BMS")
+    assert bms.levels == {} and [v.levels["2.1"] for v in bms.variants] == [21, 15]

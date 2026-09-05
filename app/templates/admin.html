@@ -60,7 +60,8 @@
         <td><input class="mono" type="text" name="mod-{{ mi }}-extract" value="{{ m.extract or '' }}" placeholder="(last number in the string)"></td>
         {% for p in requirements.profiles %}
         {# NB: mi, not loop.index0 — inside this loop, `loop` is the profile loop #}
-        <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"></td>
+        <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"{% if m.variants %} placeholder="per variant"{% endif %}>
+          {% if m.variants %}<span class="variantlevels" title="Levels per software line (variants); edit in the YAML editor">{% for v in m.variants %}{% if not loop.first %} / {% endif %}{{ v.name.split(' (')[0] }} {{ v.levels.get(p, '—') }}{% endfor %}</span>{% endif %}</td>
         {% endfor %}
         <td class="crit"><input type="checkbox" name="mod-{{ mi }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
         <td class="del"><button type="button" class="small danger" data-delete-row>Delete</button></td>
@@ -73,7 +74,7 @@
     <button type="button" class="small secondary button" id="addrow" data-profiles="{{ requirements.profiles | tojson | forceescape }}">+ Add module</button>
     &nbsp; "Match ECU codes" is matched against the codes in the report (e.g. <code>MCU_R, MCU_RR</code>).
     The extract regex must have one capture group catching the number to compare; empty = last number in the string.
-    An empty level field = no requirement for that profile (the required profile must have a level). Modules with <code>variants</code>, <code>only_trims</code> or <code>marlin_level</code> (e.g. BMS, MCU_R, VCU) keep those settings on form save — edit them in the YAML editor below.
+    An empty level field = no requirement for that profile (the required profile must have a level). Modules with <code>variants</code> (e.g. BMS) show the per-line levels in grey under the field; those, <code>only_trims</code> and <code>marlin_level</code> are kept on form save and edited in the YAML editor below.
   </p>
   <div class="actions">
     <button type="submit">Validate and save</button>
