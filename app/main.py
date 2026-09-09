@@ -26,6 +26,7 @@ from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, block, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
 from .rules import (
+    TRIM_NAMES,
     RequirementSet,
     RequirementsValidationError,
     evaluate,
@@ -366,9 +367,17 @@ def download_pdf(request: Request, token: str):
     )
 
 
+def _fleet_stats() -> dict:
+    requirements = _current_requirements()
+    return database.stats(
+        profiles=list(requirements.profiles) if requirements else None,
+        target=requirements.target_profile if requirements else None,
+    )
+
+
 @app.get("/stats", response_class=HTMLResponse)
 def stats(request: Request):
-    return _render(request, "stats.html", {"stats": database.stats()})
+    return _render(request, "stats.html", {"stats": _fleet_stats(), "trim_names": TRIM_NAMES})
 
 
 @app.get("/privacy", response_class=HTMLResponse)

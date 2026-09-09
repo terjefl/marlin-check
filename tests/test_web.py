@@ -387,8 +387,9 @@ def test_marlin_car_result_page_and_statistics(client):
 
     stats = main.database.stats()
     assert stats["verdicts"] == {"marlin": 1}
+    assert stats["outcomes"] == {"marlin": 1}
     page = c.get("/stats?lang=en")
-    assert "Already on Marlin" in page.text
+    assert "On Marlin" in page.text and "Vehicles per software status" in page.text
     assert main.database.usage_stats()["outcomes"] == {"marlin": 1}
 
 

@@ -7,27 +7,113 @@
 {% if stats.unique_vins == 0 %}
 <div class="alert">{{ t('stats_empty') }}</div>
 {% else %}
-<div class="statgrid">
-  <div class="stat"><span class="num">{{ stats.unique_vins }}</span><span class="label">{{ t('stats_unique_vins') }}</span></div>
-  <div class="stat"><span class="num">{{ stats.total_submissions }}</span><span class="label">{{ t('stats_total') }}</span></div>
-  <div class="stat ok"><span class="num">{{ stats.verdicts.get('ready', 0) }}</span><span class="label">{{ t('stats_ready') }}</span></div>
-  <div class="stat warn"><span class="num">{{ stats.verdicts.get('zebra', 0) }}</span><span class="label">{{ t('stats_not_ready') }}</span></div>
-  <div class="stat info"><span class="num">{{ stats.verdicts.get('marlin', 0) }}</span><span class="label">{{ t('stats_marlin') }}</span></div>
-</div>
+{% set order = ['marlin', 'full_22', 'full_21', 'zebra_22', 'zebra_21'] %}
+{% set icons = {'marlin': '🐟', 'full_22': '✅', 'full_21': '🟣', 'zebra_22': '🦓', 'zebra_21': '⚠️'} %}
+{% set n_cars = stats.unique_vins %}
 
-<h2>{{ t('stats_module_heading') }}</h2>
-{% for module_id, versions in stats.module_versions.items() %}
-{% set total = versions | sum(attribute='count') %}
-<div class="modstat">
-  <h3>{{ module_id }}</h3>
-  {% for v in versions %}
-  <div class="bar-row">
-    <span class="bar-label">{{ v.version }}</span>
-    <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
-    <span class="bar-count">{{ v.count }}</span>
-  </div>
+<div class="statgrid">
+  <div class="stat"><span class="num">{{ n_cars }}</span><span class="label">{{ t('stats_unique_vins') }}</span></div>
+  <div class="stat"><span class="num">{{ stats.total_submissions }}</span><span class="label">{{ t('stats_total') }}</span></div>
+  {% for o in order %}
+  <div class="stat oc-{{ o }}"><span class="num">{{ stats.outcomes.get(o, 0) }}</span><span class="label">{{ icons[o] }} {{ t('outcome_' + o + '_short') }}</span></div>
   {% endfor %}
 </div>
-{% endfor %}
+
+<section class="card">
+  <h2>{{ t('stats_outcomes_heading') }}</h2>
+  <div class="stack" role="img" aria-label="{{ t('stats_outcomes_heading') }}">
+    {% for o in order %}{% set n = stats.outcomes.get(o, 0) %}{% if n %}
+    <div class="seg oc-{{ o }}" style="flex-grow: {{ n }}" title="{{ t('outcome_' + o + '_short') }}: {{ n }}"><span>{{ n }}</span></div>
+    {% endif %}{% endfor %}
+  </div>
+  <ul class="legend">
+    {% for o in order %}
+    <li><i class="swatch oc-{{ o }}"></i>{{ icons[o] }} {{ t('outcome_' + o + '_short') }} — <strong>{{ stats.outcomes.get(o, 0) }}</strong> ({{ (100 * stats.outcomes.get(o, 0) / n_cars) | round(0) | int }} %)</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card">
+  <h2>{{ t('stats_split_heading') }}</h2>
+  <p class="meta">{{ t('stats_split_intro') }}</p>
+  <div class="usagegrid">
+    {% for key, profile in [('zebra_22', stats.profiles[-1]), ('zebra_21', stats.profiles[-2] if stats.profiles | length > 1 else stats.profiles[-1])] %}
+    {% set part = stats.split[key] %}
+    <div>
+      <h3>{{ icons[key] }} {{ t('stats_split_' + key, n=part.cars, profile=profile) }}</h3>
+      {% if not part.modules %}
+      <p class="meta">{{ t('stats_split_none') }}</p>
+      {% else %}
+      {% for m in part.modules %}
+      <div class="bar-row">
+        <span class="bar-label">{{ m.module_id }}</span>
+        <div class="bar-track"><div class="bar oc-{{ key }}" style="width: {{ (100 * m.n / part.cars) | round(1) }}%"></div></div>
+        <span class="bar-count">{{ m.n }}</span>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card">
+  <h2>{{ t('stats_levels_heading') }}</h2>
+  <p class="meta">{{ t('stats_levels_intro') }}</p>
+  {% set level_keys = ['below'] + stats.profiles + ['unknown'] %}
+  {% for module_id, buckets in stats.module_levels.items() %}
+  {% set total = buckets.values() | sum %}
+  <div class="levelrow">
+    <span class="bar-label">{{ module_id }}</span>
+    <div class="stack small">
+      {% for k in level_keys %}{% set n = buckets.get(k, 0) %}{% if n %}
+      <div class="seg lv-{{ k | replace('.', '') }}" style="flex-grow: {{ n }}" title="{{ k }}: {{ n }}"><span>{{ n }}</span></div>
+      {% endif %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <ul class="legend">
+    {% for k in level_keys %}
+    <li><i class="swatch lv-{{ k | replace('.', '') }}"></i>{% if k == 'below' %}{{ t('stats_level_below') }}{% elif k == 'unknown' %}{{ t('stats_level_unknown') }}{% else %}{{ t('sw_profile', profile=k) }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+  <details class="extra">
+    <summary>{{ t('stats_module_heading') }}</summary>
+    {% for module_id, versions in stats.module_versions.items() %}
+    {% set total = versions | sum(attribute='count') %}
+    <div class="modstat">
+      <h3>{{ module_id }}</h3>
+      {% for v in versions %}
+      <div class="bar-row">
+        <span class="bar-label">{{ v.version }}</span>
+        <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
+        <span class="bar-count">{{ v.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </details>
+</section>
+
+<div class="usagegrid">
+  <section class="card">
+    <h2>{{ t('stats_trims_heading') }}</h2>
+    <table class="modules"><tbody>
+      {% for row in stats.trims %}<tr><td>{{ trim_names.get(row.trim) or t('trim_unknown') }}{% if row.trim %} ({{ row.trim }}){% endif %}</td><td class="num">{{ row.n }}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="card">
+    <h2>{{ t('stats_countries_heading') }}</h2>
+    <table class="modules"><tbody>
+      {% for row in stats.countries %}<tr><td>{{ row.country or t('stats_unknown') }}</td><td class="num">{{ row.n }}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="card">
+    <h2>{{ t('stats_weeks_heading') }}</h2>
+    <table class="modules"><thead><tr><th>{{ t('stats_col_week') }}</th><th class="num">{{ t('stats_col_uploads') }}</th><th class="num">{{ t('stats_col_vehicles') }}</th></tr></thead><tbody>
+      {% for row in stats.per_week %}<tr><td>{{ row.week }}</td><td class="num">{{ row.uploads }}</td><td class="num">{{ row.vehicles }}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
 {% endif %}
 {% endblock %}

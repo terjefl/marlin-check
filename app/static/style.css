@@ -154,3 +154,25 @@ table.resulttable { min-width: 720px; }
 .steps li { margin: 0.4rem 0; }
 .stepsheading { font-size: 1.05rem; margin-bottom: 0.4rem; }
 .stat.partial .num { color: #b07d00; }
+
+/* v2: dashboard */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.card h2 { margin: 0 0 0.6rem; font-size: 1.15rem; }
+.card h3 { margin: 0.4rem 0 0.5rem; font-size: 0.98rem; }
+.stack { display: flex; gap: 2px; height: 1.6rem; border-radius: 4px; overflow: hidden; background: var(--bg); }
+.stack.small { height: 1.1rem; flex: 1; }
+.seg { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.78rem; min-width: 1.4rem; }
+.stack.small .seg { font-size: 0.7rem; min-width: 1.1rem; }
+.legend { list-style: none; padding: 0; margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; font-size: 0.88rem; }
+.swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 3px; margin-right: 0.4rem; vertical-align: -0.1rem; }
+.levelrow { display: grid; grid-template-columns: 5rem 1fr; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; }
+/* Outcome colors (validated for color-vision deficiency in this order) */
+.oc-marlin { background: #1a73e8; }  .stat.oc-marlin .num { color: #1a73e8; }
+.oc-full_22 { background: #1e8e3e; } .stat.oc-full_22 .num { color: #1e8e3e; }
+.oc-full_21 { background: #7b4ea3; } .stat.oc-full_21 .num { color: #7b4ea3; }
+.oc-zebra_22 { background: #e8710a; } .stat.oc-zebra_22 .num { color: #e8710a; }
+.oc-zebra_21 { background: #b3126b; } .stat.oc-zebra_21 .num { color: #b3126b; }
+.stat.oc-marlin, .stat.oc-full_22, .stat.oc-full_21, .stat.oc-zebra_22, .stat.oc-zebra_21 { background: var(--surface); }
+/* Level colors: sequential blue for the profiles, red below, grey unknown */
+.lv-below { background: #c5221f; } .lv-20 { background: #9bbfe6; color: #1a2330; } .lv-21 { background: #4a90d9; } .lv-22 { background: #0b4f9c; } .lv-unknown { background: #9aa4b1; }
+.seg.lv-20, .seg.lv-20 span { color: #1a2330; }
