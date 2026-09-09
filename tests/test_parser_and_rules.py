@@ -397,3 +397,107 @@ def test_notes_field_is_parsed_and_must_be_a_string():
     assert "Open points" in requirements.notes
     with pytest.raises(RequirementsValidationError):
         parse_requirements_text(_MINIMAL + "notes: [not, a, string]\n")
+
+
+# --- Outcome classification (the association's five categories, Sep 2026) ---
+
+def _with(report, **values):
+    """Replace Supplier SW Version on the given ECU codes."""
+    for m in report.modules:
+        if m.code in values:
+            m.supplier_sw = values[m.code]
+    return report
+
+
+def test_outcomes_for_the_reference_cars():
+    from app.rules import (
+        OUTCOME_FULL_TARGET,
+        OUTCOME_FULL_TOP,
+        OUTCOME_MARLIN,
+        OUTCOME_ZEBRA_TARGET,
+        OUTCOME_ZEBRA_TOP,
+    )
+
+    requirements = load_requirements(REQUIREMENTS)
+
+    full_21 = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
+    assert (full_21.outcome, full_21.complete_profile, full_21.top_evidence) == (
+        OUTCOME_FULL_TARGET, "2.1", "2.1"
+    )
+    assert {r.requirement.id for r in full_21.below("2.2")} == {"BCM", "ESP", "MCU_F", "MCU_R", "VCU"}
+    assert full_21.below("2.1") == []
+
+    full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
+    assert (full_22.outcome, full_22.complete_profile, full_22.top_evidence) == (
+        OUTCOME_FULL_TOP, "2.2", "2.2"
+    )
+    assert full_22.below("2.2") == []
+
+    # The real fixture car: BCM 21 is below even 2.0 -> not Marlin-ready
+    zebra = evaluate(_report(), requirements)
+    assert zebra.outcome == OUTCOME_ZEBRA_TARGET
+    assert zebra.complete_profile is None
+    assert [r.requirement.id for r in zebra.below("2.1")] == ["BCM"]
+    assert zebra.verdict == VERDICT_ZEBRA
+
+    # A started-but-incomplete 2.2: BCM and VCU already at 2.2, MCU/ESP still 2.1
+    started = _with(_fixture_report("olp_report_21_full.txt"), BCM="BCM395042", VCU="VCU039023")
+    started = evaluate(started, requirements)
+    assert (started.outcome, started.complete_profile, started.top_evidence) == (
+        OUTCOME_ZEBRA_TOP, "2.1", "2.2"
+    )
+    assert {r.requirement.id for r in started.below("2.2")} == {"ESP", "MCU_F", "MCU_R"}
+    assert started.verdict == VERDICT_READY  # still Marlin-capable in the old sense
+
+    marlin = evaluate(_fixture_report("olp_report_marlin.txt"), requirements)
+    assert marlin.outcome == OUTCOME_MARLIN
+
+
+def test_shared_minimums_are_not_evidence_of_the_higher_profile():
+    """ECC is 24 on both 2.1 and 2.2 and BMS 21 on every profile: such readings
+    must not turn a clean 2.1 car into a '2.2 zebra'."""
+    from app.rules import OUTCOME_FULL_TARGET
+
+    requirements = load_requirements(REQUIREMENTS)
+    evaluation = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
+    by_id = {r.requirement.id: r for r in evaluation.results}
+    assert by_id["ECC"].level == "2.2" and by_id["ECC"].evidence_level == "2.1"
+    assert by_id["BMS"].level == "2.2" and by_id["BMS"].evidence_level == "2.0"
+    assert by_id["BCM"].level == "2.1" and by_id["BCM"].evidence_level == "2.0"
+    assert by_id["VCU"].level == "2.1" and by_id["VCU"].evidence_level == "2.1"
+    assert by_id["VCU"].meets == {"2.0": True, "2.1": True, "2.2": False}
+    assert evaluation.outcome == OUTCOME_FULL_TARGET
+
+
+def test_pure_20_car_and_missing_module_are_below_target():
+    from app.rules import OUTCOME_ZEBRA_TARGET
+
+    requirements = load_requirements(REQUIREMENTS)
+    pure_20 = _with(
+        _fixture_report("olp_report_21_full.txt"),
+        ECC="ECC39519", MCU_F="MCU5000017", MCU_R="MCU5000017", VCU="VCU039020",
+    )
+    pure_20 = evaluate(pure_20, requirements)
+    assert (pure_20.outcome, pure_20.complete_profile, pure_20.top_evidence) == (
+        OUTCOME_ZEBRA_TARGET, "2.0", "2.0"
+    )
+
+    report = _fixture_report("olp_report_22_full.txt")
+    report.modules = [m for m in report.modules if m.code != "ESP"]
+    missing = evaluate(report, requirements)
+    assert missing.outcome == OUTCOME_ZEBRA_TARGET and missing.complete_profile is None
+    by_id = {r.requirement.id: r for r in missing.results}
+    assert by_id["ESP"].meets == {"2.0": False, "2.1": False, "2.2": False}
+
+
+def test_sport_without_rear_mcu_can_still_be_complete():
+    from app.rules import OUTCOME_FULL_TOP
+
+    requirements = load_requirements(REQUIREMENTS)
+    report = _fixture_report("olp_report_22_full.txt")
+    report.vin = report.vin[:4] + "S" + report.vin[5:]
+    report.modules = [m for m in report.modules if m.code != "MCU_R"]
+    _with(report, BMS="BMSL39015")
+    evaluation = evaluate(report, requirements)
+    assert evaluation.outcome == OUTCOME_FULL_TOP
+    assert "MCU_R" not in {r.requirement.id for r in evaluation.results}

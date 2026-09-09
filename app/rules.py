@@ -37,6 +37,24 @@ VERDICT_READY = "ready"
 VERDICT_ZEBRA = "zebra"
 VERDICT_MARLIN = "marlin"    # the car already runs Marlin; the readiness check does not apply
 
+# Outcomes: the association's finer classification (Sep 2026). `verdict` is
+# derived from the outcome so older code keeps working.
+#   marlin    already on Marlin (VCU 2.4)
+#   full_22   every module at the highest profile: fully 2.2, Marlin-ready
+#   full_21   every module at the target profile and NONE showing evidence of
+#             the highest profile: a clean 2.1 car, Marlin-ready, but a direct
+#             update leaves the 2.2-only ECUs behind (recommend 2.2 first)
+#   zebra_22  every module at the target profile, some already at the highest
+#             one: a started-but-incomplete 2.2 ("2.2 zebra"); Marlin-ready in
+#             principle, but finish 2.2 first
+#   zebra_21  at least one module below the target profile: not Marlin-ready
+OUTCOME_MARLIN = "marlin"
+OUTCOME_FULL_TOP = "full_22"
+OUTCOME_FULL_TARGET = "full_21"
+OUTCOME_ZEBRA_TOP = "zebra_22"
+OUTCOME_ZEBRA_TARGET = "zebra_21"
+OUTCOMES = [OUTCOME_FULL_TOP, OUTCOME_FULL_TARGET, OUTCOME_ZEBRA_TOP, OUTCOME_ZEBRA_TARGET, OUTCOME_MARLIN]
+
 # Fallback when the module has no extract regex of its own: last digit group
 _DEFAULT_EXTRACT = re.compile(r"(\d+)\s*$")
 
@@ -97,6 +115,17 @@ class ModuleResult:
     level: str | None = None      # highest profile the module satisfies, None = below all
     variant: str = ""             # name of the matched variant, if any
     top_required: int | None = None  # minimum for the highest profile (variant-aware), if defined
+    # Per profile: does the module meet that profile's minimum? None = the
+    # profile defines no level for this module. A module without a number
+    # (missing/empty/unparseable) meets nothing.
+    meets: dict[str, bool | None] = field(default_factory=dict)
+    # The LOWEST profile whose minimum equals the minimum of the highest
+    # profile the module satisfies. Where two profiles share a minimum (ECC is
+    # 24 on both 2.1 and 2.2) a reading cannot prove the higher one, so it only
+    # counts as evidence of the lower. Drives the "zebra" detection.
+    evidence_level: str | None = None
+    # variant-aware levels actually used for this module (profile -> minimum)
+    levels: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -109,6 +138,16 @@ class Evaluation:
     extra_modules: list = field(default_factory=list)  # report modules without a requirement
     trim: str = ""                # trim letter read from the VIN (5th character)
     trim_name: str = ""           # "One"/"Extreme"/"Ultra"/"Sport", or "" if the letter is unknown
+    outcome: str = ""             # one of OUTCOMES
+    complete_profile: str | None = None  # highest profile every required module meets
+    top_evidence: str | None = None      # highest evidence_level over the modules
+
+    def below(self, profile: str) -> list[ModuleResult]:
+        """Modules that do not meet `profile` (no number counts as below)."""
+        return [r for r in self.results if r.meets.get(profile) is False]
+
+    def meeting(self, profile: str) -> list[ModuleResult]:
+        return [r for r in self.results if r.meets.get(profile) is True]
 
     @property
     def ok_below_top(self) -> list[ModuleResult]:
@@ -338,6 +377,31 @@ def _profile_level(extracted: int, levels: dict[str, int], profiles: list[str]) 
     return level
 
 
+def _evidence_level(extracted: int, levels: dict[str, int], profiles: list[str]) -> str | None:
+    """Lowest profile sharing the minimum of the highest satisfied profile."""
+    satisfied = _profile_level(extracted, levels, profiles)
+    if satisfied is None:
+        return None
+    minimum = levels[satisfied]
+    for profile in profiles:
+        if levels.get(profile) == minimum:
+            return profile
+    return satisfied
+
+
+def _meets(extracted: int | None, levels: dict[str, int], profiles: list[str]) -> dict[str, bool | None]:
+    out: dict[str, bool | None] = {}
+    for profile in profiles:
+        minimum = levels.get(profile)
+        if minimum is None:
+            out[profile] = None
+        elif extracted is None:
+            out[profile] = False
+        else:
+            out[profile] = extracted >= minimum
+    return out
+
+
 TRIM_NAMES = {"Z": "One", "E": "Extreme", "U": "Ultra", "S": "Sport"}
 
 
@@ -365,7 +429,10 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
             if req.only_trims and trim_known and trim not in req.only_trims:
                 continue
             results.append(
-                ModuleResult(requirement=req, status=MISSING, required=req.levels.get(target))
+                ModuleResult(
+                    requirement=req, status=MISSING, required=req.levels.get(target),
+                    meets=_meets(None, req.levels, requirements.profiles), levels=dict(req.levels),
+                )
             )
             continue
         matched.append(reading)
@@ -391,6 +458,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 ModuleResult(
                     requirement=req, status=EMPTY, raw_name=reading.raw_name,
                     required=required, variant=variant_name,
+                    meets=_meets(None, levels, requirements.profiles), levels=dict(levels),
                 )
             )
             continue
@@ -401,6 +469,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                     requirement=req, status=UNPARSEABLE,
                     raw_name=reading.raw_name, version=reading.supplier_sw,
                     required=required, variant=variant_name,
+                    meets=_meets(None, levels, requirements.profiles), levels=dict(levels),
                 )
             )
             continue
@@ -415,6 +484,9 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 level=_profile_level(extracted, levels, requirements.profiles),
                 variant=variant_name,
                 top_required=top_required,
+                meets=_meets(extracted, levels, requirements.profiles),
+                evidence_level=_evidence_level(extracted, levels, requirements.profiles),
+                levels=dict(levels),
             )
         )
 
@@ -434,13 +506,48 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
         verdict = VERDICT_ZEBRA
     else:
         verdict = VERDICT_READY
+
+    profiles = list(requirements.profiles)
+    complete_profile, top_evidence = _classify_levels(results, profiles)
+    outcome = _outcome(verdict, complete_profile, top_evidence, target, profiles)
     return Evaluation(
         verdict=verdict,
         requirements_version=requirements.version,
         target_profile=target,
         results=results,
-        profiles=list(requirements.profiles),
+        profiles=profiles,
         extra_modules=extra,
         trim=trim,
         trim_name=TRIM_NAMES.get(trim, ""),
+        outcome=outcome,
+        complete_profile=complete_profile,
+        top_evidence=top_evidence,
     )
+
+
+def _classify_levels(results: list[ModuleResult], profiles: list[str]) -> tuple[str | None, str | None]:
+    """(complete_profile, top_evidence): the highest profile that EVERY
+    required module meets, and the highest profile ANY module gives evidence
+    of. Only critical modules decide completeness; non-critical ones are
+    informational, as in the ready/zebra verdict."""
+    critical = [r for r in results if r.requirement.critical]
+    complete = None
+    for profile in profiles:
+        judged = [r.meets.get(profile) for r in critical]
+        if judged and all(v is not False for v in judged) and any(v is True for v in judged):
+            complete = profile
+    evidence = [r.evidence_level for r in results if r.evidence_level is not None]
+    top = max(evidence, key=profiles.index) if evidence else None
+    return complete, top
+
+
+def _outcome(verdict: str, complete: str | None, top: str | None, target: str, profiles: list[str]) -> str:
+    if verdict == VERDICT_MARLIN:
+        return OUTCOME_MARLIN
+    if complete is None or profiles.index(complete) < profiles.index(target):
+        return OUTCOME_ZEBRA_TARGET
+    if complete == profiles[-1]:
+        return OUTCOME_FULL_TOP
+    if top is not None and profiles.index(top) > profiles.index(complete):
+        return OUTCOME_ZEBRA_TOP
+    return OUTCOME_FULL_TARGET
