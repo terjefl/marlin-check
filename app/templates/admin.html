@@ -3,13 +3,8 @@
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <h1>Requirements administration</h1>
-<div class="meta adminbar">
-  <span>Logged in as <strong>{{ username }}</strong>. Changes are validated before saving, take effect on the next analysis, and are logged with username, IP and diff.</span>
-  <form method="post" action="/admin/logout">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button type="submit" class="small secondary">Log out</button>
-  </form>
-</div>
+{% include "_admin_nav.html" %}
+<p class="meta">Changes are validated before saving, take effect on the next analysis, and are logged with username, IP and diff.</p>
 
 {% if message %}<div class="alert">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
@@ -95,6 +90,15 @@
   </form>
 </details>
 
+<h2>Vehicle register</h2>
+{% include "_fleet_tiles.html" %}
+<form method="post" action="/admin/reevaluate" class="actions" data-confirm="Re-evaluate every stored report with the current requirements file? Outcomes and levels in the register are recomputed; nothing is deleted.">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit" class="secondary">Re-evaluate all stored reports with the current requirements</button>
+  <a class="button" href="/admin/fleet">Open the vehicle register</a>
+</form>
+<p class="fieldhelp">Run this after changing requirement levels, and once after the v2 upgrade so reports stored before it get an outcome.</p>
+
 <h2>Usage statistics</h2>
 <p class="meta">Anonymous count per upload: country (from Cloudflare), language, outcome, and a daily-rotating IP hash for unique users. No VIN, report data or raw IP is ever stored.</p>
 {% if usage.total == 0 %}
@@ -102,7 +106,6 @@
 {% else %}
 <div class="statgrid">
   <div class="stat"><span class="num">{{ usage.total }}</span><span class="label">Total uploads</span></div>
-  <div class="stat"><span class="num">{{ usage.consented }}</span><span class="label">With consent</span></div>
   <div class="stat ok"><span class="num">{{ usage.outcomes.get('ready', 0) }}</span><span class="label">Marlin ready</span></div>
   <div class="stat warn"><span class="num">{{ usage.outcomes.get('zebra', 0) }}</span><span class="label">Zebra</span></div>
   <div class="stat info"><span class="num">{{ usage.outcomes.get('marlin', 0) }}</span><span class="label">Already on Marlin</span></div>

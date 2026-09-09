@@ -1,0 +1,10 @@
+<div class="meta adminbar">
+  <span>
+    <a href="/admin">Requirements</a> · <a href="/admin/fleet">Vehicle register</a> · <a href="/stats">Public dashboard</a>
+    &nbsp;— logged in as <strong>{{ username }}</strong>
+  </span>
+  <form method="post" action="/admin/logout">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="small secondary">Log out</button>
+  </form>
+</div>

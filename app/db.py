@@ -235,6 +235,90 @@ class Database:
             conn.executemany(_INSERT_READING, _reading_rows(submission_id, evaluation))
         return submission_id
 
+    # --- the vehicle register (admin) ----------------------------------------
+
+    _LATEST = (
+        "SELECT s.* FROM submissions s"
+        " JOIN (SELECT vin_hash, MAX(uploaded_at) AS latest"
+        "       FROM submissions GROUP BY vin_hash) m"
+        " ON s.vin_hash = m.vin_hash AND s.uploaded_at = m.latest"
+    )
+
+    def fleet_vehicles(self, *, outcome: str = "", trim: str = "", query: str = "") -> list[dict]:
+        """One row per VIN (latest submission), with the evaluated modules as
+        {module_id: {"extracted", "level", "status", "version"}}. Filters are
+        exact on outcome/trim and a substring on the VIN."""
+        filters = [
+            ("outcome = ?", outcome),
+            ("trim = ?", trim.upper()),
+            ("vin LIKE ?", f"%{query.upper()}%" if query else ""),
+        ]
+        where = [sql for sql, value in filters if value]
+        params = [value for _sql, value in filters if value]
+        clause = (" WHERE " + " AND ".join(where)) if where else ""
+        with self._connect() as conn:
+            vehicles = [
+                dict(row) for row in conn.execute(
+                    f"SELECT * FROM ({self._LATEST}){clause} ORDER BY uploaded_at DESC", params
+                )
+            ]
+            by_id = {v["id"]: v for v in vehicles}
+            for v in vehicles:
+                v["modules"] = {}
+                v["uploads"] = 0
+            if by_id:
+                placeholders = ",".join("?" * len(by_id))
+                for row in conn.execute(
+                    "SELECT submission_id, module_id, extracted, level, status, version"
+                    f" FROM module_readings WHERE module_id IS NOT NULL AND submission_id IN ({placeholders})",
+                    list(by_id),
+                ):
+                    by_id[row["submission_id"]]["modules"][row["module_id"]] = {
+                        "extracted": row["extracted"], "level": row["level"],
+                        "status": row["status"], "version": row["version"],
+                    }
+                for row in conn.execute(
+                    "SELECT vin_hash, COUNT(*) AS n FROM submissions GROUP BY vin_hash"
+                ):
+                    for v in vehicles:
+                        if v["vin_hash"] == row["vin_hash"]:
+                            v["uploads"] = row["n"]
+        return vehicles
+
+    def vehicle_history(self, vin: str) -> list[dict]:
+        """Every submission for the VIN, newest first, each with its readings."""
+        with self._connect() as conn:
+            subs = [
+                dict(row) for row in conn.execute(
+                    "SELECT * FROM submissions WHERE vin_hash = ? ORDER BY uploaded_at DESC",
+                    (vin_hash(vin),),
+                )
+            ]
+            for sub in subs:
+                sub["readings"] = [
+                    dict(row) for row in conn.execute(
+                        "SELECT * FROM module_readings WHERE submission_id = ? ORDER BY rowid",
+                        (sub["id"],),
+                    )
+                ]
+        return subs
+
+    def export_readings(self):
+        """Every reading of every submission, joined with its submission —
+        one row per ECU per upload, for the CSV export."""
+        with self._connect() as conn:
+            yield from (
+                dict(row) for row in conn.execute(
+                    "SELECT s.id AS submission_id, s.vin, s.uploaded_at, s.report_date, s.trim,"
+                    " s.outcome, s.complete_profile, s.top_evidence, s.requirements_version, s.country,"
+                    " mr.code, mr.raw_name, mr.section, mr.module_id, mr.version AS supplier_sw,"
+                    " mr.software, mr.hardware, mr.bootloader, mr.extracted, mr.level,"
+                    " mr.evidence_level, mr.status"
+                    " FROM module_readings mr JOIN submissions s ON s.id = mr.submission_id"
+                    " ORDER BY s.uploaded_at DESC, mr.rowid"
+                )
+            )
+
     # --- re-evaluation and deletion (vehicle register maintenance) ---------
 
     def reevaluate_all(self, requirements: RequirementSet) -> int:

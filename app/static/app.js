@@ -15,6 +15,13 @@
     }
   });
 
+  // Forms with data-confirm ask before submitting (delete a vehicle, re-evaluate)
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      if (!window.confirm(form.dataset.confirm)) { event.preventDefault(); }
+    });
+  });
+
   var addRow = document.getElementById("addrow");
   if (addRow) {
     addRow.addEventListener("click", function () {

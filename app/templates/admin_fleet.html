@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Vehicle register — {{ t('site_title') }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>Vehicle register</h1>
+{% include "_admin_nav.html" %}
+{% include "_fleet_tiles.html" %}
+
+<form class="filterbar" method="get" action="/admin/fleet">
+  <label>Outcome
+    <select name="outcome">
+      <option value="">all</option>
+      {% for o in outcomes %}<option value="{{ o }}" {% if filters.outcome == o %}selected{% endif %}>{{ t('outcome_' + o + '_short') }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Trim
+    <select name="trim">
+      <option value="">all</option>
+      {% for letter, name in trim_names.items() %}<option value="{{ letter }}" {% if filters.trim == letter %}selected{% endif %}>{{ name }} ({{ letter }})</option>{% endfor %}
+    </select>
+  </label>
+  <label>VIN contains <input type="text" name="q" value="{{ filters.query }}" maxlength="17" class="mono"></label>
+  <button type="submit" class="small">Filter</button>
+  <a class="button secondary small" href="/admin/fleet">Reset</a>
+  <span class="meta">{{ vehicles | length }} vehicle(s)</span>
+  <span class="exports">
+    <a class="button small" href="/admin/fleet/vehicles.csv">⬇ Vehicles CSV</a>
+    <a class="button small" href="/admin/fleet/readings.csv">⬇ All ECU readings CSV</a>
+  </span>
+</form>
+
+<div class="tablescroll">
+<table class="modules fleet">
+  <thead>
+    <tr>
+      <th>VIN</th><th>Trim</th><th>Last upload (UTC)</th><th class="num">Uploads</th><th>Outcome</th>
+      <th class="num">Complete</th><th class="num">Evidence</th><th>Country</th>
+      {% for m in module_ids %}<th class="num">{{ m }}</th>{% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in vehicles %}
+    <tr>
+      <td class="mono"><a href="/admin/fleet/{{ v.vin }}">{{ v.vin }}</a></td>
+      <td>{{ trim_names.get(v.trim, v.trim or '?') }}</td>
+      <td>{{ v.uploaded_at[:16].replace('T', ' ') }}</td>
+      <td class="num">{{ v.uploads }}</td>
+      <td><span class="pill oc-{{ v.outcome }}">{{ t('outcome_' + v.outcome + '_short') if v.outcome else '(not evaluated)' }}</span></td>
+      <td class="num">{{ v.complete_profile or '—' }}</td>
+      <td class="num">{{ v.top_evidence or '—' }}</td>
+      <td>{{ v.country or '' }}</td>
+      {% for m in module_ids %}
+      {% set r = v.modules.get(m) %}
+      {% if not r %}<td class="num lvl unmet" title="not in report">—</td>
+      {% else %}
+      {% set cls = 'unmet' if (r.level is none or (target and profiles and profiles.index(r.level) < profiles.index(target))) else ('met' if r.level == profiles[-1] else 'mid') %}
+      <td class="num lvl {{ cls }}" title="{{ r.version }} ({{ r.status }})">{{ r.extracted if r.extracted is not none else '?' }}<span class="crit"> {{ r.level or '' }}</span></td>
+      {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="fieldhelp">Per module: the number read from the Supplier SW Version and the profile it reaches. Red = below the {{ target }} level (or missing/unreadable), amber = at {{ target }} but below {{ profiles[-1] if profiles else '' }}, green = at {{ profiles[-1] if profiles else '' }}.</p>
+{% endblock %}

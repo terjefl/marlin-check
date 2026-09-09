@@ -1,0 +1,9 @@
+{% set order = ['marlin', 'full_22', 'full_21', 'zebra_22', 'zebra_21'] %}
+{% set icons = {'marlin': '🐟', 'full_22': '✅', 'full_21': '🟣', 'zebra_22': '🦓', 'zebra_21': '⚠️'} %}
+<div class="statgrid">
+  <div class="stat"><span class="num">{{ fleet.unique_vins }}</span><span class="label">Vehicles</span></div>
+  <div class="stat"><span class="num">{{ fleet.total_submissions }}</span><span class="label">Uploads</span></div>
+  {% for o in order %}
+  <div class="stat oc-{{ o }}"><a href="/admin/fleet?outcome={{ o }}"><span class="num">{{ fleet.outcomes.get(o, 0) }}</span><span class="label">{{ icons[o] }} {{ t('outcome_' + o + '_short') }}</span></a></div>
+  {% endfor %}
+</div>

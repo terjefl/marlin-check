@@ -211,7 +211,7 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
     assert '+version: "2026-09-official"' in entry["detail"]
 
     # The analysis uses the new requirements version immediately
-    result = c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")})
+    result = c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")}, data={"consent": "yes"})
     assert "2026-09-official" in result.text
 
 
@@ -408,3 +408,121 @@ def test_form_editor_shows_variant_levels_for_bms(client):
 
     bms = next(m for m in load_requirements(main.REQUIREMENTS_PATH).modules if m.id == "BMS")
     assert bms.levels == {} and [v.levels["2.1"] for v in bms.variants] == [21, 15]
+
+
+# --- the vehicle register --------------------------------------------------
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _upload_car(c, name: str, vin_suffix: str, **overrides):
+    text = (FIXTURES / name).read_text()
+    lines = []
+    for line in text.splitlines():
+        if line.startswith("VIN: "):
+            line = line[:-2] + vin_suffix
+        lines.append(line)
+    text = "\n".join(lines)
+    for code, value in overrides.items():
+        text = text.replace(code, value)
+    return c.post(
+        "/analyze", files={"report": ("r.txt", text.encode(), "text/plain")},
+        data={"consent": "yes"}, headers={"CF-IPCountry": "SE"},
+    )
+
+
+def test_register_pages_and_exports_require_login(client):
+    c, _ = client
+    for path in ("/admin/fleet", "/admin/fleet/vehicles.csv", "/admin/fleet/readings.csv",
+                 "/admin/fleet/VCF1ZBE20PG099999"):
+        response = c.get(path, follow_redirects=False)
+        assert response.status_code == 303 and response.headers["location"].startswith("/admin/login")
+
+
+def test_register_lists_filters_and_exports_vehicles(client):
+    c, main = client
+    _upload_car(c, "olp_report_21_full.txt", "01")
+    _upload_car(c, "olp_report_22_full.txt", "02")
+    _upload_car(c, "olp_report_21_full.txt", "03", BCM395030="BCM395042", VCU039021="VCU039023")
+    _upload_car(c, "olp_report_21_full.txt", "01")  # second upload of the first car
+    _login(c, "terje", "hemmelig123")
+
+    page = c.get("/admin/fleet").text
+    assert page.count('href="/admin/fleet/VCF1ZBE20PG0999') == 3
+    assert "Clean 2.1" in page and "Full 2.2" in page and "2.2 zebra" in page
+    filtered = c.get("/admin/fleet?outcome=zebra_22").text
+    assert filtered.count('href="/admin/fleet/VCF1ZBE20PG0999') == 1 and "VCF1ZBE20PG099903" in filtered
+    searched = c.get("/admin/fleet?q=99902").text
+    assert "VCF1ZBE20PG099902" in searched and "VCF1ZBE20PG099901" not in searched
+
+    vehicles = c.get("/admin/fleet/vehicles.csv")
+    assert vehicles.status_code == 200
+    assert vehicles.headers["content-type"].startswith("text/csv")
+    assert vehicles.text.startswith("﻿vin;trim;")
+    rows = vehicles.text.lstrip("﻿").splitlines()
+    assert len(rows) == 4  # header + three vehicles (latest upload each)
+    first_car = next(r for r in rows if "VCF1ZBE20PG099901" in r)
+    assert ";2;full_21;2.1;2.1;SE;" in first_car  # two uploads, clean 2.1
+    assert first_car.endswith(";BCM395030;89324V040200990131;ECC395 24;BMSN39021;MCU5000019;MCU5000019;VCU039021")
+
+    readings = c.get("/admin/fleet/readings.csv")
+    assert readings.status_code == 200
+    lines = readings.text.lstrip("﻿").splitlines()
+    assert len(lines) == 1 + 4 * 37  # every ECU of every upload, including the re-upload
+    assert lines[0].startswith("submission_id;vin;uploaded_at_utc;")
+    assert any(";ESP;ESP - Electronic Stability Program;CHASSIS;ESP;89819V050101060131;" in line for line in lines)
+
+    exports = [e for e in main.database.audit_entries() if e["action"] == "export"]
+    assert {e["detail"] for e in exports} == {"vehicles.csv", "readings.csv"}
+
+
+def test_vehicle_page_history_and_deletion(client):
+    c, main = client
+    _upload_car(c, "olp_report_21_full.txt", "05")
+    _upload_car(c, "olp_report_21_full.txt", "05", BCM395030="BCM395042", VCU039021="VCU039023")
+    _login(c, "terje", "hemmelig123")
+
+    page = c.get("/admin/fleet/VCF1ZBE20PG099905")
+    assert page.status_code == 200
+    assert page.text.count("2026-09-workbook-v2-draft") == 2  # two uploads listed
+    assert "2.2 zebra" in page.text and "Clean 2.1" in page.text
+    assert "BCM395042" in page.text  # newest upload shown by default
+    assert "FM298033S001K" in page.text  # the software version field, not only Supplier SW
+    assert c.get("/admin/fleet/VCF1ZBE20PG000000").status_code == 404
+    assert c.get("/admin/fleet/not-a-vin").status_code == 404
+
+    assert len(list(Path(main.UPLOADS_DIR).iterdir())) == 2
+    csrf = _csrf(page.text)
+    response = c.post("/admin/fleet/VCF1ZBE20PG099905/delete", data={"csrf": csrf},
+                      headers={"Sec-Fetch-Site": "same-origin"}, follow_redirects=False)
+    assert response.status_code == 303
+    assert main.database.stats()["unique_vins"] == 0
+    assert list(Path(main.UPLOADS_DIR).iterdir()) == []
+    assert c.get("/admin/fleet/VCF1ZBE20PG099905").status_code == 404
+    deletions = [e for e in main.database.audit_entries() if e["action"] == "vehicle_delete"]
+    assert len(deletions) == 1 and "VCF1ZBE20PG099905" in deletions[0]["detail"]
+    assert "2 removed from disk" in deletions[0]["detail"]
+
+    # Deleting needs CSRF like every other admin POST
+    assert c.post("/admin/fleet/VCF1ZBE20PG099905/delete", data={}).status_code == 403
+
+
+def test_reevaluate_button_applies_the_current_requirements(client):
+    c, main = client
+    _upload_car(c, "olp_report_22_full.txt", "06")
+    _login(c, "terje", "hemmelig123")
+    assert main.database.stats()["outcomes"] == {"full_22": 1}
+
+    # Raise the ECC 2.2 level far above the car's 25 through the YAML editor, then re-evaluate
+    csrf = _csrf(c.get("/admin").text)
+    stricter = main.REQUIREMENTS_PATH.read_text().replace(
+        'levels: {"2.0": 19, "2.1": 24, "2.2": 24}', 'levels: {"2.0": 19, "2.1": 24, "2.2": 30}'
+    )
+    c.post("/admin/save", data={"yaml_text": stricter, "csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert main.database.stats()["outcomes"] == {"full_22": 1}  # stored outcome unchanged so far
+
+    response = c.post("/admin/reevaluate", data={"csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert response.status_code == 200
+    assert "Re-evaluated 1 stored report(s)" in response.text
+    assert main.database.stats()["outcomes"] == {"zebra_22": 1}
+    assert any(e["action"] == "reevaluate" for e in main.database.audit_entries())

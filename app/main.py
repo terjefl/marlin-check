@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import csv
 import difflib
 import hashlib
 import hmac
+import io
 import logging
 import os
 import re
@@ -16,7 +18,7 @@ from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -26,6 +28,7 @@ from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, block, negotiate_language, translator
 from .parser import MAX_REPORT_BYTES, ReportParseError, parse_report
 from .rules import (
+    OUTCOMES,
     TRIM_NAMES,
     RequirementSet,
     RequirementsValidationError,
@@ -293,9 +296,11 @@ async def analyze(request: Request, report: UploadFile):
     # full module list go into the vehicle register.
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     safe_ext = ".pdf" if data[:5] == b"%PDF-" else ".txt"
+    # Microseconds + a random tail: two uploads of the same VIN within a second
+    # must not overwrite each other.
     stored_filename = (
-        f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-        f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}{safe_ext}"
+        f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}"
+        f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}_{secrets.token_hex(3)}{safe_ext}"
     )
     (UPLOADS_DIR / stored_filename).write_bytes(data)
     database.store_submission(
@@ -530,6 +535,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),
             "usage": database.usage_stats(14),
+            "fleet": _fleet_stats(),
         },
         status_code=status_code,
     )
@@ -674,4 +680,163 @@ def _form_to_yaml(form, username: str) -> str:
     )
     return header + yaml_module.safe_dump(
         data, allow_unicode=True, sort_keys=False, default_flow_style=False, width=100
+    )
+
+
+# --- Admin: the vehicle register ------------------------------------------
+
+def _vin_or_404(vin: str) -> str:
+    vin = vin.strip().upper()
+    if not re.fullmatch(r"[A-HJ-NPR-Z0-9]{17}", vin):
+        raise HTTPException(status_code=404, detail="Not a VIN.")
+    return vin
+
+
+@app.get("/admin/fleet", response_class=HTMLResponse)
+def admin_fleet(request: Request, username: str = Depends(require_admin)):
+    q = request.query_params
+    filters = {
+        "outcome": q.get("outcome", "") if q.get("outcome", "") in OUTCOMES else "",
+        "trim": q.get("trim", "")[:1].upper(),
+        "query": q.get("q", "")[:17],
+    }
+    requirements = _current_requirements()
+    return _render(
+        request, "admin_fleet.html",
+        {
+            "username": username, "csrf": request.state.csrf,
+            "vehicles": database.fleet_vehicles(**filters),
+            "filters": filters, "outcomes": OUTCOMES, "trim_names": TRIM_NAMES,
+            "module_ids": [m.id for m in requirements.modules] if requirements else [],
+            "profiles": list(requirements.profiles) if requirements else [],
+            "target": requirements.target_profile if requirements else "",
+            "fleet": _fleet_stats(),
+        },
+    )
+
+
+def _csv_response(filename: str, header: list[str], rows) -> StreamingResponse:
+    """Streams a CSV with a UTF-8 BOM so Excel opens it with the right encoding."""
+    def generate():
+        buffer = io.StringIO()
+        writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
+        buffer.write("\ufeff")
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+            if buffer.tell() > 64 * 1024:
+                yield buffer.getvalue()
+                buffer.seek(0)
+                buffer.truncate()
+        yield buffer.getvalue()
+
+    return StreamingResponse(
+        generate(), media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@app.get("/admin/fleet/vehicles.csv")
+def admin_fleet_vehicles_csv(request: Request, username: str = Depends(require_admin)):
+    requirements = _current_requirements()
+    module_ids = [m.id for m in requirements.modules] if requirements else []
+    header = [
+        "vin", "trim", "last_upload_utc", "report_date", "uploads", "outcome",
+        "complete_profile", "top_evidence", "country", "requirements_version",
+    ] + [f"{m}_level" for m in module_ids] + [f"{m}_number" for m in module_ids] + [f"{m}_version" for m in module_ids]
+
+    def rows():
+        for v in database.fleet_vehicles():
+            mods = v["modules"]
+            yield [
+                v["vin"], v["trim"], v["uploaded_at"], v["report_date"], v["uploads"], v["outcome"],
+                v["complete_profile"] or "", v["top_evidence"] or "", v["country"], v["requirements_version"],
+            ] + [
+                (mods.get(m) or {}).get("level") or "" for m in module_ids
+            ] + [
+                "" if (mods.get(m) or {}).get("extracted") is None else mods[m]["extracted"] for m in module_ids
+            ] + [
+                (mods.get(m) or {}).get("version") or "" for m in module_ids
+            ]
+
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    database.add_audit(username, client_ip(request), "export", "vehicles.csv")
+    return _csv_response(f"marlin-vehicles_{stamp}.csv", header, rows())
+
+
+@app.get("/admin/fleet/readings.csv")
+def admin_fleet_readings_csv(request: Request, username: str = Depends(require_admin)):
+    header = [
+        "submission_id", "vin", "uploaded_at_utc", "report_date", "trim", "outcome",
+        "complete_profile", "top_evidence", "requirements_version", "country",
+        "ecu_code", "ecu_name", "section", "module_id", "supplier_sw_version",
+        "software_version", "hardware_version", "bootloader_version",
+        "extracted_number", "level", "evidence_level", "status",
+    ]
+    rows = (
+        [r[k] if r[k] is not None else "" for k in (
+            "submission_id", "vin", "uploaded_at", "report_date", "trim", "outcome",
+            "complete_profile", "top_evidence", "requirements_version", "country",
+            "code", "raw_name", "section", "module_id", "supplier_sw",
+            "software", "hardware", "bootloader", "extracted", "level", "evidence_level", "status",
+        )]
+        for r in database.export_readings()
+    )
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    database.add_audit(username, client_ip(request), "export", "readings.csv")
+    return _csv_response(f"marlin-readings_{stamp}.csv", header, rows)
+
+
+@app.get("/admin/fleet/{vin}", response_class=HTMLResponse)
+def admin_vehicle(request: Request, vin: str, username: str = Depends(require_admin)):
+    vin = _vin_or_404(vin)
+    history = database.vehicle_history(vin)
+    if not history:
+        raise HTTPException(status_code=404, detail="No submissions for this VIN.")
+    selected_id = request.query_params.get("s", "")
+    selected = next((h for h in history if h["id"] == selected_id), history[0])
+    return _render(
+        request, "admin_vehicle.html",
+        {
+            "username": username, "csrf": request.state.csrf, "vin": vin,
+            "history": history, "selected": selected, "trim_names": TRIM_NAMES,
+        },
+    )
+
+
+@app.post("/admin/fleet/{vin}/delete")
+async def admin_vehicle_delete(request: Request, vin: str, username: str = Depends(require_csrf)):
+    vin = _vin_or_404(vin)
+    files = database.delete_vehicle(vin)
+    removed = 0
+    for name in files:
+        path = UPLOADS_DIR / Path(name).name
+        try:
+            path.unlink()
+            removed += 1
+        except FileNotFoundError:
+            pass
+    database.add_audit(
+        username, client_ip(request), "vehicle_delete",
+        f"VIN {vin}: {len(files)} submission file(s) referenced, {removed} removed from disk",
+    )
+    return RedirectResponse("/admin/fleet", status_code=303)
+
+
+@app.post("/admin/reevaluate")
+async def admin_reevaluate(request: Request, username: str = Depends(require_csrf)):
+    requirements = _current_requirements()
+    if requirements is None:
+        return _render_admin(request, username, error="Cannot re-evaluate: no valid requirements loaded.", status_code=503)
+    count = await run_in_threadpool(database.reevaluate_all, requirements)
+    database.add_audit(
+        username, client_ip(request), "reevaluate",
+        f"{count} stored report(s) re-evaluated with requirements {requirements.version}",
+    )
+    return _render_admin(
+        request, username,
+        message=f"Re-evaluated {count} stored report(s) with requirements version {requirements.version}.",
     )

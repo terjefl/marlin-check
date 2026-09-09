@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ vin }} — {{ t('site_title') }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1 class="mono">{{ vin }}</h1>
+{% include "_admin_nav.html" %}
+<p class="meta"><a href="/admin/fleet">← Vehicle register</a> · Trim: {{ trim_names.get(selected.trim, selected.trim or 'unknown') }} · {{ history | length }} upload(s)</p>
+
+<h2>Uploads</h2>
+<table class="modules">
+  <thead><tr><th>Uploaded (UTC)</th><th>Report date</th><th>Outcome</th><th class="num">Complete</th><th class="num">Evidence</th><th>Requirements</th><th>Country</th><th>Language</th><th>File</th></tr></thead>
+  <tbody>
+    {% for h in history %}
+    <tr {% if h.id == selected.id %}class="selectedrow"{% endif %}>
+      <td><a href="/admin/fleet/{{ vin }}?s={{ h.id }}">{{ h.uploaded_at[:19].replace('T', ' ') }}</a></td>
+      <td>{{ h.report_date[:19] }}</td>
+      <td><span class="pill oc-{{ h.outcome }}">{{ t('outcome_' + h.outcome + '_short') if h.outcome else '(not evaluated)' }}</span></td>
+      <td class="num">{{ h.complete_profile or '—' }}</td><td class="num">{{ h.top_evidence or '—' }}</td>
+      <td class="mono">{{ h.requirements_version }}</td><td>{{ h.country }}</td><td>{{ h.lang }}</td><td class="mono">{{ h.stored_filename or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>All control modules — upload of {{ selected.uploaded_at[:19].replace('T', ' ') }} UTC</h2>
+<div class="tablescroll">
+<table class="modules">
+  <thead><tr><th>Section</th><th>ECU</th><th>Supplier SW</th><th>Software</th><th>Hardware</th><th>Bootloader</th><th>Requirement</th><th class="num">Number</th><th class="num">Level</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for r in selected.readings %}
+    <tr class="{% if r.module_id %}status-{{ r.status }}{% endif %}">
+      <td>{{ r.section }}</td><td>{{ r.raw_name }}</td>
+      <td class="mono">{{ r.version }}</td><td class="mono">{{ r.software }}</td><td class="mono">{{ r.hardware }}</td><td class="mono">{{ r.bootloader }}</td>
+      <td>{{ r.module_id or '' }}</td>
+      <td class="num">{{ r.extracted if r.extracted is not none else '' }}</td>
+      <td class="num">{{ r.level or '' }}</td>
+      <td>{% if r.module_id %}{{ r.status }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<details class="extra danger-zone">
+  <summary>Delete all data for this vehicle</summary>
+  <p class="meta">Removes every upload of this VIN from the register, including the stored report files. Use for a member's deletion request. This is logged.</p>
+  <form method="post" action="/admin/fleet/{{ vin }}/delete" data-confirm="Delete all {{ history | length }} upload(s) for {{ vin }}? This cannot be undone.">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit" class="danger">Delete {{ vin }} permanently</button>
+  </form>
+</details>
+{% endblock %}
