@@ -111,7 +111,7 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
         request,
         template,
         {"lang": lang, "t": translator(lang), "languages": LANGUAGE_NAMES,
-         "static_v": STATIC_VERSION, **context},
+         "static_v": STATIC_VERSION, "steps": block(lang, "intro_steps"), **context},
         status_code=status_code,
     )
     if request.query_params.get("lang") in SUPPORTED:

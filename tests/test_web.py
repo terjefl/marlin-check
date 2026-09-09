@@ -404,7 +404,11 @@ def test_front_page_shows_variant_levels_for_bms(client):
     c, _ = client
     page = c.get("/?lang=en").text
     assert "≥ —" not in page
-    assert "≥ 21 <span class=\"crit\">[NMC (One/Extreme/Ultra)]</span> / ≥ 15 <span class=\"crit\">[LFP (Sport)]</span>" in page
+    # Variant levels per software line, once per profile column and once for the Marlin column
+    assert page.count("≥ 21 <span class=\"crit\">[NMC]</span> / ≥ 15 <span class=\"crit\">[LFP]</span>") == 4
+    # One column per profile plus the Marlin requirement column
+    for heading in ("SW 2.0", "SW 2.1", "SW 2.2", "Marlin requirement"):
+        assert heading in page
 
 
 def test_empty_version_field_is_explained_on_the_result_page(client):

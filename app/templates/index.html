@@ -10,30 +10,44 @@
 <div class="alert error">{{ error }}</div>
 {% endif %}
 
-<div class="alert">⚠️ {{ t('vcu24_notice') }}</div>
+<h2 class="stepsheading">{{ t('steps_heading') }}</h2>
+<ol class="steps">
+  {% for step in steps %}
+  <li>{{ step }}</li>
+  {% endfor %}
+</ol>
 
 <form class="uploadbox" method="post" action="/analyze" enctype="multipart/form-data">
   <label class="filelabel" for="report">{{ t('upload_label') }}</label>
   <input type="file" id="report" name="report" required
          accept=".pdf,.txt,application/pdf,text/plain">
   <label class="consent">
-    <input type="checkbox" name="consent" value="yes">
+    <input type="checkbox" name="consent" value="yes" required>
     <span>{{ t('consent_label') }}</span>
   </label>
-  <p class="hint">{{ t('consent_hint') }}</p>
   <button type="submit">{{ t('upload_button') }}</button>
 </form>
 
+<div class="alert">⚠️ {{ t('vcu24_notice') }}</div>
+
 {% if requirements %}
+{% set target = requirements.target_profile %}
+{% macro level_cell(m, p) -%}
+  {%- if m.levels.get(p) is not none -%}≥ {{ m.levels[p] }}
+  {%- elif m.variants -%}{% for v in m.variants %}{% if not loop.first %} / {% endif %}≥ {{ v.levels.get(p, '—') }} <span class="crit">[{{ v.name.split(' (')[0] }}]</span>{% endfor %}
+  {%- else -%}—{%- endif -%}
+{%- endmacro %}
 <details class="extra frontreqs">
   <summary>{{ t('front_requirements_title') }}</summary>
-  <p class="meta">{{ t('front_requirements_intro', profile=requirements.target_profile, version=requirements.version) }}</p>
+  <p class="meta">{{ t('front_requirements_intro', profile=target, version=requirements.version) }}</p>
+  <div class="tablescroll">
   <table class="modules">
     <thead>
       <tr>
         <th>{{ t('table_module') }}</th>
         <th>{{ t('table_codes') }}</th>
-        <th>{{ t('table_required') }}</th>
+        {% for p in requirements.profiles %}<th class="num">{{ t('sw_profile', profile=p) }}</th>{% endfor %}
+        <th class="num">{{ t('table_marlin_req') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -41,11 +55,13 @@
       <tr>
         <td>{{ m.label }}{% if m.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
         <td class="mono">{{ m.match | join(', ') }}</td>
-        <td>{% if m.levels.get(requirements.target_profile) is not none %}≥ {{ m.levels[requirements.target_profile] }}{% elif m.variants %}{% for v in m.variants %}{% if not loop.first %} / {% endif %}≥ {{ v.levels.get(requirements.target_profile, '—') }} <span class="crit">[{{ v.name }}]</span>{% endfor %}{% else %}—{% endif %}</td>
+        {% for p in requirements.profiles %}<td class="num">{{ level_cell(m, p) }}</td>{% endfor %}
+        <td class="num">{{ level_cell(m, target) }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </details>
 {% endif %}
 {% endblock %}
