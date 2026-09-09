@@ -1,4 +1,4 @@
-"""End-to-end tests of the web flow, including the consent logic."""
+"""End-to-end tests of the web flow, including the mandatory-storage rule."""
 
 import importlib
 from datetime import UTC
@@ -20,28 +20,51 @@ def client(tmp_path, monkeypatch):
     return TestClient(main.app), main
 
 
-def _upload(client, consent: bool):
-    data = {"consent": "yes"} if consent else {}
+CONSENT = {"consent": "yes"}
+
+
+def _upload(client, consent: bool = True, body: bytes | None = None, **kwargs):
+    data = CONSENT if consent else {}
     return client.post(
         "/analyze",
-        files={"report": ("report.txt", FIXTURE.read_bytes(), "text/plain")},
+        files={"report": ("report.txt", body if body is not None else FIXTURE.read_bytes(), "text/plain")},
         data=data,
+        **kwargs,
     )
 
 
-def test_upload_without_consent_stores_nothing(client):
+def test_upload_without_acceptance_is_refused_and_stores_nothing(client):
     c, main = client
     response = _upload(c, consent=False)
-    assert response.status_code == 200
-    assert "VCF1ZBE20PG099999" in response.text
+    assert response.status_code == 422
+    assert "must accept" in response.text
+    assert "VCF1ZBE20PG099999" not in response.text
     assert main.database.stats()["unique_vins"] == 0
     assert not Path(main.UPLOADS_DIR).exists()
 
 
-def test_upload_with_consent_stores_submission_and_file(client):
+def test_upload_stores_submission_file_and_all_module_readings(client):
     c, main = client
-    response = _upload(c, consent=True)
+    response = _upload(c, consent=True, headers={"CF-IPCountry": "NO"})
     assert response.status_code == 200
+    import sqlite3
+
+    conn = sqlite3.connect(main.database.path)
+    conn.row_factory = sqlite3.Row
+    sub = conn.execute("SELECT * FROM submissions").fetchone()
+    assert (sub["trim"], sub["outcome"], sub["complete_profile"], sub["top_evidence"], sub["country"]) == (
+        "Z", "zebra_21", None, "2.1", "NO"
+    )
+    assert sub["report_date"].startswith("2026-08-28")
+    readings = conn.execute("SELECT * FROM module_readings ORDER BY rowid").fetchall()
+    assert len(readings) == 37  # every ECU block, not only the seven with requirements
+    vcu = next(r for r in readings if r["code"] == "VCU")
+    assert (vcu["module_id"], vcu["extracted"], vcu["level"], vcu["evidence_level"], vcu["section"]) == (
+        "VCU", 21, "2.1", "2.1", "POWERTRAIN"
+    )
+    esp = next(r for r in readings if r["code"] == "ESP")
+    assert (esp["software"], esp["bootloader"]) == ("FM292045S020J", "FM292045B020B")
+    assert sum(1 for r in readings if r["status"] == "extra") == 30
     stats = main.database.stats()
     assert stats["unique_vins"] == 1
     assert stats["total_submissions"] == 1
@@ -58,9 +81,7 @@ def test_upload_with_consent_stores_submission_and_file(client):
 
 def test_invalid_file_shows_error(client):
     c, _ = client
-    response = c.post(
-        "/analyze",
-        files={"report": ("junk.txt", b"nothing useful here", "text/plain")},
+    response = c.post("/analyze", files={"report": ("junk.txt", b"nothing useful here", "text/plain")}, data=CONSENT,
     )
     assert response.status_code == 422
 
@@ -68,9 +89,7 @@ def test_invalid_file_shows_error(client):
 def test_parse_error_is_fully_translated(client):
     """Regression: the error reason must follow the page language, not be hardcoded Norwegian."""
     c, _ = client
-    english = c.post(
-        "/analyze?lang=en",
-        files={"report": ("junk.txt", b"nothing useful here", "text/plain")},
+    english = c.post("/analyze?lang=en", files={"report": ("junk.txt", b"nothing useful here", "text/plain")}, data=CONSENT,
     )
     assert "Could not find the heading" in english.text
     assert "Fant ikke overskriften" not in english.text
@@ -78,6 +97,7 @@ def test_parse_error_is_fully_translated(client):
     german = c.post(
         "/analyze?lang=de",
         files={"report": ("junk.txt", b"nothing useful here", "text/plain")},
+        data=CONSENT,
     )
     assert "wurde nicht gefunden" in german.text
 
@@ -103,7 +123,7 @@ def test_stats_and_privacy_pages_render(client):
 def test_result_page_survives_language_switch_and_reload(client):
     """POST /analyze redirects to GET /result/<token>; language switch and refresh work."""
     c, _ = client
-    response = _upload(c, consent=False)
+    response = _upload(c)
     assert response.status_code == 200
     assert "/result/" in str(response.url)
 
@@ -125,22 +145,17 @@ def test_result_page_survives_language_switch_and_reload(client):
     assert again.headers["cache-control"] == "private, no-store"
 
 
-def test_usage_logged_without_consent_and_without_ip(client):
-    """Usage is counted even without consent — but without VIN or raw IP."""
+def test_usage_logged_without_vin_and_without_ip(client):
+    """Usage is counted per upload (parse errors too) — never with VIN or raw IP."""
     c, main = client
     headers = {"CF-IPCountry": "NO", "Accept-Language": "nb-NO,nb;q=0.9"}
-    response = c.post(
-        "/analyze",
-        files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
-        headers=headers,
-    )
+    response = _upload(c, headers=headers)
     assert response.status_code == 200
     # Parse errors are counted too
-    c.post("/analyze", files={"report": ("junk.txt", b"garbage", "text/plain")}, headers=headers)
+    c.post("/analyze", files={"report": ("junk.txt", b"garbage", "text/plain")}, data=CONSENT, headers=headers)
 
     usage = main.database.usage_stats()
     assert usage["total"] == 2
-    assert usage["consented"] == 0
     assert usage["outcomes"] == {"zebra": 1, "parse_error": 1}
     assert usage["countries"][0]["country"] == "NO"
     assert usage["languages"][0]["ui_lang"] == "nb"
@@ -155,8 +170,7 @@ def test_usage_logged_without_consent_and_without_ip(client):
     assert "VCF1ZBE20PG099999" not in blob
     assert "testclient" not in blob and "127.0.0.1" not in blob
 
-    # No submissions stored (consent not given)
-    assert main.database.stats()["unique_vins"] == 0
+    assert main.database.stats()["unique_vins"] == 1
 
 
 def test_language_negotiation(client):
@@ -177,9 +191,7 @@ def test_upload_rate_limit_ignores_client_supplied_forwarded_for(client):
 
     codes = []
     for i in range(main.RATE_LIMIT_UPLOADS + 2):
-        response = c.post(
-            "/analyze",
-            files={"report": ("r.txt", fixture, "text/plain")},
+        response = c.post("/analyze", files={"report": ("r.txt", fixture, "text/plain")}, data=CONSENT,
             headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.5"},
             follow_redirects=False,
         )
@@ -188,9 +200,7 @@ def test_upload_rate_limit_ignores_client_supplied_forwarded_for(client):
     assert codes[main.RATE_LIMIT_UPLOADS:] == [429, 429]
 
     # A different CF-Connecting-IP is a different client and is not blocked
-    response = c.post(
-        "/analyze",
-        files={"report": ("r.txt", fixture, "text/plain")},
+    response = c.post("/analyze", files={"report": ("r.txt", fixture, "text/plain")}, data=CONSENT,
         headers={"CF-Connecting-IP": "198.51.100.42"},
         follow_redirects=False,
     )
@@ -206,7 +216,7 @@ def test_usage_ip_hash_is_keyed_and_not_reversible(client):
     from datetime import datetime
 
     c, main = client
-    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")}, data=CONSENT,
            headers={"CF-Connecting-IP": "203.0.113.77"})
     import sqlite3
 
@@ -218,12 +228,12 @@ def test_usage_ip_hash_is_keyed_and_not_reversible(client):
     assert stored != public_scheme
     assert len(stored) == 16
     # Same client on the same day -> same hash (unique-user counting still works)
-    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")}, data=CONSENT,
            headers={"CF-Connecting-IP": "203.0.113.77"})
     assert main.database.usage_stats()["per_day"][0]["unique_users"] == 1
     # A new key (restart / day rollover) yields a different hash for the same IP
     main._usage_key["day"] = ""
-    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
+    c.post("/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")}, data=CONSENT,
            headers={"CF-Connecting-IP": "203.0.113.77"})
     assert main.database.usage_stats()["per_day"][0]["unique_users"] == 2
 
@@ -254,7 +264,7 @@ def test_slow_pdf_does_not_block_other_requests(client, monkeypatch):
         def upload():
             result["status"] = shared.post(
                 "/analyze", files={"report": ("r.txt", FIXTURE.read_bytes(), "text/plain")},
-                follow_redirects=False,
+                data=CONSENT, follow_redirects=False,
             ).status_code
 
         worker = threading.Thread(target=upload)
@@ -291,21 +301,21 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     c, _main, path = client_with_config
     good = path.read_text()
     assert c.get("/healthz").status_code == 200
-    assert "2026-09-workbook-v2-draft" in _upload(c, consent=False).text
+    assert "2026-09-workbook-v2-draft" in _upload(c).text
 
     path.write_text("modules: [\n")  # a bad edit on the host
     health = c.get("/healthz")
     assert health.status_code == 503
     assert health.json()["status"] == "degraded"
     # Analyses continue on the last valid set instead of failing with 500
-    response = _upload(c, consent=False)
+    response = _upload(c)
     assert response.status_code == 200
     assert "2026-09-workbook-v2-draft" in response.text
     assert c.get("/").status_code == 200
 
     path.unlink()  # mount gone entirely
     assert c.get("/healthz").status_code == 503
-    assert _upload(c, consent=False).status_code == 200
+    assert _upload(c).status_code == 200
 
     path.write_text(good)
     assert c.get("/healthz").status_code == 200
@@ -323,7 +333,7 @@ def test_corrupt_requirements_at_startup_gives_503_not_500(tmp_path, monkeypatch
     importlib.reload(main)
     c = TestClient(main.app, raise_server_exceptions=False)
     assert c.get("/healthz").status_code == 503
-    response = _upload(c, consent=False)
+    response = _upload(c)
     assert response.status_code == 503
     assert "requirements file is currently unavailable" in response.text
 
@@ -332,19 +342,19 @@ def test_oversized_upload_rejected_by_content_length_and_by_chunked_read(client)
     c, main = client
     limit = main.MAX_REPORT_BYTES
     # Far over the limit: the middleware answers from Content-Length alone
-    huge = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 200 * 1024), "text/plain")})
+    huge = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 200 * 1024), "text/plain")}, data=CONSENT)
     assert huge.status_code == 413
     assert "larger than the 15 MB limit" in huge.text
     # Just over the limit (inside the multipart slack): caught by the chunked read
-    just_over = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 1), "text/plain")})
+    just_over = c.post("/analyze", files={"report": ("big.txt", b"x" * (limit + 1), "text/plain")}, data=CONSENT)
     assert just_over.status_code == 413
     # Under the limit still goes through the parser (and is rejected as not a report)
-    assert c.post("/analyze", files={"report": ("r.txt", b"x" * 1024, "text/plain")}).status_code == 422
+    assert c.post("/analyze", files={"report": ("r.txt", b"x" * 1024, "text/plain")}, data=CONSENT).status_code == 422
 
 
 def test_bad_pdf_error_hides_library_internals(client):
     c, _ = client
-    response = c.post("/analyze?lang=en", files={"report": ("r.pdf", b"%PDF-1.7 garbage", "application/pdf")})
+    response = c.post("/analyze?lang=en", files={"report": ("r.pdf", b"%PDF-1.7 garbage", "application/pdf")}, data=CONSENT)
     assert response.status_code == 422
     assert "The PDF content could not be read." in response.text
     assert "The PDF content could not be read. (" not in response.text
@@ -355,7 +365,7 @@ def test_bad_pdf_error_hides_library_internals(client):
 def test_pdf_download_is_not_cacheable(client):
     pytest.importorskip("weasyprint")
     c, _ = client
-    response = _upload(c, consent=False)
+    response = _upload(c)
     token = str(response.url).rsplit("/", 1)[1]
     pdf = c.get(f"/pdf/{token}")
     assert pdf.status_code == 200
@@ -368,11 +378,7 @@ def test_marlin_car_result_page_and_statistics(client):
     is counted separately in the public statistics."""
     c, main = client
     fixture = Path(__file__).parent / "fixtures" / "olp_report_marlin_bcm41.txt"
-    response = c.post(
-        "/analyze?lang=en",
-        files={"report": ("r.txt", fixture.read_bytes(), "text/plain")},
-        data={"consent": "yes"},
-    )
+    response = c.post("/analyze?lang=en", files={"report": ("r.txt", fixture.read_bytes(), "text/plain")}, data=CONSENT)
     assert response.status_code == 200
     assert "Already on Marlin" in response.text
     assert "can be updated directly to Marlin" not in response.text
@@ -414,7 +420,7 @@ def test_front_page_shows_variant_levels_for_bms(client):
 def test_empty_version_field_is_explained_on_the_result_page(client):
     c, _ = client
     text = FIXTURE.read_text().replace("Supplier SW Version: VCU039021", "Supplier SW Version:")
-    response = c.post("/analyze?lang=en", files={"report": ("r.txt", text.encode(), "text/plain")})
+    response = c.post("/analyze?lang=en", files={"report": ("r.txt", text.encode(), "text/plain")}, data=CONSENT)
     assert response.status_code == 200
     assert "Version field empty in the report" in response.text
     assert "Version not recognized" not in response.text

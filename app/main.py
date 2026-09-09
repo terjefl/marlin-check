@@ -271,7 +271,8 @@ async def analyze(request: Request, report: UploadFile):
         return _render(request, "index.html", {"error": t("error_too_large"), "requirements": requirements}, status_code=413)
 
     form = await request.form()
-    consent = form.get("consent") == "yes"
+    if form.get("consent") != "yes":
+        return _render(request, "index.html", {"error": t("error_consent_required"), "requirements": requirements}, status_code=422)
 
     try:
         parsed, evaluation = await run_in_threadpool(
@@ -287,17 +288,21 @@ async def analyze(request: Request, report: UploadFile):
             request, "index.html", {"error": t("error_parse", reason=reason), "requirements": requirements}, status_code=422
         )
 
-    if consent:
-        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        safe_ext = ".pdf" if data[:5] == b"%PDF-" else ".txt"
-        stored_filename = (
-            f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
-            f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}{safe_ext}"
-        )
-        (UPLOADS_DIR / stored_filename).write_bytes(data)
-        database.store_submission(parsed, evaluation, lang, stored_filename)
+    # Storage is mandatory (association decision, Sep 2026): the file and the
+    # full module list go into the vehicle register.
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    safe_ext = ".pdf" if data[:5] == b"%PDF-" else ".txt"
+    stored_filename = (
+        f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+        f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}{safe_ext}"
+    )
+    (UPLOADS_DIR / stored_filename).write_bytes(data)
+    database.store_submission(
+        parsed, evaluation, lang, stored_filename,
+        country=request.headers.get("cf-ipcountry", "").upper(),
+    )
 
-    _log_usage(request, lang, evaluation.verdict, consent=consent)
+    _log_usage(request, lang, evaluation.verdict, consent=True)
 
     _prune_results()
     token = secrets.token_urlsafe(16)

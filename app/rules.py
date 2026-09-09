@@ -126,6 +126,8 @@ class ModuleResult:
     evidence_level: str | None = None
     # variant-aware levels actually used for this module (profile -> minimum)
     levels: dict[str, int] = field(default_factory=dict)
+    # the report line this result was computed from (None when missing)
+    reading: ModuleReading | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -459,6 +461,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                     requirement=req, status=EMPTY, raw_name=reading.raw_name,
                     required=required, variant=variant_name,
                     meets=_meets(None, levels, requirements.profiles), levels=dict(levels),
+                    reading=reading,
                 )
             )
             continue
@@ -470,6 +473,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                     raw_name=reading.raw_name, version=reading.supplier_sw,
                     required=required, variant=variant_name,
                     meets=_meets(None, levels, requirements.profiles), levels=dict(levels),
+                    reading=reading,
                 )
             )
             continue
@@ -487,6 +491,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
                 meets=_meets(extracted, levels, requirements.profiles),
                 evidence_level=_evidence_level(extracted, levels, requirements.profiles),
                 levels=dict(levels),
+                reading=reading,
             )
         )
 
