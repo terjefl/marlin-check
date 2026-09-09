@@ -40,7 +40,7 @@
   "stats_module_heading": "Version distribution per module",
   "stats_empty": "No data yet — statistics appear once members upload reports.",
   "privacy_title": "Privacy",
-  "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. If you do NOT tick the consent box, the report is processed in memory only and nothing is stored. If you tick the box, we store the report file, your VIN and the module versions so the association can build aggregated statistics (number of unique cars, version distribution). Statistics never show individual VINs. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have stored data removed, contact the association. For every upload we also record an anonymous usage entry — country (from Cloudflare), language, and whether the car was ready — never the VIN, the report, or your IP address.",
+  "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. To use the service you must accept that the report file, your VIN, the software versions of every control module, the country you uploaded from (from Cloudflare) and the upload time are stored in the association's vehicle register. The register is used to build aggregated statistics (number of cars per software status, version distribution per module) and to help the association plan updates; the public statistics page never shows individual VINs. The full register, including VINs, is available only to the association's administrators. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have your data removed, contact the association; administrators can delete every record for a VIN. For every upload we also record an anonymous usage entry — country, language and outcome — never the VIN, the report or your IP address.",
   "footer_disclaimer": "Community tool — not affiliated with Fisker Inc. Updates are carried out by a service partner; confirm the result with them before an update is performed.",
   "alpha_title": "BETA",
   "alpha_text": "The check has been verified against real cars on 2.1, 2.2 and Marlin, but a few requirement values are still being confirmed by the association. Always confirm with a service partner before an update is performed.",
@@ -88,9 +88,9 @@
     {
       "title": "The requirements and the verdict",
       "paragraphs": [
-        "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the seven units that matter for Marlin, body control (BCM), stability system (ESP), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release.",
-        "The Marlin rule is simple: a car can be updated directly if all seven units are at the 2.1 level or higher, a so-called “100% 2.1 car”. If even one of them is below, the car is a zebra, a car with mixed levels, and must first receive the full 2.2 update, which lifts all units together. The result page shows which units fail, the number that was read, and the number required.",
-        "For cars that are ready, the check also lists the units that are below the 2.2 level. A direct update from 2.1 to Marlin does not touch these; they stay where they are. The car works, but it is worth knowing."
+        "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the seven units that matter for Marlin, body control (BCM), stability system (ESP), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release. The result page shows this table with one column per release and a tick or cross per unit.",
+        "The check first works out how far the car has come. A release is “complete” when all seven units are at its level or higher. It also looks at whether any unit already carries a level that only a higher release installs; where two releases share the same minimum for a unit (climate control is 24 on both 2.1 and 2.2, for instance) that unit is never taken as proof of the higher release.",
+        "From that, the car gets one of five results. “2.2 fully updated”: every unit at the 2.2 level, Marlin ready. “2.1 fully updated”: every unit at 2.1 and none at 2.2 — Marlin is possible, but the units the 2.2 update lifts would stay behind, so 2.2 first is recommended. “2.2 zebra”: everything at least 2.1, some units already at 2.2 and others not — a started but incomplete 2.2; finish it, then Marlin. “2.1 zebra”: at least one unit below 2.1 — not Marlin ready; lift those units to 2.1, then 2.2, then Marlin. And “already on Marlin” for cars whose vehicle controller shows the Marlin level. In every case the page lists the units that are holding the car back, with the number read and the number required."
       ]
     },
     {
@@ -135,8 +135,8 @@
           "text": "The whole interpretation is fixed rules and patterns. The same report always gives the same answer, and every number on the result page can be traced to one line in the report and one number in the requirements."
         },
         {
-          "lead": "Nothing is stored without consent.",
-          "text": "The report is analysed in memory, and the result is available for 30 minutes behind a link nobody can guess. If you tick the consent box, the report and the VIN are stored for the association’s statistics, which never show individual cars."
+          "lead": "Every report is stored.",
+          "text": "The result is available for 30 minutes behind a link nobody can guess. The report, the VIN and every module version go into the association's vehicle register, which its administrators use for statistics and update planning; the public statistics never show individual cars. See the privacy page for what is stored and how to have it removed."
         }
       ]
     },

@@ -6,17 +6,23 @@ car's control modules meet the minimum software levels required for the
 **Marlin** software update. Live at <https://marlin.flagan.net> (BETA since 2026-09-05).
 
 - Per-module result (OK / outdated / missing / version not recognised / empty
-  field) and an overall verdict: **Marlin-ready**, a **zebra** (mixed levels,
-  needs the full SW 2.2 update first), or **already on Marlin** (VCU 2.4
-  detected; the page lists what Marlin left on older levels instead).
+  field), one column per software release (2.0 / 2.1 / 2.2) with the minimum
+  and a tick/cross, and one of five outcomes: **full 2.2** (Marlin-ready),
+  **clean 2.1** (Marlin possible, 2.2 recommended first), **2.2 zebra**
+  (started but incomplete 2.2), **2.1 zebra** (not Marlin-ready) or
+  **already on Marlin** (VCU 2.4 detected). Each comes with the list of
+  modules holding the car back and a recommendation.
 - Trim read from the VIN (5th character): a Sport has no rear motor controller,
   so it is not counted as missing there. Battery management is checked per
   software line (NMC vs LFP pack).
 - Downloadable PDF report (WeasyPrint), generated in the active language.
 - A public "How it works" page (`/how-it-works`) explaining the interpretation
   at processing level, in all languages.
-- Optional consent for storage → anonymous fleet statistics (`/stats`).
-  Without consent nothing is stored.
+- Storage is mandatory (association decision, Sep 2026): every analyzed
+  report goes into the **vehicle register** — file, VIN, all ECU version
+  fields, outcome. Public dashboard (`/stats`, aggregated, no VINs) and an
+  admin register with per-VIN history, filters, CSV exports, re-evaluation
+  against changed requirements and deletion per VIN.
 - 7 languages (en, nb, sv, da, de, fr, es) with browser auto-detection.
 - Deterministic parsing and comparison — no LLMs involved.
 
@@ -24,14 +30,16 @@ car's control modules meet the minimum software levels required for the
 
 ```
 app/
-  main.py       FastAPI app: routes, upload flow, admin (form login, CSRF), usage logging
+  main.py       FastAPI app: routes, upload flow, admin (form login, CSRF), register, CSV
   parser.py     Parses the OLP "ECU Software Version Report" (PDF via pdfplumber, or text)
   rules.py      Rule engine: profile-based requirements, variants, trims, Marlin marker,
-                validation of the YAML
-  db.py         SQLite: consented submissions, usage stats, audit log, admin sessions
+                outcome classification, validation of the YAML
+  db.py         SQLite: vehicle register (submissions + all module readings), fleet
+                statistics, re-evaluation, usage stats, audit log, admin sessions
   auth.py       Credentials (PBKDF2), login lockout, trusted client-IP header
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
-  templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_login/pdf
+  templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_fleet/
+                admin_vehicle/admin_login/pdf
   static/       style.css and app.js (all page JS; no inline scripts, CSP-enforced)
 tests/          pytest suite. Fixtures: a real OLP export (olp_report.pdf, unmodified)
                 and its text extraction with an anonymized VIN, plus synthetic
@@ -46,12 +54,24 @@ pyproject.toml              ruff configuration
 
 | Area | State |
 |---|---|
-| Parser | Verified against a real OLP PDF export (fixture) and eleven consented uploads |
+| Parser | Verified against a real OLP PDF export (fixture) and the consented uploads of the BETA period |
 | Requirements | The association's minimum table (2.0/2.1/2.2). Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points (tracked in the `notes:` field of the requirements file): the Sport/LFP BMS level rests on one reference report, one Marlin car shows BCM 41 where the table says 42, all 2.2+ cars show ECC 25 where the table says 24 |
 | Trim logic | Verified for One; the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
 
 ## How the check works (short)
+
+Outcomes (rule engine, `app/rules.py`): each module gets `meets[profile]`
+and an `evidence_level` — the LOWEST profile that shares the minimum of the
+highest profile the module satisfies, so a module whose 2.1 and 2.2 minimums
+are equal (ECC 24, BMS 21) never counts as proof of 2.2. Per car:
+`complete_profile` (highest profile every critical module meets) and
+`top_evidence` (highest evidence over the modules). Then: VCU at the Marlin
+level → `marlin`; complete = 2.2 → `full_22`; complete = 2.1 and evidence
+2.1 → `full_21`; complete = 2.1 and evidence 2.2 → `zebra_22`; anything
+below 2.1 → `zebra_21`. The old `verdict` (ready/zebra/marlin) is derived
+from the same data and kept for compatibility.
+
 
 The parser reads the OLP report: sections (BODY/INFOTAINMENT/POWERTRAIN/CHASSIS/ADAS),
 ECU blocks (`CODE - Name`) and the **Supplier SW Version** field, which is
@@ -114,6 +134,17 @@ valid set has been loaded at all, uploads get a friendly 503 page.
   `notes`; edit those in the YAML editor.
 - **Activity log:** saves (with unified diff), logins and logouts, with
   timestamp, username and client IP.
+- **Vehicle register (`/admin/fleet`):** one row per VIN (latest upload)
+  with outcome, complete/evidence profile and the extracted level of every
+  required module; filter by outcome, trim and VIN. `/admin/fleet/<VIN>`
+  shows the upload history and the full module table (all four version
+  fields) of any upload, and can delete every record and file for that VIN
+  (audited). Exports: `vehicles.csv` (one row per car) and `readings.csv`
+  (one row per ECU per upload), semicolon-separated with a UTF-8 BOM.
+- **Re-evaluate all:** re-runs the current requirements file on every
+  stored report (rebuilt from its readings) and rewrites outcome and levels.
+  Run it after changing levels, and once after the v2 upgrade so the rows
+  from the consent period get an outcome.
 - **Usage statistics:** anonymous per-upload counters (country from
   Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
   unique users — see "Privacy model"). Never VIN, report content or raw IP.
@@ -166,7 +197,7 @@ changing `requirements.txt`, regenerate the lock with
 | Variable | Default in code | In the Docker image | Description |
 |---|---|---|---|
 | `MARLIN_DATA_DIR` | `./data` | `/data` | SQLite database (`marlin.sqlite3`) |
-| `MARLIN_UPLOADS_DIR` | `./data/uploads` | `/data/uploads` | Stored report files (only with consent) |
+| `MARLIN_UPLOADS_DIR` | `./data/uploads` | `/data/uploads` | Stored report files |
 | `MARLIN_REQUIREMENTS_PATH` | `./requirements.example.yaml` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
 | `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
@@ -197,16 +228,23 @@ that sets the trusted client-IP header.
 
 ## Privacy model
 
-- Without the consent checkbox nothing from the report is stored — the
-  analysis happens in memory and the result lives 30 minutes behind an
-  unguessable token (`/result/<token>`).
-- With consent: report file + VIN + module versions are stored for aggregated
-  fleet statistics (`/stats` never shows individual VINs).
+- Storage is mandatory: the member must tick the acceptance box, otherwise
+  the upload is refused (422) and nothing is stored. Every analyzed report is
+  stored: the file, the VIN, every ECU block with all four version fields,
+  trim, outcome, upload country (`CF-IPCountry`) and time. The result page
+  lives 30 minutes behind an unguessable token (`/result/<token>`).
+- The database schema is migrated in place on startup (additive `ALTER
+  TABLE`); rows from the consent period are kept and get an outcome after
+  "Re-evaluate all" in the admin page.
+- `/stats` is public and aggregated (outcomes, split cars per module, level
+  per module, trims, countries, weeks) — never a VIN. VINs are visible only
+  in the admin register. Deletion per VIN is an admin action.
 - Anonymous usage counting per upload (admin-only view): country, language,
   outcome, and a keyed daily hash of the IP for unique-user counts. The HMAC
   key is random, lives only in process memory and is replaced at the UTC day
   rollover and on restart, so a stored hash cannot be brute-forced back to an
   IP. No VIN, no report data, no raw IP.
 - Email delivery was deliberately left out (abuse surface).
-- Open: the privacy page does not yet name a controller/contact, a retention
-  period, or offer a deletion routine; these await the association's decision.
+- Open: the privacy page does not yet name a controller/contact or a
+  retention period; these await the association's decision. The deletion
+  routine exists (admin, per VIN).

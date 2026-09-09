@@ -40,7 +40,7 @@
   "stats_module_heading": "Versionsfördelning per modul",
   "stats_empty": "Inga data ännu — statistiken visas när medlemmar laddar upp rapporter.",
   "privacy_title": "Integritet",
-  "privacy_text": "Denna portal drivs av frivilliga för medlemmar i Fisker Owners Association. När du laddar upp en rapport analyseras den på vår server och resultatet visas för dig. Om du INTE bockar i samtyckesrutan behandlas rapporten endast i minnet och ingenting sparas. Bockar du i rutan sparar vi rapportfilen, ditt VIN och modulversionerna så att föreningen kan bygga aggregerad statistik (antal unika bilar, versionsfördelning). Statistiken visar aldrig enskilda VIN. Inga data delas med tredje part och inga spårningscookies används (endast en cookie som kommer ihåg ditt språkval). Kontakta föreningen för att få sparade data raderade. För varje uppladdning registrerar vi också en anonym användningspost — land (från Cloudflare), språk och om bilen var redo — aldrig VIN, rapporten eller din IP-adress.",
+  "privacy_text": "Den här portalen drivs av frivilliga för medlemmar i Fisker Owners Association. När du laddar upp en rapport analyseras den på vår server och resultatet visas för dig. För att använda tjänsten måste du acceptera att rapportfilen, ditt VIN, programvaruversionerna för alla styrenheter, landet du laddade upp från (från Cloudflare) och tidpunkten lagras i föreningens fordonsregister. Registret används för aggregerad statistik (antal bilar per programvarustatus, versionsfördelning per modul) och för att hjälpa föreningen planera uppdateringar; den offentliga statistiksidan visar aldrig enskilda VIN. Hela registret, inklusive VIN, är endast tillgängligt för föreningens administratörer. Inga data delas med tredje part och inga spårningskakor används (endast en kaka som kommer ihåg ditt språkval). Kontakta föreningen för att få dina data raderade; administratörerna kan radera allt som lagrats om ett VIN. För varje uppladdning registrerar vi också en anonym användningspost — land, språk och utfall — aldrig VIN, rapporten eller din IP-adress.",
   "footer_disclaimer": "Ideellt verktyg — inte kopplat till Fisker Inc. Uppdateringar utförs av en servicepartner; stäm av resultatet med dem innan en uppdatering utförs.",
   "alpha_title": "BETA",
   "alpha_text": "Kontrollen är verifierad mot riktiga bilar på 2.1, 2.2 och Marlin, men vissa kravvärden bekräftas fortfarande av föreningen. Stäm alltid av med en servicepartner innan en uppdatering utförs.",
@@ -88,9 +88,9 @@
     {
       "title": "Kraven och utlåtandet",
       "paragraphs": [
-        "Kraven är ordnade efter programvaruversionerna 2.0, 2.1 och 2.2. För var och en av de sju enheter som har betydelse för Marlin, karosstyrning (BCM), stabilitetssystem (ESP), klimatstyrning (ECC), batteristyrning (BMS), motorstyrning fram och bak (MCU) och fordonsstyrning (VCU), anger tabellen vilken nivå enheten minst måste ha för att tillhöra varje version.",
-        "Regeln för Marlin är enkel: en bil kan uppdateras direkt om alla sju enheterna ligger på 2.1-nivå eller högre, en så kallad ”100 % 2.1-bil”. Ligger en enda av dem under är bilen en zebra, en bil med blandade nivåer, och måste först få den fullständiga 2.2-uppdateringen, som lyfter alla enheter samlat. Resultatsidan visar vilka enheter som inte klarar sig, vilket tal som lästes och vilket som krävs.",
-        "För bilar som är klara visar kontrollen dessutom vilka enheter som ligger under 2.2-nivån. En direkt uppdatering från 2.1 till Marlin rör nämligen inte dessa; de stannar där de är. Bilen fungerar, men det är bra att veta."
+        "Kraven är ordnade efter programvaruversion: 2.0, 2.1 och 2.2. För var och en av de sju enheter som spelar roll för Marlin — karosstyrning (BCM), stabilitetssystem (ESP), klimatstyrning (ECC), batteristyrning (BMS), främre och bakre motorstyrning (MCU) och fordonsstyrning (VCU) — anger tabellen den miniminivå en enhet måste ha för att tillhöra varje version. Resultatsidan visar tabellen med en kolumn per version och en bock eller ett kryss per enhet.",
+        "Kontrollen tar först reda på hur långt bilen har kommit. En version är ”fullständig” när alla sju enheter ligger på dess nivå eller högre. Den tittar också på om någon enhet redan har en nivå som bara en högre version installerar; där två versioner delar samma minimum för en enhet (klimatstyrning är 24 på både 2.1 och 2.2, till exempel) räknas den enheten aldrig som bevis på den högre versionen.",
+        "Utifrån det får bilen ett av fem resultat. ”2.2 fullständigt uppdaterad”: alla enheter på 2.2-nivå, Marlin-redo. ”2.1 fullständigt uppdaterad”: alla enheter på 2.1 och ingen på 2.2 — Marlin är möjlig, men enheterna som 2.2-uppdateringen lyfter blir kvar, så 2.2 först rekommenderas. ”2.2-zebra”: allt minst 2.1, vissa enheter redan på 2.2 och andra inte — en påbörjad men ofullständig 2.2; slutför den, sedan Marlin. ”2.1-zebra”: minst en enhet under 2.1 — inte Marlin-redo; lyft dessa enheter till 2.1, sedan 2.2, sedan Marlin. Och ”redan på Marlin” för bilar där fordonsstyrningen visar Marlin-nivån. I alla fall listar sidan enheterna som håller bilen tillbaka, med avläst tal och krav."
       ]
     },
     {
@@ -135,8 +135,8 @@
           "text": "Hela tolkningen är fasta regler och mönster. Samma rapport ger alltid samma svar, och varje tal på resultatsidan kan spåras till en rad i rapporten och ett tal i kraven."
         },
         {
-          "lead": "Inget sparas utan samtycke.",
-          "text": "Rapporten analyseras i minnet, och resultatet är tillgängligt i 30 minuter bakom en länk ingen kan gissa. Kryssar du i samtycke sparas rapporten och VIN för föreningens statistik, som aldrig visar enskilda bilar."
+          "lead": "Alla rapporter lagras.",
+          "text": "Resultatet är tillgängligt i 30 minuter bakom en länk ingen kan gissa. Rapporten, VIN och alla modulversioner går in i föreningens fordonsregister, som administratörerna använder för statistik och planering av uppdateringar; den offentliga statistiken visar aldrig enskilda bilar. Se integritetssidan för vad som lagras och hur du får det raderat."
         }
       ]
     },

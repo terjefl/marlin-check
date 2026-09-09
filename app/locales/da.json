@@ -40,7 +40,7 @@
   "stats_module_heading": "Versionsfordeling pr. modul",
   "stats_empty": "Ingen data endnu — statistikken vises, når medlemmer uploader rapporter.",
   "privacy_title": "Privatliv",
-  "privacy_text": "Denne portal drives af frivillige for medlemmer af Fisker Owners Association. Når du uploader en rapport, analyseres den på vores server, og resultatet vises for dig. Hvis du IKKE sætter kryds i samtykkefeltet, behandles rapporten kun i hukommelsen, og intet gemmes. Sætter du kryds, gemmer vi rapportfilen, dit VIN og modulversionerne, så foreningen kan lave aggregeret statistik (antal unikke biler, versionsfordeling). Statistikken viser aldrig enkelte VIN. Ingen data deles med tredjepart, og der bruges ingen sporingscookies (kun en cookie, der husker dit sprogvalg). Kontakt foreningen for at få gemte data slettet. For hver upload registrerer vi også en anonym brugstælling — land (fra Cloudflare), sprog og om bilen var klar — aldrig VIN, rapporten eller din IP-adresse.",
+  "privacy_text": "Denne portal drives af frivillige for medlemmer af Fisker Owners Association. Når du uploader en rapport, analyseres den på vores server, og resultatet vises for dig. For at bruge tjenesten skal du acceptere, at rapportfilen, dit VIN, softwareversionerne for alle styreenheder, landet du uploadede fra (fra Cloudflare) og tidspunktet gemmes i foreningens køretøjsregister. Registret bruges til aggregeret statistik (antal biler per softwarestatus, versionsfordeling per modul) og til at hjælpe foreningen med at planlægge opdateringer; den offentlige statistikside viser aldrig enkelte VIN. Hele registret, inklusive VIN, er kun tilgængeligt for foreningens administratorer. Ingen data deles med tredjeparter, og der bruges ingen sporingscookies (kun en cookie, der husker dit sprogvalg). Kontakt foreningen for at få dine data slettet; administratorerne kan slette alt, der er gemt om et VIN. For hver upload registrerer vi også en anonym brugspost — land, sprog og udfald — aldrig VIN, rapporten eller din IP-adresse.",
   "footer_disclaimer": "Frivilligt værktøj — ikke tilknyttet Fisker Inc. Opdateringer udføres af en servicepartner; afklar resultatet med dem, før en opdatering udføres.",
   "alpha_title": "BETA",
   "alpha_text": "Tjekket er verificeret mod ægte biler på 2.1, 2.2 og Marlin, men enkelte kravværdier bekræftes stadig af foreningen. Afklar altid med en servicepartner, før en opdatering udføres.",
@@ -88,9 +88,9 @@
     {
       "title": "Kravene og vurderingen",
       "paragraphs": [
-        "Kravene er ordnet efter softwareudgaverne 2.0, 2.1 og 2.2. For hver af de syv enheder, der har betydning for Marlin, karrosseristyring (BCM), stabilitetssystem (ESP), klimastyring (ECC), batteristyring (BMS), motorstyring for og bag (MCU) og køretøjsstyring (VCU), angiver tabellen, hvilket niveau enheden mindst skal have for at høre til hver udgave.",
-        "Reglen for Marlin er enkel: en bil kan opdateres direkte, hvis alle syv enheder er på 2.1-niveau eller højere, en såkaldt ”100 % 2.1-bil”. Er blot én af dem under, er bilen en zebra, en bil med blandede niveauer, og skal først have den fulde 2.2-opdatering, som løfter alle enheder samlet. Resultatsiden viser, hvilke enheder der fejler, hvilket tal der blev læst, og hvilket der kræves.",
-        "For biler, der er klar, viser tjekket desuden, hvilke enheder der ligger under 2.2-niveauet. En direkte opdatering fra 2.1 til Marlin rører nemlig ikke disse; de bliver, hvor de er. Bilen virker, men det er godt at vide."
+        "Kravene er ordnet efter softwareudgave: 2.0, 2.1 og 2.2. For hver af de syv enheder, der betyder noget for Marlin — karosseristyring (BCM), stabilitetssystem (ESP), klimastyring (ECC), batteristyring (BMS), forreste og bageste motorstyring (MCU) og køretøjsstyring (VCU) — angiver tabellen det minimumsniveau, en enhed skal have for at tilhøre hver udgave. Resultatsiden viser tabellen med én kolonne per udgave og et flueben eller kryds per enhed.",
+        "Tjekket finder først ud af, hvor langt bilen er nået. En udgave er »fuldstændig«, når alle syv enheder er på dens niveau eller højere. Det ser også på, om nogen enhed allerede har et niveau, som kun en højere udgave installerer; hvor to udgaver deler samme minimum for en enhed (klimastyring er 24 på både 2.1 og 2.2, for eksempel), regnes den enhed aldrig som bevis på den højere udgave.",
+        "Ud fra det får bilen ét af fem resultater. »2.2 fuldstændigt opdateret«: alle enheder på 2.2-niveau, Marlin-klar. »2.1 fuldstændigt opdateret«: alle enheder på 2.1 og ingen på 2.2 — Marlin er mulig, men enhederne, som 2.2-opdateringen løfter, bliver stående, så 2.2 først anbefales. »2.2-zebra«: alt mindst 2.1, nogle enheder allerede på 2.2 og andre ikke — en påbegyndt, men ufuldstændig 2.2; fuldfør den, derefter Marlin. »2.1-zebra«: mindst én enhed under 2.1 — ikke Marlin-klar; løft disse enheder til 2.1, så 2.2, så Marlin. Og »allerede på Marlin« for biler, hvor køretøjsstyringen viser Marlin-niveauet. I alle tilfælde lister siden de enheder, der holder bilen tilbage, med aflæst tal og krav."
       ]
     },
     {
@@ -135,8 +135,8 @@
           "text": "Hele fortolkningen er faste regler og mønstre. Samme rapport giver altid samme svar, og hvert tal på resultatsiden kan spores til én linje i rapporten og ét tal i kravene."
         },
         {
-          "lead": "Intet gemmes uden samtykke.",
-          "text": "Rapporten analyseres i hukommelsen, og resultatet er tilgængeligt i 30 minutter bag et link, ingen kan gætte. Sætter du kryds ved samtykke, gemmes rapporten og VIN til foreningens statistik, som aldrig viser enkelte biler."
+          "lead": "Alle rapporter gemmes.",
+          "text": "Resultatet er tilgængeligt i 30 minutter bag et link, ingen kan gætte. Rapporten, VIN og alle modulversioner går ind i foreningens køretøjsregister, som administratorerne bruger til statistik og planlægning af opdateringer; den offentlige statistik viser aldrig enkelte biler. Se privatlivssiden for, hvad der gemmes, og hvordan du får det slettet."
         }
       ]
     },
