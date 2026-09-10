@@ -149,8 +149,8 @@
   ],
   "steps_heading": "Sådan får du bilen analyseret",
   "intro_steps": [
-    "Forbind til OLP med den grønne dongle, start OLP diagnostics mode (ikonet nederst til venstre), tryk på software version-ikonet og kør software version report (alle ECU'er). Gem PDF-rapporten på mobilen, eller send den på e-mail til dig selv – det, der er nemmest for dig.",
-    "Tryk på »Vælg fil« nedenfor og find OLP-rapporten (PDF-filen hedder »ecu_software_report_…«). Sæt kryds ved, at VIN og ECU-versioner gemmes i foreningens køretøjsregister, og tryk Analysér."
+    "Forbind til OLP med den grønne dongle, start OLP diagnostics mode (ikonet nederst til venstre), tryk på software version-ikonet og kør software version report (alle ECU'er). Gem PDF-rapporten i en mappe på mobilen (for eksempel Filer eller Downloads), eller send den på e-mail til dig selv og åbn den på en computer – det, der er nemmest.",
+    "Tryk på »Vælg fil« nedenfor og find OLP-rapporten, enten i mappen på mobilen eller på den computer, du sendte den til. PDF-filen hedder »ecu_software_report_…«. Sæt kryds ved, at VIN og ECU-versioner gemmes i foreningens køretøjsregister, og tryk Analysér."
   ],
   "error_consent_required": "Du skal acceptere, at VIN og modulversioner gemmes, før rapporten kan analyseres.",
   "table_marlin_req": "Marlin-krav",

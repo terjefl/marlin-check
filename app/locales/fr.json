@@ -149,8 +149,8 @@
   ],
   "steps_heading": "Voici comment faire analyser votre voiture",
   "intro_steps": [
-    "Connectez-vous à OLP avec le dongle vert, lancez le mode diagnostic OLP (icône en bas à gauche), appuyez sur l'icône « software version » et générez le rapport de versions logicielles (tous les calculateurs). Enregistrez le rapport PDF sur votre téléphone ou envoyez-le-vous par e-mail – ce qui est le plus simple pour vous.",
-    "Cliquez sur « Choisir un fichier » ci-dessous et sélectionnez votre rapport OLP (le fichier PDF s'appelle « ecu_software_report_… »). Cochez la case autorisant l'enregistrement du VIN et des versions des calculateurs dans le registre des véhicules de l'association, puis appuyez sur Analyser."
+    "Connectez-vous à OLP avec le dongle vert, lancez le mode diagnostic OLP (icône en bas à gauche), appuyez sur l'icône « software version » et générez le rapport de versions logicielles (tous les calculateurs). Enregistrez le rapport PDF dans un dossier de votre téléphone (par exemple Fichiers ou Téléchargements), ou envoyez-le-vous par e-mail et ouvrez-le sur un ordinateur – ce qui est le plus simple.",
+    "Cliquez sur « Choisir un fichier » ci-dessous et sélectionnez le rapport OLP, soit dans ce dossier sur votre téléphone, soit sur l'ordinateur auquel vous l'avez envoyé. Le fichier PDF s'appelle « ecu_software_report_… ». Cochez la case autorisant l'enregistrement du VIN et des versions des calculateurs dans le registre des véhicules de l'association, puis appuyez sur Analyser."
   ],
   "error_consent_required": "Vous devez accepter l'enregistrement du VIN et des versions des modules avant que le rapport puisse être analysé.",
   "table_marlin_req": "Exigence Marlin",
