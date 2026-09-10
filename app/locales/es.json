@@ -149,7 +149,7 @@
   ],
   "steps_heading": "Así se analiza su coche",
   "intro_steps": [
-    "Conéctese a OLP con el dongle verde, inicie el modo de diagnóstico de OLP (icono inferior izquierdo), pulse el icono de versión de software y genere el informe de versiones de software (todas las ECU). Guarde el informe PDF en una carpeta de su móvil (por ejemplo Archivos o Descargas), o envíeselo por correo electrónico y ábralo en un ordenador, lo que le resulte más fácil.",
+    "Conéctese a OLP (Ocean Link Pro) con el dongle verde, inicie el modo de diagnóstico de OLP (icono inferior izquierdo), pulse el icono de versión de software y genere el informe de versiones de software (todas las ECU). Guarde el informe PDF en una carpeta de su móvil (por ejemplo Archivos o Descargas), o envíeselo por correo electrónico y ábralo en un ordenador, lo que le resulte más fácil.",
     "Pulse «Elegir archivo» más abajo y seleccione el informe OLP, ya sea desde esa carpeta de su móvil o desde el ordenador al que se lo envió. El archivo PDF se llama «ecu_software_report_…». Marque la casilla para permitir que el VIN y las versiones de las ECU se guarden en el registro de vehículos de la asociación, y pulse Analizar."
   ],
   "error_consent_required": "Debe aceptar que el VIN y las versiones de los módulos se guarden antes de que el informe pueda analizarse.",

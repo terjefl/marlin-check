@@ -149,7 +149,7 @@
   ],
   "steps_heading": "Slik får du bilen analysert",
   "intro_steps": [
-    "Koble til OLP med den grønne dongelen, start OLP diagnostics mode (ikonet nederst til venstre), trykk på software version-ikonet og kjør software version report (alle ECU-er). Lagre PDF-rapporten i en mappe på mobilen (for eksempel Filer eller Nedlastinger), eller send den på e-post til deg selv og åpne den på en datamaskin – det som er enklest.",
+    "Koble til OLP (Ocean Link Pro) med den grønne dongelen, start OLP diagnostics mode (ikonet nederst til venstre), trykk på software version-ikonet og kjør software version report (alle ECU-er). Lagre PDF-rapporten i en mappe på mobilen (for eksempel Filer eller Nedlastinger), eller send den på e-post til deg selv og åpne den på en datamaskin – det som er enklest.",
     "Trykk «Velg fil» under og finn OLP-rapporten, enten i mappen på mobilen eller på datamaskinen du sendte den til. PDF-filen heter «ecu_software_report_…». Kryss av for at VIN og ECU-versjoner lagres i foreningens kjøretøyregister, og trykk Analyser."
   ],
   "error_consent_required": "Du må akseptere at VIN og modulversjoner lagres før rapporten kan analyseres.",
