@@ -55,7 +55,7 @@
   "parse_no_vin": "Keine VIN-Zeile (VIN: <17 Zeichen>) im Bericht gefunden.",
   "parse_no_modules": "Keine ECU-Abschnitte im Bericht gefunden.",
   "ready_22_note": "Hinweis: Ein direktes Update von 2.1 auf Marlin aktualisiert die unten gelisteten ECUs trotzdem NICHT — sie gehören zum 2.2-Update (ein verpflichtender NHTSA-Rückruf in Nordamerika, den die meisten europäischen Autos nie erhielten). Das Auto funktioniert einwandfrei, aber diese ECUs bleiben auf ihren aktuellen Versionen:",
-  "vcu24_notice": "Hinweis für alle, die bereits VCU 2.4 haben (durch Marlin oder anderweitig): Informieren Sie unbedingt jeden, der Ihr Fahrzeug auf 2.2 aktualisiert, dass Sie es BEREITS haben. Es gibt keinen Weg zurück und keine Kompatibilität von VCU 2.4 (Marlin) zu VCU 2.3 (2.2/2.2.3) – das Fahrzeug wird unbrauchbar („gebrickt“), wenn Sie das nicht VOR dem Update erkennen und mitteilen.",
+  "vcu24_notice": "Hinweis für alle, die bereits VCU 2.4 haben (durch Marlin oder anderweitig): Informieren Sie unbedingt jeden, der Ihr Fahrzeug auf 2.2 aktualisiert, dass Sie BEREITS VCU 2.4 haben. Es gibt keinen Weg zurück und keine Kompatibilität von VCU 2.4 (Marlin) zu VCU 2.3 (2.2/2.2.3) – das Fahrzeug wird unbrauchbar („gebrickt“), wenn Sie das nicht VOR dem Update erkennen und mitteilen.",
   "trim_label": "Ausstattung (aus der VIN)",
   "trim_unknown": "unbekannt",
   "trim_unknown_note": "Die Ausstattungsvariante konnte nicht aus der VIN gelesen werden, daher gelten alle Module als erforderlich (einschließlich des hinteren Motorsteuergeräts).",
@@ -149,8 +149,8 @@
   ],
   "steps_heading": "So lassen Sie Ihr Fahrzeug analysieren",
   "intro_steps": [
-    "Verbinden Sie sich mit dem grünen Dongle mit OLP, starten Sie den OLP-Diagnosemodus (Symbol unten links), tippen Sie auf das Software-Version-Symbol und erstellen Sie den Software Version Report (alle ECUs). Senden Sie sich den PDF-Bericht per E-Mail oder laden Sie ihn auf Ihr Telefon bzw. Ihren PC herunter.",
-    "Klicken Sie unten auf „Datei auswählen“ und wählen Sie Ihren OLP-Bericht (die PDF-Datei heißt „ecu report…“). Setzen Sie das Häkchen, damit VIN und ECU-Versionen im Fahrzeugregister des Vereins gespeichert werden, und klicken Sie auf Analysieren."
+    "Verbinden Sie sich mit dem grünen Dongle mit OLP, starten Sie den OLP-Diagnosemodus (Symbol unten links), tippen Sie auf das Software-Version-Symbol und erstellen Sie den Software Version Report (alle ECUs). Speichern Sie den PDF-Bericht auf Ihrem Mobilgerät oder senden Sie ihn sich per E-Mail – was für Sie am einfachsten ist.",
+    "Klicken Sie unten auf „Datei auswählen“ und wählen Sie Ihren OLP-Bericht (die PDF-Datei heißt „ecu_software_report_…“). Setzen Sie das Häkchen, damit VIN und ECU-Versionen im Fahrzeugregister des Vereins gespeichert werden, und klicken Sie auf Analysieren."
   ],
   "error_consent_required": "Sie müssen der Speicherung von VIN und Modulversionen zustimmen, bevor der Bericht analysiert werden kann.",
   "table_marlin_req": "Marlin-Anforderung",

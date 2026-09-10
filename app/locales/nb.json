@@ -55,7 +55,7 @@
   "parse_no_vin": "Fant ingen VIN-linje (VIN: <17 tegn>) i rapporten.",
   "parse_no_modules": "Fant ingen ECU-blokker i rapporten.",
   "ready_22_note": "Merk: en direkte oppdatering fra 2.1 til Marlin vil fortsatt IKKE oppdatere ECU-ene under — de tilhører 2.2-oppdateringen (en pålagt NHTSA-tilbakekalling i Nord-Amerika som de fleste europeiske biler aldri fikk). Bilen vil fungere fint, men disse ECU-ene forblir på dagens versjoner:",
-  "vcu24_notice": "Merknad til alle som allerede har VCU 2.4 (fra Marlin eller annet): sørg for å informere den som skal oppdatere bilen din til 2.2 om at du ALLEREDE har den. Det finnes ingen vei tilbake eller kompatibilitet fra VCU 2.4 (Marlin) til VCU 2.3 (2.2/2.2.3), og dette vil «bricke» bilen med mindre du identifiserer og kommuniserer det FØR oppdateringen.",
+  "vcu24_notice": "Merknad til alle som allerede har VCU 2.4 (fra Marlin eller annet): sørg for å informere den som skal oppdatere bilen din til 2.2 om at du ALLEREDE har VCU 2.4. Det finnes ingen vei tilbake eller kompatibilitet fra VCU 2.4 (Marlin) til VCU 2.3 (2.2/2.2.3), og dette vil «bricke» bilen med mindre du identifiserer og kommuniserer det FØR oppdateringen.",
   "trim_label": "Utgave (fra VIN)",
   "trim_unknown": "ukjent",
   "trim_unknown_note": "Utgaven kunne ikke leses fra VIN-nummeret, så alle moduler regnes som påkrevd (inkludert bakre motorkontroller).",
@@ -149,8 +149,8 @@
   ],
   "steps_heading": "Slik får du bilen analysert",
   "intro_steps": [
-    "Koble til OLP med den grønne dongelen, start OLP diagnostics mode (ikonet nederst til venstre), trykk på software version-ikonet og kjør software version report (alle ECU-er). Del PDF-rapporten på e-post til deg selv, eller last den ned til telefonen eller PC-en.",
-    "Trykk «Velg fil» under og finn OLP-rapporten (PDF-filen heter «ecu report…»). Kryss av for at VIN og ECU-versjoner lagres i foreningens kjøretøyregister, og trykk Analyser."
+    "Koble til OLP med den grønne dongelen, start OLP diagnostics mode (ikonet nederst til venstre), trykk på software version-ikonet og kjør software version report (alle ECU-er). Lagre PDF-rapporten på mobilen, eller send den på e-post til deg selv – det som er enklest for deg.",
+    "Trykk «Velg fil» under og finn OLP-rapporten (PDF-filen heter «ecu_software_report_…»). Kryss av for at VIN og ECU-versjoner lagres i foreningens kjøretøyregister, og trykk Analyser."
   ],
   "error_consent_required": "Du må akseptere at VIN og modulversjoner lagres før rapporten kan analyseres.",
   "table_marlin_req": "Marlin-krav",

@@ -55,7 +55,7 @@
   "parse_no_vin": "Aucune ligne VIN (VIN : <17 caractères>) trouvée dans le rapport.",
   "parse_no_modules": "Aucune section ECU trouvée dans le rapport.",
   "ready_22_note": "Remarque : une mise à jour directe de 2.1 vers Marlin ne mettra toujours PAS à jour les calculateurs ci-dessous — ils appartiennent à la mise à jour 2.2 (un rappel NHTSA obligatoire en Amérique du Nord que la plupart des voitures européennes n'ont jamais reçu). La voiture fonctionnera très bien, mais ces calculateurs resteront sur leurs versions actuelles :",
-  "vcu24_notice": "Avis à tous ceux qui ont déjà le VCU 2.4 (via Marlin ou autrement) : informez impérativement toute personne mettant votre voiture à jour en 2.2 que vous l'avez DÉJÀ. Il n'existe aucun retour en arrière ni compatibilité du VCU 2.4 (Marlin) vers le VCU 2.3 (2.2/2.2.3), et cela rendra votre voiture inutilisable (« brick ») si vous ne l'identifiez pas et ne le communiquez pas AVANT la mise à jour.",
+  "vcu24_notice": "Avis à tous ceux qui ont déjà le VCU 2.4 (via Marlin ou autrement) : informez impérativement toute personne mettant votre voiture à jour en 2.2 que vous avez DÉJÀ le VCU 2.4. Il n'existe aucun retour en arrière ni compatibilité du VCU 2.4 (Marlin) vers le VCU 2.3 (2.2/2.2.3), et cela rendra votre voiture inutilisable (« brick ») si vous ne l'identifiez pas et ne le communiquez pas AVANT la mise à jour.",
   "trim_label": "Finition (d'après le VIN)",
   "trim_unknown": "inconnue",
   "trim_unknown_note": "La finition n'a pas pu être déterminée à partir du VIN ; tous les modules sont donc considérés comme requis (y compris le contrôleur du moteur arrière).",
@@ -149,8 +149,8 @@
   ],
   "steps_heading": "Voici comment faire analyser votre voiture",
   "intro_steps": [
-    "Connectez-vous à OLP avec le dongle vert, lancez le mode diagnostic OLP (icône en bas à gauche), appuyez sur l'icône « software version » et générez le rapport de versions logicielles (tous les calculateurs). Envoyez-vous le rapport PDF par e-mail ou téléchargez-le sur votre téléphone ou votre ordinateur.",
-    "Cliquez sur « Choisir un fichier » ci-dessous et sélectionnez votre rapport OLP (le fichier PDF s'appelle « ecu report… »). Cochez la case autorisant l'enregistrement du VIN et des versions des calculateurs dans le registre des véhicules de l'association, puis appuyez sur Analyser."
+    "Connectez-vous à OLP avec le dongle vert, lancez le mode diagnostic OLP (icône en bas à gauche), appuyez sur l'icône « software version » et générez le rapport de versions logicielles (tous les calculateurs). Enregistrez le rapport PDF sur votre téléphone ou envoyez-le-vous par e-mail – ce qui est le plus simple pour vous.",
+    "Cliquez sur « Choisir un fichier » ci-dessous et sélectionnez votre rapport OLP (le fichier PDF s'appelle « ecu_software_report_… »). Cochez la case autorisant l'enregistrement du VIN et des versions des calculateurs dans le registre des véhicules de l'association, puis appuyez sur Analyser."
   ],
   "error_consent_required": "Vous devez accepter l'enregistrement du VIN et des versions des modules avant que le rapport puisse être analysé.",
   "table_marlin_req": "Exigence Marlin",
