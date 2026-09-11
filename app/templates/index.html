@@ -15,11 +15,12 @@
   {% for step in steps %}
   <li>{{ step }}
     {% if loop.first %}
+    {% set video_lang = 'nb' if lang == 'nb' else 'en' %}
     <details class="howto-video">
       <summary>{{ t('video_summary') }}</summary>
       <video controls preload="none" playsinline
-             poster="/static/olp-howto-poster.jpg?v={{ static_v }}"
-             src="/static/olp-howto.mp4?v={{ static_v }}"></video>
+             poster="/static/olp-howto-{{ video_lang }}-poster.jpg?v={{ static_v }}"
+             src="/static/olp-howto-{{ video_lang }}.mp4?v={{ static_v }}"></video>
       <p class="hint">{{ t('video_caption') }}</p>
     </details>
     {% endif %}
