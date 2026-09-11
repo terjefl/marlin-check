@@ -149,7 +149,7 @@
   ],
   "steps_heading": "So lassen Sie Ihr Fahrzeug analysieren",
   "intro_steps": [
-    "Verbinden Sie sich mit dem grünen OBD-II-Dongle (Bluetooth 4.0, in der Diagnosebuchse des Fahrzeugs) mit OLP (Ocean Link Pro), starten Sie den OLP-Diagnosemodus (Symbol unten links), tippen Sie auf das Software-Version-Symbol und erstellen Sie den Software Version Report (alle ECUs). Speichern Sie den PDF-Bericht in einem Ordner auf Ihrem Telefon (z. B. Dateien oder Downloads) oder senden Sie ihn sich per E-Mail und öffnen Sie ihn am Computer – was für Sie am einfachsten ist.",
+    "Verbinden Sie sich mit dem grünen OBD-II-Dongle (Bluetooth 4.0, in der Diagnosebuchse des Fahrzeugs) mit OLP (OceanLink Pro), starten Sie den OLP-Diagnosemodus (Symbol unten links), tippen Sie auf das Software-Version-Symbol und erstellen Sie den Software Version Report (alle ECUs). Speichern Sie den PDF-Bericht in einem Ordner auf Ihrem Telefon (z. B. Dateien oder Downloads) oder senden Sie ihn sich per E-Mail und öffnen Sie ihn am Computer – was für Sie am einfachsten ist.",
     "Klicken Sie unten auf „Datei auswählen“ und wählen Sie den OLP-Bericht, entweder aus diesem Ordner auf dem Telefon oder auf dem Computer, an den Sie ihn gesendet haben. Die PDF-Datei heißt „ecu_software_report_…“. Setzen Sie das Häkchen, damit VIN und ECU-Versionen im Fahrzeugregister des Vereins gespeichert werden, und klicken Sie auf Analysieren."
   ],
   "error_consent_required": "Sie müssen der Speicherung von VIN und Modulversionen zustimmen, bevor der Bericht analysiert werden kann.",
