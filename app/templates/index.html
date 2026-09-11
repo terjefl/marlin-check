@@ -13,7 +13,17 @@
 <h2 class="stepsheading">{{ t('steps_heading') }}</h2>
 <ol class="steps">
   {% for step in steps %}
-  <li>{{ step }}</li>
+  <li>{{ step }}
+    {% if loop.first %}
+    <details class="howto-video">
+      <summary>{{ t('video_summary') }}</summary>
+      <video controls preload="none" playsinline
+             poster="/static/olp-howto-poster.jpg?v={{ static_v }}"
+             src="/static/olp-howto.mp4?v={{ static_v }}"></video>
+      <p class="hint">{{ t('video_caption') }}</p>
+    </details>
+    {% endif %}
+  </li>
   {% endfor %}
 </ol>
 

@@ -153,6 +153,10 @@ table.resulttable { min-width: 720px; }
 .steps { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1.2rem 0.8rem 2.4rem; max-width: 560px; margin: 0 0 1rem; }
 .steps li { margin: 0.4rem 0; }
 .stepsheading { font-size: 1.05rem; margin-bottom: 0.4rem; }
+.howto-video { margin: 0.4rem 0 0.2rem; }
+.howto-video summary { cursor: pointer; color: var(--accent); font-size: 0.92rem; }
+.howto-video summary:hover { text-decoration: underline; }
+.howto-video video { display: block; width: 100%; max-width: 300px; margin: 0.6rem 0 0.3rem; border-radius: 12px; border: 1px solid var(--border); background: #000; }
 .stat.partial .num { color: #b07d00; }
 
 /* v2: dashboard */

@@ -152,6 +152,8 @@
     "Connect to OLP (OceanLink Pro) with the green OBD-II dongle (Bluetooth 4.0, plugged into the car's diagnostic port), run OLP diagnostics mode (lower left icon), click the software version icon and run the software version report (all ECUs). Save the PDF report to a folder on your phone (for example Files or Downloads), or email it to yourself and open it on a computer — whichever is easiest.",
     "Click “Choose file” below and pick the OLP report, either from that folder on your phone or from the computer you emailed it to. The PDF file is called “ecu_software_report_…”. Tick the box to allow your VIN and ECU versions to be stored in the association's vehicle register, and press Analyze."
   ],
+  "video_summary": "See how it is done in OLP (video, 1 min)",
+  "video_caption": "The video shows step 1 from start to saved PDF report.",
   "error_consent_required": "You must accept that the VIN and module versions are stored before the report can be analyzed.",
   "table_marlin_req": "Marlin requirement",
   "sw_profile": "SW {profile}",
