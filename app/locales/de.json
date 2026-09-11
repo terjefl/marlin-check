@@ -154,6 +154,8 @@
   ],
   "video_summary": "So geht es in OLP (Video, 1 Min.)",
   "video_caption": "Das Video zeigt Schritt 1 vom Start bis zum gespeicherten PDF-Bericht.",
+  "dongle_caption": "So sieht der Dongle aus: vLinker FD+ (grün, BLE und Bluetooth), eingesteckt in die Diagnosebuchse des Fahrzeugs.",
+  "dongle_alt": "Foto des vLinker FD+ OBD-II-Dongles",
   "error_consent_required": "Sie müssen der Speicherung von VIN und Modulversionen zustimmen, bevor der Bericht analysiert werden kann.",
   "table_marlin_req": "Marlin-Anforderung",
   "sw_profile": "SW {profile}",

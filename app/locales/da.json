@@ -154,6 +154,8 @@
   ],
   "video_summary": "Se hvordan det gøres i OLP (video, 1 min)",
   "video_caption": "Videoen viser trin 1 fra start til gemt PDF-rapport.",
+  "dongle_caption": "Sådan ser donglen ud: vLinker FD+ (grøn, BLE og Bluetooth), sat i bilens diagnosestik.",
+  "dongle_alt": "Billede af vLinker FD+ OBD-II-dongle",
   "error_consent_required": "Du skal acceptere, at VIN og modulversioner gemmes, før rapporten kan analyseres.",
   "table_marlin_req": "Marlin-krav",
   "sw_profile": "SW {profile}",

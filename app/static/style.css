@@ -157,6 +157,7 @@ table.resulttable { min-width: 720px; }
 .howto-video summary { cursor: pointer; color: var(--accent); font-size: 0.92rem; }
 .howto-video summary:hover { text-decoration: underline; }
 .howto-video video { display: block; width: 100%; max-width: 300px; margin: 0.6rem 0 0.3rem; border-radius: 12px; border: 1px solid var(--border); background: #000; }
+.howto-video img.dongle { display: block; width: 100%; max-width: 220px; height: auto; margin: 0.9rem 0 0.3rem; border-radius: 12px; border: 1px solid var(--border); background: #fff; }
 .stat.partial .num { color: #b07d00; }
 
 /* v2: dashboard */

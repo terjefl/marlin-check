@@ -154,6 +154,8 @@
   ],
   "video_summary": "Vea cómo se hace en OLP (vídeo, 1 min)",
   "video_caption": "El vídeo muestra el paso 1 desde el inicio hasta el informe PDF guardado.",
+  "dongle_caption": "Así es el dongle: vLinker FD+ (verde, BLE y Bluetooth), conectado al puerto de diagnóstico del coche.",
+  "dongle_alt": "Foto del dongle OBD-II vLinker FD+",
   "error_consent_required": "Debe aceptar que el VIN y las versiones de los módulos se guarden antes de que el informe pueda analizarse.",
   "table_marlin_req": "Requisito Marlin",
   "sw_profile": "SW {profile}",

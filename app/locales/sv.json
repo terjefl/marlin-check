@@ -154,6 +154,8 @@
   ],
   "video_summary": "Se hur det görs i OLP (video, 1 min)",
   "video_caption": "Videon visar steg 1 från start till sparad PDF-rapport.",
+  "dongle_caption": "Så här ser dongeln ut: vLinker FD+ (grön, BLE och Bluetooth), ansluten till bilens diagnosuttag.",
+  "dongle_alt": "Bild av vLinker FD+ OBD-II-dongel",
   "error_consent_required": "Du måste acceptera att VIN och modulversioner lagras innan rapporten kan analyseras.",
   "table_marlin_req": "Marlin-krav",
   "sw_profile": "SW {profile}",

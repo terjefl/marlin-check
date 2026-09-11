@@ -22,6 +22,9 @@
              poster="/static/olp-howto-{{ video_lang }}-poster.jpg?v={{ static_v }}"
              src="/static/olp-howto-{{ video_lang }}.mp4?v={{ static_v }}"></video>
       <p class="hint">{{ t('video_caption') }}</p>
+      <img class="dongle" src="/static/vlinker-fd-plus.jpg?v={{ static_v }}" width="480" height="480"
+           loading="lazy" alt="{{ t('dongle_alt') }}">
+      <p class="hint">{{ t('dongle_caption') }}</p>
     </details>
     {% endif %}
   </li>

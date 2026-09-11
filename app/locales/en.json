@@ -154,6 +154,8 @@
   ],
   "video_summary": "See how it is done in OLP (video, 1 min)",
   "video_caption": "The video shows step 1 from start to saved PDF report.",
+  "dongle_caption": "This is what the dongle looks like: vLinker FD+ (green, BLE and Bluetooth), plugged into the car's diagnostic port.",
+  "dongle_alt": "Photo of the vLinker FD+ OBD-II dongle",
   "error_consent_required": "You must accept that the VIN and module versions are stored before the report can be analyzed.",
   "table_marlin_req": "Marlin requirement",
   "sw_profile": "SW {profile}",
