@@ -40,7 +40,9 @@ app/
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
   templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_fleet/
                 admin_vehicle/admin_login/pdf
-  static/       style.css and app.js (all page JS; no inline scripts, CSP-enforced)
+  static/       style.css and app.js (all page JS; no inline scripts, CSP-enforced),
+                the two front-page videos (olp-howto-nb/-en.mp4 + posters; nb gets the
+                Norwegian one, every other language the English one) and the dongle photo
 tests/          pytest suite. Fixtures: a real OLP export (olp_report.pdf, unmodified)
                 and its text extraction with an anonymized VIN, plus synthetic
                 reference cars (100% 2.1, full 2.2, two Marlin cars) built from it
@@ -55,9 +57,33 @@ pyproject.toml              ruff configuration
 | Area | State |
 |---|---|
 | Parser | Verified against a real OLP PDF export (fixture) and the consented uploads of the BETA period |
-| Requirements | The association's minimum table (2.0/2.1/2.2). Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points (tracked in the `notes:` field of the requirements file): the Sport/LFP BMS level rests on one reference report, one Marlin car shows BCM 41 where the table says 42, all 2.2+ cars show ECC 25 where the table says 24 |
-| Trim logic | Verified for One; the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
+| Requirements | The association's minimum table (2.0/2.1/2.2), still marked draft by the association. Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points are listed below and tracked in the `notes:` field of the requirements file |
+| Trim logic | Verified for One (Z) and Extreme (E, one upload 2026-09-12, NMC battery line as expected); the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
+
+## Open points (2026-09-12)
+
+Waiting on the association (Jens):
+
+1. **ECC at 2.2**: the table says 24, all 2.2/Marlin reference cars show 25.
+   Changing it to 25 makes ECC evidence of 2.2 (today 2.1 and 2.2 share the
+   minimum, so ECC never proves 2.2) and shifts some cars from "clean 2.1"
+   to "2.2 zebra". The how-it-works page names ECC 24 as the example of a
+   shared minimum and must be rewritten in 7 languages at the same time.
+2. **BCM 41 vs 42**: one Marlin car shows BCM 41 where the table says 42
+   for 2.2.
+3. **Sport**: the LFP BMS level (15) rests on one reference report, and the
+   trim letter S has never been seen in a real upload. S is the letter that
+   exempts MCU_R, so this is the one trim rule that is still unverified.
+4. **Workbook questions**: the B-vs-C interpretation of the comparison
+   sheet, and the 2.0 column that shows 2.1 values.
+5. **Privacy**: controller/contact and retention period for the register
+   (see Privacy model below).
+
+Operational, on Terje's signal only: reset all data at go-live (delete
+`marlin.sqlite3` + `-wal`/`-shm` and `uploads/*` on the host with the
+container stopped) and drop the BETA banner. Pre-v2 rows show country
+"(unknown)" on `/stats` because country was not stored before v2; left as is.
 
 ## How the check works (short)
 
