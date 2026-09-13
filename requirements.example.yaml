@@ -54,9 +54,10 @@ notes: |
   - The Sport/LFP BMS level (15) is read from a Sport reference report
     ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
     table, so it may not be the true 2.1 minimum for the LFP line.
-  - The trim letter (5th VIN character) is verified for One (Z) and Extreme
-    (E, one upload 2026-09-12, BMSN line). Sport (S) is unverified, and it is
-    the letter that matters: it exempts MCU_R.
+  - The trim letter (5th VIN character) is verified for One (Z), Extreme (E,
+    2026-09-12) and Ultra (U, 2026-09-13) by real uploads, all on the BMSN
+    line. Sport (S) is unverified, and it is the letter that matters: it
+    exempts MCU_R.
   - Workbook questions for the association: the B-vs-C interpretation of the
     comparison sheet, and the 2.0 column that shows 2.1 values.
   - If ECC at 2.2 is changed to 25: ECC then becomes evidence of 2.2 (today

@@ -59,7 +59,7 @@ pyproject.toml              ruff configuration
 |---|---|
 | Parser | Verified against a real OLP PDF export (fixture) and the consented uploads of the BETA period |
 | Requirements | The association's minimum table (2.0/2.1/2.2) plus iBooster as the eighth critical module (2026-09-13, ESP and iBooster must be on the same generation), still marked draft by the association. Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points are listed below and tracked in the `notes:` field of the requirements file |
-| Trim logic | Verified for One (Z) and Extreme (E, one upload 2026-09-12, NMC battery line as expected); the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
+| Trim logic | Verified for One (Z), Extreme (E, 2026-09-12) and Ultra (U, 2026-09-13) by real uploads, all on the NMC battery line as expected; the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
 
 ## Open points (2026-09-13)
