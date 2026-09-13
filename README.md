@@ -1,6 +1,7 @@
 # Ocean Software Check
 
-Web portal for the Fisker Owners Association (formerly "Marlin Readiness Check"): members upload an ECU diagnostics
+Web portal for the Fisker Owners Association, renamed from "Marlin Readiness
+Check" on 2026-09-13 (the URL stays): members upload an ECU diagnostics
 report exported from **OceanLink Pro (OLP)**, and the portal checks whether the
 car's control modules meet the minimum software levels required for the
 **Marlin** software update. Live at <https://marlin.flagan.net> (BETA since 2026-09-05).
@@ -61,7 +62,7 @@ pyproject.toml              ruff configuration
 | Trim logic | Verified for One (Z) and Extreme (E, one upload 2026-09-12, NMC battery line as expected); the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
 
-## Open points (2026-09-12)
+## Open points (2026-09-13)
 
 Waiting on the association (Jens):
 
@@ -108,7 +109,11 @@ regex turns that text into a number (`BCM395030` → 30, `ECC395 24` → 24,
 `89324V0402…` → 402). Anything the regex does not recognise is "version not
 recognised" and counts as failing; doubt never yields "ready".
 
-The requirements are profile-based (2.0/2.1/2.2). A car that reaches the 2.1
+The requirements are profile-based (2.0/2.1/2.2) and cover eight modules: BCM,
+ESP, iBooster (IBS), ECC, BMS, MCU_F, MCU_R and VCU. iBooster was added on
+2026-09-13 because ESP and iBooster are Bosch units that must be flashed to the
+same generation: a car with ESP at the 2.2 level (501) but iBooster still on
+the 2.1 line (400 instead of 401) is a 2.2 zebra. A car that reaches the 2.1
 level on all eight required modules is "100% 2.1" and can be updated directly
 to Marlin; otherwise it is a zebra and must go via SW 2.2 first. A ready car is
 also shown which modules sit below the 2.2 level (a direct 2.1→Marlin update

@@ -76,6 +76,11 @@ notes: |
   The Marlin requirement (2.1 profile) is 400, which every car has, so no car
   loses "Marlin ready" because of this module.
 
+    Register after re-evaluation 2026-09-13 (20 cars): 8 cars have iBooster 401
+  but only 6 have ESP 501 (the 4 Marlin and 2 full-2.2 cars, all with iBooster
+  401). So no car has new ESP with old iBooster; two cars have the opposite,
+  iBooster flashed without ESP. The version field is the date of the change.
+
   Right-hand drive: the workbook shows RHD-specific software lines only on
   EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
   (ADAS039021 vs ADAS039020). None of these is a required module, and ESP has
