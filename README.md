@@ -19,12 +19,12 @@ car's control modules meet the minimum software levels required for the
 - A public "How it works" page (`/how-it-works`) explaining the interpretation
   at processing level, in all languages.
 - Storage is mandatory (association decision, Sep 2026): every analyzed
-  report goes into the **vehicle register** — file, VIN, all ECU version
+  report goes into the **vehicle register** – file, VIN, all ECU version
   fields, outcome. Public dashboard (`/stats`, aggregated, no VINs) and an
   admin register with per-VIN history, filters, CSV exports, re-evaluation
   against changed requirements and deletion per VIN.
 - 7 languages (en, nb, sv, da, de, fr, es) with browser auto-detection.
-- Deterministic parsing and comparison — no LLMs involved.
+- Deterministic parsing and comparison – no LLMs involved.
 
 ## Repository layout
 
@@ -46,7 +46,7 @@ app/
 tests/          pytest suite. Fixtures: a real OLP export (olp_report.pdf, unmodified)
                 and its text extraction with an anonymized VIN, plus synthetic
                 reference cars (100% 2.1, full 2.2, two Marlin cars) built from it
-scripts/        hash_password.py — create admin password hashes
+scripts/        hash_password.py – create admin password hashes
 requirements.example.yaml   the requirements spec with field documentation
 requirements.txt / .lock    loose spec / pinned+hashed set used by Docker and CI
 pyproject.toml              ruff configuration
@@ -88,7 +88,7 @@ container stopped) and drop the BETA banner. Pre-v2 rows show country
 ## How the check works (short)
 
 Outcomes (rule engine, `app/rules.py`): each module gets `meets[profile]`
-and an `evidence_level` — the LOWEST profile that shares the minimum of the
+and an `evidence_level` – the LOWEST profile that shares the minimum of the
 highest profile the module satisfies, so a module whose 2.1 and 2.2 minimums
 are equal (ECC 24, BMS 21) never counts as proof of 2.2. Per car:
 `complete_profile` (highest profile every critical module meets) and
@@ -119,7 +119,7 @@ is in `requirements.example.yaml`.
 
 `requirements.example.yaml` defines the module requirements. In production it
 lives as `/config/requirements.yaml` (bind-mounted directory). It is re-read
-on every analysis, so requirements can be updated **without** a rebuild —
+on every analysis, so requirements can be updated **without** a rebuild –
 either directly on the host or via the admin page. Per module: `match` (ECU
 codes), `extract` (regex with one capture group), `levels` per profile,
 `critical`, optional `variants` (parallel software lines, e.g. BMS NMC/LFP),
@@ -145,7 +145,7 @@ valid set has been loaded at all, uploads get a friendly 503 page.
 
 - **Login:** form login at `/admin/login`. Users live in
   `/config/admin_users.yaml` (see `admin_users.example.yaml`) as
-  `username: pbkdf2-hash` — create hashes with
+  `username: pbkdf2-hash` – create hashes with
   `python3 scripts/hash_password.py`; the file is read on every login, so
   adding a user needs no restart. Failed attempts are locked out after 10 per
   15 min, per IP and per username. Sessions live in SQLite (only a hash of
@@ -173,7 +173,7 @@ valid set has been loaded at all, uploads get a friendly 503 page.
   from the consent period get an outcome.
 - **Usage statistics:** anonymous per-upload counters (country from
   Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
-  unique users — see "Privacy model"). Never VIN, report content or raw IP.
+  unique users – see "Privacy model"). Never VIN, report content or raw IP.
 
 ## Security notes
 
@@ -263,7 +263,7 @@ that sets the trusted client-IP header.
   TABLE`); rows from the consent period are kept and get an outcome after
   "Re-evaluate all" in the admin page.
 - `/stats` is public and aggregated (outcomes, split cars per module, level
-  per module, trims, countries, weeks) — never a VIN. VINs are visible only
+  per module, trims, countries, weeks) – never a VIN. VINs are visible only
   in the admin register. Deletion per VIN is an admin action.
 - Anonymous usage counting per upload (admin-only view): country, language,
   outcome, and a keyed daily hash of the IP for unique-user counts. The HMAC

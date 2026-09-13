@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Admin — {{ t('site_title') }}{% endblock %}
+{% block title %}Admin – {{ t('site_title') }}{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <h1>Requirements administration</h1>
@@ -12,7 +12,7 @@
 
 {% if requirements and requirements.notes %}
 <details class="extra" open>
-  <summary>Notes (sources and open points — edit in the YAML editor, field <code>notes</code>)</summary>
+  <summary>Notes (sources and open points – edit in the YAML editor, field <code>notes</code>)</summary>
   <pre class="diff">{{ requirements.notes }}</pre>
 </details>
 {% endif %}
@@ -54,9 +54,9 @@
         <td><input class="mono" type="text" name="mod-{{ mi }}-match" value="{{ m.match | join(', ') }}"></td>
         <td><input class="mono" type="text" name="mod-{{ mi }}-extract" value="{{ m.extract or '' }}" placeholder="(last number in the string)"></td>
         {% for p in requirements.profiles %}
-        {# NB: mi, not loop.index0 — inside this loop, `loop` is the profile loop #}
+        {# NB: mi, not loop.index0 – inside this loop, `loop` is the profile loop #}
         <td class="num"><input type="number" name="mod-{{ mi }}-level-{{ p }}" value="{{ m.levels.get(p, '') }}"{% if m.variants %} placeholder="per variant"{% endif %}>
-          {% if m.variants %}<span class="variantlevels" title="Levels per software line (variants); edit in the YAML editor">{% for v in m.variants %}{% if not loop.first %} / {% endif %}{{ v.name.split(' (')[0] }} {{ v.levels.get(p, '—') }}{% endfor %}</span>{% endif %}</td>
+          {% if m.variants %}<span class="variantlevels" title="Levels per software line (variants); edit in the YAML editor">{% for v in m.variants %}{% if not loop.first %} / {% endif %}{{ v.name.split(' (')[0] }} {{ v.levels.get(p, '–') }}{% endfor %}</span>{% endif %}</td>
         {% endfor %}
         <td class="crit"><input type="checkbox" name="mod-{{ mi }}-critical" value="yes" {% if m.critical %}checked{% endif %}></td>
         <td class="del"><button type="button" class="small danger" data-delete-row>Delete</button></td>
@@ -128,13 +128,13 @@
 </div>
 {% endif %}
 
-<h2>Activity log ({{ audit | length }} most recent — saves, logins, logouts)</h2>
+<h2>Activity log ({{ audit | length }} most recent – saves, logins, logouts)</h2>
 {% if not audit %}
 <p class="meta">No changes logged yet.</p>
 {% else %}
 {% for entry in audit %}
 <details class="extra auditentry">
-  <summary>{{ entry.ts[:19] }} UTC — <strong>{{ entry.username }}</strong> from {{ entry.ip }} ({{ entry.action }})</summary>
+  <summary>{{ entry.ts[:19] }} UTC – <strong>{{ entry.username }}</strong> from {{ entry.ip }} ({{ entry.action }})</summary>
   {% if entry.detail %}<pre class="diff">{{ entry.detail }}</pre>{% endif %}
 </details>
 {% endfor %}

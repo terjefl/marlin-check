@@ -15,9 +15,9 @@
   "error_rate_limited": "Trop de téléversements en peu de temps. Veuillez patienter une minute et réessayer.",
   "result_title": "Résultat pour le VIN {vin}",
   "verdict_ready": "Prête pour Marlin",
-  "verdict_zebra": "Pas prête — mises à jour ciblées nécessaires",
-  "verdict_ready_text": "Tous les modules requis atteignent les niveaux minimaux 2.1 — votre voiture est une vraie 100 % 2.1 et peut être mise à jour directement vers Marlin.",
-  "verdict_zebra_text": "Votre voiture est un zèbre et ne pourra pas être mise à jour vers Marlin — les versions logicielles des calculateurs listées ci-dessous appartiennent à SW 2.1, 2.0 voire antérieur. Faites d'abord effectuer la mise à jour 2.2 complète avant de tenter la mise à jour Marlin :",
+  "verdict_zebra": "Pas prête – mises à jour ciblées nécessaires",
+  "verdict_ready_text": "Tous les modules requis atteignent les niveaux minimaux 2.1 – votre voiture est une vraie 100 % 2.1 et peut être mise à jour directement vers Marlin.",
+  "verdict_zebra_text": "Votre voiture est un zèbre et ne pourra pas être mise à jour vers Marlin – les versions logicielles des calculateurs listées ci-dessous appartiennent à SW 2.1, 2.0 voire antérieur. Faites d'abord effectuer la mise à jour 2.2 complète avant de tenter la mise à jour Marlin :",
   "requirements_version_label": "Version des exigences",
   "target_profile_label": "Profil requis",
   "level_label": "au niveau",
@@ -38,7 +38,7 @@
   "stats_unique_vins": "Véhicules uniques",
   "stats_total": "Rapports téléversés",
   "stats_module_heading": "Répartition des versions par module",
-  "stats_empty": "Pas encore de données — les statistiques apparaîtront quand les membres enverront des rapports.",
+  "stats_empty": "Pas encore de données – les statistiques apparaîtront quand les membres enverront des rapports.",
   "privacy_title": "Confidentialité",
   "privacy_text": "Ce portail est géré par des bénévoles pour les membres de la Fisker Owners Association. Lorsque vous envoyez un rapport, il est analysé sur notre serveur et le résultat vous est affiché. Pour utiliser le service, vous devez accepter que le fichier du rapport, votre VIN, les versions logicielles de tous les calculateurs, le pays depuis lequel vous avez envoyé le rapport (via Cloudflare) et l'heure d'envoi soient enregistrés dans le registre des véhicules de l'association. Le registre sert à produire des statistiques agrégées (nombre de voitures par statut logiciel, répartition des versions par module) et à aider l'association à planifier les mises à jour ; la page publique de statistiques n'affiche jamais de VIN individuel. Le registre complet, VIN compris, n'est accessible qu'aux administrateurs de l'association. Aucune donnée n'est partagée avec des tiers et aucun cookie de suivi n'est utilisé (seulement un cookie mémorisant votre choix de langue). Pour faire supprimer vos données, contactez l'association ; les administrateurs peuvent effacer tout ce qui concerne un VIN. Indépendamment du registre, chaque envoi est aussi compté dans une statistique d'utilisation anonyme destinée aux administrateurs : pays, langue, résultat et un hachage changeant chaque jour pour compter les utilisateurs uniques. Ce comptage n'est pas lié à l'entrée du registre et ne contient ni VIN, ni rapport, ni adresse IP.",
   "footer_disclaimer": "Outil communautaire – sans lien avec Fisker Inc. Les mises à jour sont réalisées par un partenaire de service. Validez le résultat avec votre partenaire de service avant que la voiture soit mise à jour.",
@@ -51,10 +51,10 @@
   "parse_empty": "Le fichier est vide.",
   "parse_bad_pdf": "Le contenu du PDF n'a pas pu être lu.",
   "parse_unreadable": "Le fichier n'est ni un PDF ni du texte lisible.",
-  "parse_no_header": "Le titre « ECU Software Version Report » est introuvable — s'agit-il bien d'un rapport de diagnostic exporté depuis OceanLink Pro ?",
+  "parse_no_header": "Le titre « ECU Software Version Report » est introuvable – s'agit-il bien d'un rapport de diagnostic exporté depuis OceanLink Pro ?",
   "parse_no_vin": "Aucune ligne VIN (VIN : <17 caractères>) trouvée dans le rapport.",
   "parse_no_modules": "Aucune section ECU trouvée dans le rapport.",
-  "ready_22_note": "Remarque : une mise à jour directe de 2.1 vers Marlin ne mettra toujours PAS à jour les calculateurs ci-dessous — ils appartiennent à la mise à jour 2.2 (un rappel NHTSA obligatoire en Amérique du Nord que la plupart des voitures européennes n'ont jamais reçu). La voiture fonctionnera très bien, mais ces calculateurs resteront sur leurs versions actuelles :",
+  "ready_22_note": "Remarque : une mise à jour directe de 2.1 vers Marlin ne mettra toujours PAS à jour les calculateurs ci-dessous – ils appartiennent à la mise à jour 2.2 (un rappel NHTSA obligatoire en Amérique du Nord que la plupart des voitures européennes n'ont jamais reçu). La voiture fonctionnera très bien, mais ces calculateurs resteront sur leurs versions actuelles :",
   "vcu24_notice": "Important si vous avez déjà le VCU 2.4 (via Marlin ou autrement) : Informez la personne qui va mettre votre voiture à jour en 2.2 que le VCU 2.4 est déjà installé. Il n'existe aucun retour à une version antérieure du VCU, ni aucune compatibilité connue entre le VCU 2.4 (Marlin) et les versions VCU 2.3 (2.2.2 et 2.2.3). Cela doit donc être réglé avant le début de la mise à jour, sinon la voiture peut devenir inutilisable (« brick »). L'analyse détecte le VCU 2.4 dans le rapport et affiche alors la voiture comme « déjà sous Marlin ».",
   "trim_label": "Finition (d'après le VIN)",
   "trim_unknown": "inconnue",
@@ -88,9 +88,9 @@
     {
       "title": "Les exigences et le verdict",
       "paragraphs": [
-        "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des sept calculateurs qui comptent pour Marlin — carrosserie (BCM), stabilité (ESP), climatisation (ECC), gestion de batterie (BMS), moteurs avant et arrière (MCU) et contrôle véhicule (VCU) — le tableau indique le niveau minimal qu'un calculateur doit avoir pour appartenir à chaque version. La page de résultat affiche ce tableau avec une colonne par version et une coche ou une croix par calculateur.",
+        "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des sept calculateurs qui comptent pour Marlin – carrosserie (BCM), stabilité (ESP), climatisation (ECC), gestion de batterie (BMS), moteurs avant et arrière (MCU) et contrôle véhicule (VCU) – le tableau indique le niveau minimal qu'un calculateur doit avoir pour appartenir à chaque version. La page de résultat affiche ce tableau avec une colonne par version et une coche ou une croix par calculateur.",
         "Le contrôle détermine d'abord jusqu'où la voiture est arrivée. Une version est « complète » quand les sept calculateurs sont à son niveau ou au-dessus. Il regarde aussi si un calculateur porte déjà un niveau que seule une version supérieure installe ; lorsque deux versions partagent le même minimum pour un calculateur (la climatisation est à 24 en 2.1 comme en 2.2, par exemple), ce calculateur n'est jamais pris comme preuve de la version supérieure.",
-        "La voiture obtient alors l'un de cinq résultats. « 2.2 entièrement à jour » : tous les calculateurs au niveau 2.2, prête pour Marlin. « 2.1 entièrement à jour » : tous au niveau 2.1 et aucun en 2.2 — Marlin est possible, mais les calculateurs que la mise à jour 2.2 fait évoluer resteraient en arrière, d'où la recommandation de faire la 2.2 d'abord. « Zèbre 2.2 » : tout au moins en 2.1, certains calculateurs déjà en 2.2 et d'autres non — une 2.2 commencée mais incomplète ; la terminer, puis Marlin. « Zèbre 2.1 » : au moins un calculateur sous 2.1 — pas prête pour Marlin ; remonter ces calculateurs en 2.1, puis 2.2, puis Marlin. Et « déjà sous Marlin » pour les voitures dont le contrôleur véhicule montre le niveau Marlin. Dans tous les cas, la page liste les calculateurs qui retiennent la voiture, avec la valeur lue et la valeur requise."
+        "La voiture obtient alors l'un de cinq résultats. « 2.2 entièrement à jour » : tous les calculateurs au niveau 2.2, prête pour Marlin. « 2.1 entièrement à jour » : tous au niveau 2.1 et aucun en 2.2 – Marlin est possible, mais les calculateurs que la mise à jour 2.2 fait évoluer resteraient en arrière, d'où la recommandation de faire la 2.2 d'abord. « Zèbre 2.2 » : tout au moins en 2.1, certains calculateurs déjà en 2.2 et d'autres non – une 2.2 commencée mais incomplète ; la terminer, puis Marlin. « Zèbre 2.1 » : au moins un calculateur sous 2.1 – pas prête pour Marlin ; remonter ces calculateurs en 2.1, puis 2.2, puis Marlin. Et « déjà sous Marlin » pour les voitures dont le contrôleur véhicule montre le niveau Marlin. Dans tous les cas, la page liste les calculateurs qui retiennent la voiture, avec la valeur lue et la valeur requise."
       ]
     },
     {
@@ -189,8 +189,8 @@
   "stats_outcomes_heading": "Véhicules par statut logiciel",
   "stats_split_heading": "Qu'est-ce qui retient les voitures « zèbres » ?",
   "stats_split_intro": "Pour les voitures incomplètes : combien d'entre elles ont chaque module sous le niveau visé.",
-  "stats_split_zebra_22": "2.2 commencée mais incomplète ({n} voitures) — modules sous {profile}",
-  "stats_split_zebra_21": "Sous 2.1 ({n} voitures) — modules sous {profile}",
+  "stats_split_zebra_22": "2.2 commencée mais incomplète ({n} voitures) – modules sous {profile}",
+  "stats_split_zebra_21": "Sous 2.1 ({n} voitures) – modules sous {profile}",
   "stats_split_none": "Aucune pour le moment.",
   "stats_levels_heading": "Niveau logiciel par module",
   "stats_levels_intro": "À quelle version se trouve chaque module, sur l'ensemble des véhicules.",

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ t('stats_title') }} — {{ t('site_title') }}{% endblock %}
+{% block title %}{{ t('stats_title') }} – {{ t('site_title') }}{% endblock %}
 {% block content %}
 <h1>{{ t('stats_title') }}</h1>
 <p>{{ t('stats_intro') }}</p>
@@ -28,7 +28,7 @@
   </div>
   <ul class="legend">
     {% for o in order %}
-    <li><i class="swatch oc-{{ o }}"></i>{{ icons[o] }} {{ t('outcome_' + o + '_short') }} — <strong>{{ stats.outcomes.get(o, 0) }}</strong> ({{ (100 * stats.outcomes.get(o, 0) / n_cars) | round(0) | int }} %)</li>
+    <li><i class="swatch oc-{{ o }}"></i>{{ icons[o] }} {{ t('outcome_' + o + '_short') }} – <strong>{{ stats.outcomes.get(o, 0) }}</strong> ({{ (100 * stats.outcomes.get(o, 0) / n_cars) | round(0) | int }} %)</li>
     {% endfor %}
   </ul>
 </section>

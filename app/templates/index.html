@@ -48,8 +48,8 @@
 {% set target = requirements.target_profile %}
 {% macro level_cell(m, p) -%}
   {%- if m.levels.get(p) is not none -%}≥ {{ m.levels[p] }}
-  {%- elif m.variants -%}{% for v in m.variants %}{% if not loop.first %} / {% endif %}≥ {{ v.levels.get(p, '—') }} <span class="crit">[{{ v.name.split(' (')[0] }}]</span>{% endfor %}
-  {%- else -%}—{%- endif -%}
+  {%- elif m.variants -%}{% for v in m.variants %}{% if not loop.first %} / {% endif %}≥ {{ v.levels.get(p, '–') }} <span class="crit">[{{ v.name.split(' (')[0] }}]</span>{% endfor %}
+  {%- else -%}–{%- endif -%}
 {%- endmacro %}
 <details class="extra frontreqs">
   <summary>{{ t('front_requirements_title') }}</summary>

@@ -15,9 +15,9 @@
   "error_rate_limited": "Zu viele Uploads in kurzer Zeit. Bitte warte eine Minute und versuche es erneut.",
   "result_title": "Ergebnis für VIN {vin}",
   "verdict_ready": "Marlin-bereit",
-  "verdict_zebra": "Nicht bereit — gezielte Updates erforderlich",
-  "verdict_ready_text": "Alle erforderlichen Module erreichen die 2.1-Mindestniveaus — dein Auto ist ein volles 100%-2.1-Auto und kann direkt auf Marlin aktualisiert werden.",
-  "verdict_zebra_text": "Dein Auto ist ein Zebra und lässt sich nicht erfolgreich auf Marlin aktualisieren — die unten gelisteten ECU-Softwareversionen gehören zu SW 2.1, 2.0 oder noch älter. Lass zuerst das vollständige 2.2-Update durchführen, bevor du das Marlin-Update versuchst:",
+  "verdict_zebra": "Nicht bereit – gezielte Updates erforderlich",
+  "verdict_ready_text": "Alle erforderlichen Module erreichen die 2.1-Mindestniveaus – dein Auto ist ein volles 100%-2.1-Auto und kann direkt auf Marlin aktualisiert werden.",
+  "verdict_zebra_text": "Dein Auto ist ein Zebra und lässt sich nicht erfolgreich auf Marlin aktualisieren – die unten gelisteten ECU-Softwareversionen gehören zu SW 2.1, 2.0 oder noch älter. Lass zuerst das vollständige 2.2-Update durchführen, bevor du das Marlin-Update versuchst:",
   "requirements_version_label": "Anforderungsversion",
   "target_profile_label": "Erforderliches Profil",
   "level_label": "auf Niveau",
@@ -38,7 +38,7 @@
   "stats_unique_vins": "Einzigartige Fahrzeuge",
   "stats_total": "Hochgeladene Berichte",
   "stats_module_heading": "Versionsverteilung pro Modul",
-  "stats_empty": "Noch keine Daten — die Statistik erscheint, sobald Mitglieder Berichte hochladen.",
+  "stats_empty": "Noch keine Daten – die Statistik erscheint, sobald Mitglieder Berichte hochladen.",
   "privacy_title": "Datenschutz",
   "privacy_text": "Dieses Portal wird von Freiwilligen für Mitglieder der Fisker Owners Association betrieben. Wenn Sie einen Bericht hochladen, wird er auf unserem Server analysiert und das Ergebnis wird Ihnen angezeigt. Um den Dienst zu nutzen, müssen Sie akzeptieren, dass die Berichtsdatei, Ihre VIN, die Softwareversionen aller Steuergeräte, das Land, aus dem Sie hochgeladen haben (von Cloudflare), und der Zeitpunkt im Fahrzeugregister des Vereins gespeichert werden. Das Register dient zusammengefassten Statistiken (Anzahl der Fahrzeuge pro Softwarestatus, Versionsverteilung pro Modul) und hilft dem Verein bei der Planung von Updates; die öffentliche Statistikseite zeigt nie einzelne VINs. Das vollständige Register einschließlich VINs ist nur den Administratoren des Vereins zugänglich. Es werden keine Daten an Dritte weitergegeben und keine Tracking-Cookies verwendet (nur ein Cookie, das Ihre Sprachwahl speichert). Um Ihre Daten löschen zu lassen, wenden Sie sich an den Verein; die Administratoren können alle Einträge zu einer VIN löschen. Unabhängig vom Register wird jeder Upload zusätzlich in einer anonymen Nutzungsstatistik für die Administratoren gezählt: Land, Sprache, Ergebnis und ein täglich wechselnder Hash zum Zählen eindeutiger Nutzer. Diese Zählung ist nicht mit dem Registereintrag verknüpft und enthält weder VIN noch Bericht noch IP-Adresse.",
   "footer_disclaimer": "Community-Tool – nicht mit Fisker Inc. verbunden. Updates führt ein Servicepartner durch. Klären Sie das Ergebnis mit Ihrem Servicepartner, bevor das Fahrzeug aktualisiert wird.",
@@ -51,10 +51,10 @@
   "parse_empty": "Die Datei ist leer.",
   "parse_bad_pdf": "Der PDF-Inhalt konnte nicht gelesen werden.",
   "parse_unreadable": "Die Datei ist weder ein PDF noch lesbarer Text.",
-  "parse_no_header": "Die Überschrift „ECU Software Version Report“ wurde nicht gefunden — ist dies ein aus OceanLink Pro exportierter Diagnosebericht?",
+  "parse_no_header": "Die Überschrift „ECU Software Version Report“ wurde nicht gefunden – ist dies ein aus OceanLink Pro exportierter Diagnosebericht?",
   "parse_no_vin": "Keine VIN-Zeile (VIN: <17 Zeichen>) im Bericht gefunden.",
   "parse_no_modules": "Keine ECU-Abschnitte im Bericht gefunden.",
-  "ready_22_note": "Hinweis: Ein direktes Update von 2.1 auf Marlin aktualisiert die unten gelisteten ECUs trotzdem NICHT — sie gehören zum 2.2-Update (ein verpflichtender NHTSA-Rückruf in Nordamerika, den die meisten europäischen Autos nie erhielten). Das Auto funktioniert einwandfrei, aber diese ECUs bleiben auf ihren aktuellen Versionen:",
+  "ready_22_note": "Hinweis: Ein direktes Update von 2.1 auf Marlin aktualisiert die unten gelisteten ECUs trotzdem NICHT – sie gehören zum 2.2-Update (ein verpflichtender NHTSA-Rückruf in Nordamerika, den die meisten europäischen Autos nie erhielten). Das Auto funktioniert einwandfrei, aber diese ECUs bleiben auf ihren aktuellen Versionen:",
   "vcu24_notice": "Wichtig, wenn Sie bereits VCU 2.4 haben (durch Marlin oder anderweitig): Informieren Sie denjenigen, der Ihr Fahrzeug auf 2.2 aktualisiert, dass VCU 2.4 bereits installiert ist. Es gibt keinen Weg zurück zu einer früheren VCU-Version und keine bekannte Kompatibilität zwischen VCU 2.4 (Marlin) und den VCU-2.3-Versionen (2.2.2 und 2.2.3). Das muss daher vor Beginn des Updates geklärt werden, sonst kann das Fahrzeug unbrauchbar werden („gebrickt“). Die Prüfung erkennt VCU 2.4 im Bericht und zeigt das Fahrzeug dann als „bereits auf Marlin“ an.",
   "trim_label": "Ausstattung (aus der VIN)",
   "trim_unknown": "unbekannt",
@@ -88,9 +88,9 @@
     {
       "title": "Die Anforderungen und das Urteil",
       "paragraphs": [
-        "Die Anforderungen sind nach Software-Release geordnet: 2.0, 2.1 und 2.2. Für jedes der sieben Steuergeräte, die für Marlin zählen — Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Klimasteuerung (ECC), Batteriemanagement (BMS), vordere und hintere Motorsteuerung (MCU) und Fahrzeugsteuerung (VCU) — gibt die Tabelle die Mindeststufe an, die ein Gerät haben muss, um zu einem Release zu gehören. Die Ergebnisseite zeigt diese Tabelle mit einer Spalte pro Release und einem Haken oder Kreuz pro Gerät.",
+        "Die Anforderungen sind nach Software-Release geordnet: 2.0, 2.1 und 2.2. Für jedes der sieben Steuergeräte, die für Marlin zählen – Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Klimasteuerung (ECC), Batteriemanagement (BMS), vordere und hintere Motorsteuerung (MCU) und Fahrzeugsteuerung (VCU) – gibt die Tabelle die Mindeststufe an, die ein Gerät haben muss, um zu einem Release zu gehören. Die Ergebnisseite zeigt diese Tabelle mit einer Spalte pro Release und einem Haken oder Kreuz pro Gerät.",
         "Die Prüfung ermittelt zuerst, wie weit das Fahrzeug gekommen ist. Ein Release ist „vollständig“, wenn alle sieben Geräte auf seiner Stufe oder höher liegen. Sie prüft auch, ob ein Gerät bereits eine Stufe trägt, die nur ein höheres Release installiert; wo zwei Releases dasselbe Minimum für ein Gerät teilen (die Klimasteuerung ist z. B. auf 2.1 und 2.2 gleichermaßen 24), gilt dieses Gerät nie als Beleg für das höhere Release.",
-        "Daraus ergibt sich eines von fünf Ergebnissen. „2.2 vollständig aktualisiert“: alle Geräte auf 2.2-Stufe, Marlin-bereit. „2.1 vollständig aktualisiert“: alle Geräte auf 2.1 und keines auf 2.2 — Marlin ist möglich, aber die Geräte, die das 2.2-Update anhebt, blieben zurück, daher wird 2.2 zuerst empfohlen. „2.2-Zebra“: alles mindestens 2.1, manche Geräte schon auf 2.2, andere nicht — ein begonnenes, aber unvollständiges 2.2; erst abschließen, dann Marlin. „2.1-Zebra“: mindestens ein Gerät unter 2.1 — nicht Marlin-bereit; diese Geräte auf 2.1 heben, dann 2.2, dann Marlin. Und „bereits auf Marlin“ für Fahrzeuge, deren Fahrzeugsteuerung die Marlin-Stufe zeigt. In jedem Fall listet die Seite die Geräte auf, die das Fahrzeug zurückhalten, mit gelesenem Wert und Anforderung."
+        "Daraus ergibt sich eines von fünf Ergebnissen. „2.2 vollständig aktualisiert“: alle Geräte auf 2.2-Stufe, Marlin-bereit. „2.1 vollständig aktualisiert“: alle Geräte auf 2.1 und keines auf 2.2 – Marlin ist möglich, aber die Geräte, die das 2.2-Update anhebt, blieben zurück, daher wird 2.2 zuerst empfohlen. „2.2-Zebra“: alles mindestens 2.1, manche Geräte schon auf 2.2, andere nicht – ein begonnenes, aber unvollständiges 2.2; erst abschließen, dann Marlin. „2.1-Zebra“: mindestens ein Gerät unter 2.1 – nicht Marlin-bereit; diese Geräte auf 2.1 heben, dann 2.2, dann Marlin. Und „bereits auf Marlin“ für Fahrzeuge, deren Fahrzeugsteuerung die Marlin-Stufe zeigt. In jedem Fall listet die Seite die Geräte auf, die das Fahrzeug zurückhalten, mit gelesenem Wert und Anforderung."
       ]
     },
     {
@@ -189,8 +189,8 @@
   "stats_outcomes_heading": "Fahrzeuge nach Softwarestatus",
   "stats_split_heading": "Was hält die gemischten Fahrzeuge zurück?",
   "stats_split_intro": "Für die unvollständigen Fahrzeuge: bei wie vielen liegt das jeweilige Modul unter der angestrebten Stufe.",
-  "stats_split_zebra_22": "2.2 begonnen, aber unvollständig ({n} Fahrzeuge) — Module unter {profile}",
-  "stats_split_zebra_21": "Unter 2.1 ({n} Fahrzeuge) — Module unter {profile}",
+  "stats_split_zebra_22": "2.2 begonnen, aber unvollständig ({n} Fahrzeuge) – Module unter {profile}",
+  "stats_split_zebra_21": "Unter 2.1 ({n} Fahrzeuge) – Module unter {profile}",
   "stats_split_none": "Derzeit keine.",
   "stats_levels_heading": "Softwarestufe pro Modul",
   "stats_levels_intro": "Auf welchem Release jedes Modul liegt, über alle Fahrzeuge.",

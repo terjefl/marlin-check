@@ -15,9 +15,9 @@
   "error_rate_limited": "For mange opplastinger på kort tid. Vent et minutt og prøv igjen.",
   "result_title": "Resultat for VIN {vin}",
   "verdict_ready": "Marlin-klar",
-  "verdict_zebra": "Ikke klar — trenger målrettede oppdateringer",
-  "verdict_ready_text": "Alle påkrevde moduler oppfyller 2.1-minimumsnivåene — bilen din er en full 100 % 2.1-bil og kan oppdateres direkte til Marlin.",
-  "verdict_zebra_text": "Bilen din er en zebra og vil ikke kunne oppdateres til Marlin — ECU-programvareversjonene under tilhører SW 2.1, 2.0 eller enda eldre. Få utført den fulle 2.2-oppdateringen før du forsøker Marlin-oppdateringen:",
+  "verdict_zebra": "Ikke klar – trenger målrettede oppdateringer",
+  "verdict_ready_text": "Alle påkrevde moduler oppfyller 2.1-minimumsnivåene – bilen din er en full 100 % 2.1-bil og kan oppdateres direkte til Marlin.",
+  "verdict_zebra_text": "Bilen din er en zebra og vil ikke kunne oppdateres til Marlin – ECU-programvareversjonene under tilhører SW 2.1, 2.0 eller enda eldre. Få utført den fulle 2.2-oppdateringen før du forsøker Marlin-oppdateringen:",
   "requirements_version_label": "Kravversjon",
   "target_profile_label": "Krevd profil",
   "level_label": "på nivå",
@@ -38,7 +38,7 @@
   "stats_unique_vins": "Unike biler",
   "stats_total": "Rapporter lastet opp",
   "stats_module_heading": "Versjonsfordeling per modul",
-  "stats_empty": "Ingen data ennå — statistikken vises når medlemmer laster opp rapporter.",
+  "stats_empty": "Ingen data ennå – statistikken vises når medlemmer laster opp rapporter.",
   "privacy_title": "Personvern",
   "privacy_text": "Denne portalen drives av frivillige for medlemmer av Fisker Owners Association. Når du laster opp en rapport, analyseres den på serveren vår og resultatet vises for deg. For å bruke tjenesten må du akseptere at rapportfilen, VIN, programvareversjonene til alle styreenhetene, landet du lastet opp fra (fra Cloudflare) og tidspunktet lagres i foreningens kjøretøyregister. Registeret brukes til aggregert statistikk (antall biler per programvarestatus, versjonsfordeling per modul) og til å hjelpe foreningen med å planlegge oppdateringer; den offentlige statistikksiden viser aldri enkelt-VIN. Hele registeret, inkludert VIN, er kun tilgjengelig for foreningens administratorer. Ingen data deles med tredjeparter, og ingen sporingskapsler brukes (kun en kapsel som husker språkvalget ditt). Kontakt foreningen for å få dataene dine slettet; administratorene kan slette alt som er lagret om et VIN. Uavhengig av registeret telles hver opplasting også i en anonym bruksstatistikk for administratorene: land, språk, utfall og en daglig skiftende hash for å telle unike brukere. Denne tellingen er ikke koblet til registeroppføringen og inneholder verken VIN, rapport eller IP-adresse.",
   "footer_disclaimer": "Frivillig verktøy – ikke tilknyttet Fisker Inc. Oppdateringer utføres av en servicepartner. Avklar resultatet med servicepartneren før bilen oppdateres.",
@@ -51,10 +51,10 @@
   "parse_empty": "Filen er tom.",
   "parse_bad_pdf": "PDF-innholdet kunne ikke leses.",
   "parse_unreadable": "Filen er verken PDF eller lesbar tekst.",
-  "parse_no_header": "Fant ikke overskriften «ECU Software Version Report» — er dette en diagnoserapport eksportert fra OceanLink Pro?",
+  "parse_no_header": "Fant ikke overskriften «ECU Software Version Report» – er dette en diagnoserapport eksportert fra OceanLink Pro?",
   "parse_no_vin": "Fant ingen VIN-linje (VIN: <17 tegn>) i rapporten.",
   "parse_no_modules": "Fant ingen ECU-blokker i rapporten.",
-  "ready_22_note": "Merk: en direkte oppdatering fra 2.1 til Marlin vil fortsatt IKKE oppdatere ECU-ene under — de tilhører 2.2-oppdateringen (en pålagt NHTSA-tilbakekalling i Nord-Amerika som de fleste europeiske biler aldri fikk). Bilen vil fungere fint, men disse ECU-ene forblir på dagens versjoner:",
+  "ready_22_note": "Merk: en direkte oppdatering fra 2.1 til Marlin vil fortsatt IKKE oppdatere ECU-ene under – de tilhører 2.2-oppdateringen (en pålagt NHTSA-tilbakekalling i Nord-Amerika som de fleste europeiske biler aldri fikk). Bilen vil fungere fint, men disse ECU-ene forblir på dagens versjoner:",
   "vcu24_notice": "Viktig for deg som allerede har VCU 2.4 (fra Marlin eller på annen måte): Informer den som skal oppdatere bilen til 2.2 om at VCU 2.4 allerede er installert. Det finnes ingen vei tilbake til en tidligere VCU-versjon, og ingen kjent kompatibilitet mellom VCU 2.4 (Marlin) og VCU 2.3-versjonene (2.2.2 og 2.2.3). Dette må derfor avklares før oppdateringen starter, ellers kan bilen bli ubrukelig («brickes»). Sjekken oppdager VCU 2.4 i rapporten og viser da bilen som «allerede på Marlin».",
   "trim_label": "Utgave (fra VIN)",
   "trim_unknown": "ukjent",
@@ -88,9 +88,9 @@
     {
       "title": "Kravene og dommen",
       "paragraphs": [
-        "Kravene er ordnet etter programvareutgave: 2.0, 2.1 og 2.2. For hver av de sju enhetene som betyr noe for Marlin — karosseristyring (BCM), stabilitetssystem (ESP), klimastyring (ECC), batteristyring (BMS), fremre og bakre motorstyring (MCU) og kjøretøystyring (VCU) — sier tabellen hvilket minimumsnivå en enhet må ha for å tilhøre hver utgave. Resultatsiden viser denne tabellen med én kolonne per utgave og hake eller kryss per enhet.",
+        "Kravene er ordnet etter programvareutgave: 2.0, 2.1 og 2.2. For hver av de sju enhetene som betyr noe for Marlin – karosseristyring (BCM), stabilitetssystem (ESP), klimastyring (ECC), batteristyring (BMS), fremre og bakre motorstyring (MCU) og kjøretøystyring (VCU) – sier tabellen hvilket minimumsnivå en enhet må ha for å tilhøre hver utgave. Resultatsiden viser denne tabellen med én kolonne per utgave og hake eller kryss per enhet.",
         "Sjekken finner først ut hvor langt bilen har kommet. En utgave er «fullstendig» når alle sju enhetene er på dens nivå eller høyere. Den ser også på om noen enhet allerede har et nivå som bare en høyere utgave installerer; der to utgaver deler samme minimum for en enhet (klimastyring er 24 på både 2.1 og 2.2, for eksempel), regnes den enheten aldri som bevis på den høyere utgaven.",
-        "Ut fra dette får bilen ett av fem resultater. «2.2 fullstendig oppdatert»: alle enheter på 2.2-nivå, Marlin-klar. «2.1 fullstendig oppdatert»: alle enheter på 2.1 og ingen på 2.2 — Marlin er mulig, men enhetene 2.2-oppdateringen løfter blir stående igjen, så 2.2 først anbefales. «2.2-zebra»: alt minst 2.1, noen enheter allerede på 2.2 og andre ikke — en påbegynt, men ufullstendig 2.2; fullfør den, så Marlin. «2.1-zebra»: minst én enhet under 2.1 — ikke Marlin-klar; løft disse enhetene til 2.1, så 2.2, så Marlin. Og «allerede på Marlin» for biler der kjøretøystyringen viser Marlin-nivået. I alle tilfeller lister siden enhetene som holder bilen tilbake, med avlest tall og krav."
+        "Ut fra dette får bilen ett av fem resultater. «2.2 fullstendig oppdatert»: alle enheter på 2.2-nivå, Marlin-klar. «2.1 fullstendig oppdatert»: alle enheter på 2.1 og ingen på 2.2 – Marlin er mulig, men enhetene 2.2-oppdateringen løfter blir stående igjen, så 2.2 først anbefales. «2.2-zebra»: alt minst 2.1, noen enheter allerede på 2.2 og andre ikke – en påbegynt, men ufullstendig 2.2; fullfør den, så Marlin. «2.1-zebra»: minst én enhet under 2.1 – ikke Marlin-klar; løft disse enhetene til 2.1, så 2.2, så Marlin. Og «allerede på Marlin» for biler der kjøretøystyringen viser Marlin-nivået. I alle tilfeller lister siden enhetene som holder bilen tilbake, med avlest tall og krav."
       ]
     },
     {
@@ -189,8 +189,8 @@
   "stats_outcomes_heading": "Biler per programvarestatus",
   "stats_split_heading": "Hva holder de splittede bilene tilbake?",
   "stats_split_intro": "For de ufullstendige bilene: hvor mange av dem har hver modul under nivået de sikter mot.",
-  "stats_split_zebra_22": "2.2 påbegynt, men ufullstendig ({n} biler) — moduler under {profile}",
-  "stats_split_zebra_21": "Under 2.1 ({n} biler) — moduler under {profile}",
+  "stats_split_zebra_22": "2.2 påbegynt, men ufullstendig ({n} biler) – moduler under {profile}",
+  "stats_split_zebra_21": "Under 2.1 ({n} biler) – moduler under {profile}",
   "stats_split_none": "Ingen for øyeblikket.",
   "stats_levels_heading": "Programvarenivå per modul",
   "stats_levels_intro": "Hvilken utgave hver modul ligger på, på tvers av alle biler.",

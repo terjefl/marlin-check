@@ -24,21 +24,21 @@
   <p>{{ t('marlin_below_top_note') }}</p>
   <ul>
     {% for r in evaluation.below_top %}
-    <li>{{ r.requirement.label }} — {{ r.version }} ({{ r.extracted }} &lt; {{ r.top_required }})</li>
+    <li>{{ r.requirement.label }} – {{ r.version }} ({{ r.extracted }} &lt; {{ r.top_required }})</li>
     {% endfor %}
   </ul>
   {% elif outcome == 'zebra_21' %}
   <p>{{ t('below_list_intro', profile=target) }}</p>
   <ul>
     {% for r in evaluation.below(target) %}
-    <li>{{ r.requirement.label }} — {{ t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }} &lt; {{ r.required }}){% endif %}</li>
+    <li>{{ r.requirement.label }} – {{ t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }} &lt; {{ r.required }}){% endif %}</li>
     {% endfor %}
   </ul>
   {% elif outcome in ('full_21', 'zebra_22') and evaluation.below(top) %}
   <p>{{ t('below_list_intro', profile=top) }}</p>
   <ul>
     {% for r in evaluation.below(top) %}
-    <li>{{ r.requirement.label }} — {{ r.version }} ({{ r.extracted }} &lt; {{ r.levels.get(top) }})</li>
+    <li>{{ r.requirement.label }} – {{ r.version }} ({{ r.extracted }} &lt; {{ r.levels.get(top) }})</li>
     {% endfor %}
   </ul>
   {% endif %}
@@ -68,13 +68,13 @@
     {% for r in evaluation.results %}
     <tr class="status-{{ r.status }}">
       <td>{{ r.requirement.label }}{% if r.requirement.critical %} <span class="crit">({{ t('critical_label') }})</span>{% endif %}</td>
-      <td>{{ r.version or '—' }}{% if r.extracted is not none %} <span class="crit">→ {{ r.extracted }}</span>{% endif %}{% if r.variant %} <span class="crit">[{{ r.variant }}]</span>{% endif %}</td>
+      <td>{{ r.version or '–' }}{% if r.extracted is not none %} <span class="crit">→ {{ r.extracted }}</span>{% endif %}{% if r.variant %} <span class="crit">[{{ r.variant }}]</span>{% endif %}</td>
       {% for p in evaluation.profiles %}
       {% set met = r.meets.get(p) %}
-      <td class="num lvl {% if met is true %}met{% elif met is false %}unmet{% endif %}">{% if r.levels.get(p) is none %}—{% else %}≥ {{ r.levels[p] }} {% if met %}✓{% else %}✗{% endif %}{% endif %}</td>
+      <td class="num lvl {% if met is true %}met{% elif met is false %}unmet{% endif %}">{% if r.levels.get(p) is none %}–{% else %}≥ {{ r.levels[p] }} {% if met %}✓{% else %}✗{% endif %}{% endif %}</td>
       {% endfor %}
       {% set tmet = r.meets.get(target) %}
-      <td class="num lvl {% if tmet is true %}met{% elif tmet is false %}unmet{% endif %}">{% if r.required is none %}—{% else %}≥ {{ r.required }} {% if tmet %}✓{% else %}✗{% endif %}{% endif %}</td>
+      <td class="num lvl {% if tmet is true %}met{% elif tmet is false %}unmet{% endif %}">{% if r.required is none %}–{% else %}≥ {{ r.required }} {% if tmet %}✓{% else %}✗{% endif %}{% endif %}</td>
       <td>
         {% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}
         {% if r.level and r.status != 'ok' %} <span class="crit">({{ t('level_label') }} {{ r.level }})</span>{% endif %}

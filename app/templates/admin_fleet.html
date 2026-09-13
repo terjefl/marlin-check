@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Vehicle register — {{ t('site_title') }}{% endblock %}
+{% block title %}Vehicle register – {{ t('site_title') }}{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
 <h1>Vehicle register</h1>
@@ -46,12 +46,12 @@
       <td>{{ v.uploaded_at[:16].replace('T', ' ') }}</td>
       <td class="num">{{ v.uploads }}</td>
       <td><span class="pill oc-{{ v.outcome }}">{{ t('outcome_' + v.outcome + '_short') if v.outcome else '(not evaluated)' }}</span></td>
-      <td class="num">{{ v.complete_profile or '—' }}</td>
-      <td class="num">{{ v.top_evidence or '—' }}</td>
+      <td class="num">{{ v.complete_profile or '–' }}</td>
+      <td class="num">{{ v.top_evidence or '–' }}</td>
       <td>{{ v.country or '' }}</td>
       {% for m in module_ids %}
       {% set r = v.modules.get(m) %}
-      {% if not r %}<td class="num lvl unmet" title="not in report">—</td>
+      {% if not r %}<td class="num lvl unmet" title="not in report">–</td>
       {% else %}
       {% set cls = 'unmet' if (r.level is none or (target and profiles and profiles.index(r.level) < profiles.index(target))) else ('met' if r.level == profiles[-1] else 'mid') %}
       <td class="num lvl {{ cls }}" title="{{ r.version }} ({{ r.status }})">{{ r.extracted if r.extracted is not none else '?' }}<span class="crit"> {{ r.level or '' }}</span></td>

@@ -15,9 +15,9 @@
   "error_rate_limited": "Demasiadas subidas en poco tiempo. Espera un minuto y vuelve a intentarlo.",
   "result_title": "Resultado para el VIN {vin}",
   "verdict_ready": "Listo para Marlin",
-  "verdict_zebra": "No listo — se necesitan actualizaciones específicas",
-  "verdict_ready_text": "Todos los módulos requeridos alcanzan los niveles mínimos de 2.1 — tu coche es un 100 % 2.1 completo y puede actualizarse directamente a Marlin.",
-  "verdict_zebra_text": "Tu coche es una cebra y no podrá actualizarse correctamente a Marlin — las versiones de software de las ECU listadas abajo pertenecen a SW 2.1, 2.0 o incluso anteriores. Haz que realicen la actualización 2.2 completa antes de intentar la actualización Marlin:",
+  "verdict_zebra": "No listo – se necesitan actualizaciones específicas",
+  "verdict_ready_text": "Todos los módulos requeridos alcanzan los niveles mínimos de 2.1 – tu coche es un 100 % 2.1 completo y puede actualizarse directamente a Marlin.",
+  "verdict_zebra_text": "Tu coche es una cebra y no podrá actualizarse correctamente a Marlin – las versiones de software de las ECU listadas abajo pertenecen a SW 2.1, 2.0 o incluso anteriores. Haz que realicen la actualización 2.2 completa antes de intentar la actualización Marlin:",
   "requirements_version_label": "Versión de los requisitos",
   "target_profile_label": "Perfil requerido",
   "level_label": "en el nivel",
@@ -38,7 +38,7 @@
   "stats_unique_vins": "Vehículos únicos",
   "stats_total": "Informes subidos",
   "stats_module_heading": "Distribución de versiones por módulo",
-  "stats_empty": "Todavía no hay datos — las estadísticas aparecerán cuando los socios suban informes.",
+  "stats_empty": "Todavía no hay datos – las estadísticas aparecerán cuando los socios suban informes.",
   "privacy_title": "Privacidad",
   "privacy_text": "Este portal lo gestionan voluntarios para los socios de la Fisker Owners Association. Cuando sube un informe, se analiza en nuestro servidor y se le muestra el resultado. Para usar el servicio debe aceptar que el archivo del informe, su VIN, las versiones de software de todos los módulos de control, el país desde el que subió el informe (según Cloudflare) y la hora de subida se guarden en el registro de vehículos de la asociación. El registro se usa para elaborar estadísticas agregadas (número de coches por estado de software, distribución de versiones por módulo) y para ayudar a la asociación a planificar actualizaciones; la página pública de estadísticas nunca muestra VIN individuales. El registro completo, incluidos los VIN, solo está disponible para los administradores de la asociación. No se comparten datos con terceros ni se usan cookies de seguimiento (solo una cookie que recuerda su idioma). Para que se eliminen sus datos, contacte con la asociación; los administradores pueden borrar todo lo guardado sobre un VIN. Con independencia del registro, cada subida se cuenta además en una estadística de uso anónima para los administradores: país, idioma, resultado y un hash que cambia a diario para contar usuarios únicos. Ese recuento no está vinculado a la entrada del registro y no contiene ni VIN, ni informe, ni dirección IP.",
   "footer_disclaimer": "Herramienta comunitaria – sin vinculación con Fisker Inc. Las actualizaciones las realiza un socio de servicio. Confirme el resultado con su socio de servicio antes de que se actualice el coche.",
@@ -51,10 +51,10 @@
   "parse_empty": "El archivo está vacío.",
   "parse_bad_pdf": "No se pudo leer el contenido del PDF.",
   "parse_unreadable": "El archivo no es un PDF ni texto legible.",
-  "parse_no_header": "No se encontró el encabezado «ECU Software Version Report» — ¿es esto un informe de diagnóstico exportado desde OceanLink Pro?",
+  "parse_no_header": "No se encontró el encabezado «ECU Software Version Report» – ¿es esto un informe de diagnóstico exportado desde OceanLink Pro?",
   "parse_no_vin": "No se encontró ninguna línea VIN (VIN: <17 caracteres>) en el informe.",
   "parse_no_modules": "No se encontraron secciones de ECU en el informe.",
-  "ready_22_note": "Nota: una actualización directa de 2.1 a Marlin seguirá SIN actualizar las ECU de abajo — pertenecen a la actualización 2.2 (una llamada a revisión obligatoria de la NHTSA en Norteamérica que la mayoría de los coches europeos nunca recibió). El coche funcionará bien, pero estas ECU se quedarán en sus versiones actuales:",
+  "ready_22_note": "Nota: una actualización directa de 2.1 a Marlin seguirá SIN actualizar las ECU de abajo – pertenecen a la actualización 2.2 (una llamada a revisión obligatoria de la NHTSA en Norteamérica que la mayoría de los coches europeos nunca recibió). El coche funcionará bien, pero estas ECU se quedarán en sus versiones actuales:",
   "vcu24_notice": "Importante si ya tiene VCU 2.4 (por Marlin o de otro modo): Informe a quien vaya a actualizar su coche a 2.2 de que VCU 2.4 ya está instalado. No hay vuelta atrás a una versión anterior del VCU, ni compatibilidad conocida entre VCU 2.4 (Marlin) y las versiones VCU 2.3 (2.2.2 y 2.2.3). Por tanto, esto debe aclararse antes de que empiece la actualización; de lo contrario, el coche puede quedar inutilizable («brick»). La comprobación detecta VCU 2.4 en el informe y entonces muestra el coche como «ya con Marlin».",
   "trim_label": "Versión (según el VIN)",
   "trim_unknown": "desconocida",
@@ -88,9 +88,9 @@
     {
       "title": "Los requisitos y el veredicto",
       "paragraphs": [
-        "Los requisitos se organizan por versión de software: 2.0, 2.1 y 2.2. Para cada una de las siete unidades que importan para Marlin — carrocería (BCM), sistema de estabilidad (ESP), climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU) — la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión. La página de resultados muestra esta tabla con una columna por versión y una marca o una cruz por unidad.",
+        "Los requisitos se organizan por versión de software: 2.0, 2.1 y 2.2. Para cada una de las siete unidades que importan para Marlin – carrocería (BCM), sistema de estabilidad (ESP), climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU) – la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión. La página de resultados muestra esta tabla con una columna por versión y una marca o una cruz por unidad.",
         "La comprobación determina primero hasta dónde ha llegado el coche. Una versión está «completa» cuando las siete unidades están en su nivel o por encima. También mira si alguna unidad ya tiene un nivel que solo instala una versión superior; cuando dos versiones comparten el mismo mínimo para una unidad (la climatización es 24 tanto en 2.1 como en 2.2, por ejemplo), esa unidad nunca se toma como prueba de la versión superior.",
-        "A partir de ahí, el coche recibe uno de cinco resultados. «2.2 completamente actualizado»: todas las unidades en el nivel 2.2, listo para Marlin. «2.1 completamente actualizado»: todas en 2.1 y ninguna en 2.2 — Marlin es posible, pero las unidades que eleva la actualización 2.2 se quedarían atrás, así que se recomienda hacer primero la 2.2. «Cebra 2.2»: todo al menos en 2.1, algunas unidades ya en 2.2 y otras no — una 2.2 iniciada pero incompleta; terminarla y después Marlin. «Cebra 2.1»: al menos una unidad por debajo de 2.1 — no listo para Marlin; elevar esas unidades a 2.1, luego 2.2 y luego Marlin. Y «ya en Marlin» para los coches cuyo controlador del vehículo muestra el nivel Marlin. En todos los casos, la página lista las unidades que frenan al coche, con el número leído y el requerido."
+        "A partir de ahí, el coche recibe uno de cinco resultados. «2.2 completamente actualizado»: todas las unidades en el nivel 2.2, listo para Marlin. «2.1 completamente actualizado»: todas en 2.1 y ninguna en 2.2 – Marlin es posible, pero las unidades que eleva la actualización 2.2 se quedarían atrás, así que se recomienda hacer primero la 2.2. «Cebra 2.2»: todo al menos en 2.1, algunas unidades ya en 2.2 y otras no – una 2.2 iniciada pero incompleta; terminarla y después Marlin. «Cebra 2.1»: al menos una unidad por debajo de 2.1 – no listo para Marlin; elevar esas unidades a 2.1, luego 2.2 y luego Marlin. Y «ya en Marlin» para los coches cuyo controlador del vehículo muestra el nivel Marlin. En todos los casos, la página lista las unidades que frenan al coche, con el número leído y el requerido."
       ]
     },
     {
@@ -189,8 +189,8 @@
   "stats_outcomes_heading": "Vehículos por estado del software",
   "stats_split_heading": "¿Qué frena a los coches «cebra»?",
   "stats_split_intro": "Para los coches incompletos: cuántos de ellos tienen cada módulo por debajo del nivel al que aspiran.",
-  "stats_split_zebra_22": "2.2 iniciada pero incompleta ({n} coches) — módulos por debajo de {profile}",
-  "stats_split_zebra_21": "Por debajo de 2.1 ({n} coches) — módulos por debajo de {profile}",
+  "stats_split_zebra_22": "2.2 iniciada pero incompleta ({n} coches) – módulos por debajo de {profile}",
+  "stats_split_zebra_21": "Por debajo de 2.1 ({n} coches) – módulos por debajo de {profile}",
   "stats_split_none": "Ninguno por el momento.",
   "stats_levels_heading": "Nivel de software por módulo",
   "stats_levels_intro": "En qué versión está cada módulo, en el conjunto de vehículos.",

@@ -383,7 +383,7 @@ def test_marlin_car_result_page_and_statistics(client):
     assert "Already on Marlin" in response.text
     assert "can be updated directly to Marlin" not in response.text
     assert "Marlin does not update every module" in response.text
-    assert "Body Control Module — BCM395041 (41 &lt; 42)" in response.text
+    assert "Body Control Module – BCM395041 (41 &lt; 42)" in response.text
 
     stats = main.database.stats()
     assert stats["verdicts"] == {"marlin": 1}
@@ -410,7 +410,7 @@ def test_security_headers_and_no_inline_scripts(client):
 def test_front_page_shows_variant_levels_for_bms(client):
     c, _ = client
     page = c.get("/?lang=en").text
-    assert "≥ —" not in page
+    assert "≥ –" not in page
     # Variant levels per software line, once per profile column and once for the Marlin column
     assert page.count("≥ 21 <span class=\"crit\">[NMC]</span> / ≥ 15 <span class=\"crit\">[LFP]</span>") == 4
     # One column per profile plus the Marlin requirement column
