@@ -11,7 +11,7 @@
 {% if profile_warning %}<div class="alert error">⚠️ {{ profile_warning }}</div>{% endif %}
 
 {% if requirements and requirements.notes %}
-<details class="extra" open>
+<details class="extra">
   <summary>Notes (sources and open points – edit in the YAML editor, field <code>notes</code>)</summary>
   <pre class="diff">{{ requirements.notes }}</pre>
 </details>
