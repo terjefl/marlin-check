@@ -120,8 +120,8 @@ def test_evaluate_zebra_car():
 
     assert evaluation.verdict == VERDICT_ZEBRA
     assert {r.requirement.id for r in evaluation.failing_critical} == {"BCM"}
-    # 37 modules in the report, 7 with requirements -> 30 without
-    assert len(evaluation.extra_modules) == 30
+    # 37 modules in the report, 8 with requirements -> 29 without
+    assert len(evaluation.extra_modules) == 29
 
 
 def test_evaluate_full_21_car():
@@ -135,10 +135,10 @@ def test_evaluate_full_21_car():
     assert evaluation.verdict == VERDICT_READY
     assert all(r.status == OK for r in evaluation.results)
     # Jens' note 2: a direct 2.1->Marlin jump leaves the 2.2-only ECUs behind.
-    # This car meets 2.1 but not 2.2 on BCM (30<42), ESP (402<501),
+    # This car meets 2.1 but not 2.2 on BCM (30<42), ESP (402<501), IBS (400<401),
     # MCU_F/R (19<21) and VCU (21<23); ECC (24) and BMS (21) already meet 2.2.
     assert {r.requirement.id for r in evaluation.ok_below_top} == {
-        "BCM", "ESP", "MCU_F", "MCU_R", "VCU",
+        "BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU",
     }
 
 
@@ -295,14 +295,14 @@ def test_reference_cars_from_the_fleet():
     full_21 = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
     assert full_21.verdict == VERDICT_READY
     assert all(r.status == OK for r in full_21.results)
-    # Every module exactly at the 2.1 minimum -> all five 2.2-only ECUs are left behind
-    assert {r.requirement.id for r in full_21.ok_below_top} == {"BCM", "ESP", "MCU_F", "MCU_R", "VCU"}
+    # Every module exactly at the 2.1 minimum -> all six 2.2-only ECUs are left behind
+    assert {r.requirement.id for r in full_21.ok_below_top} == {"BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU"}
 
     full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
     assert full_22.verdict == VERDICT_READY
     assert full_22.ok_below_top == []
     assert {r.requirement.id: r.level for r in full_22.results} == {
-        m: "2.2" for m in ["BCM", "ESP", "ECC", "BMS", "MCU_R", "MCU_F", "VCU"]
+        m: "2.2" for m in ["BCM", "ESP", "IBS", "ECC", "BMS", "MCU_R", "MCU_F", "VCU"]
     }
 
 
@@ -363,7 +363,7 @@ def test_duplicate_ecu_block_stays_visible_as_extra_module():
     evaluation = evaluate(report, requirements)
     assert next(r for r in evaluation.results if r.requirement.id == "BMS").version == "BMSN39021"
     assert any(m.supplier_sw == "BMSN39001" for m in evaluation.extra_modules)
-    assert len(evaluation.extra_modules) == 31
+    assert len(evaluation.extra_modules) == 30
 
 
 def test_variant_levels_override_per_profile_not_wholesale():
@@ -424,7 +424,7 @@ def test_outcomes_for_the_reference_cars():
     assert (full_21.outcome, full_21.complete_profile, full_21.top_evidence) == (
         OUTCOME_FULL_TARGET, "2.1", "2.1"
     )
-    assert {r.requirement.id for r in full_21.below("2.2")} == {"BCM", "ESP", "MCU_F", "MCU_R", "VCU"}
+    assert {r.requirement.id for r in full_21.below("2.2")} == {"BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU"}
     assert full_21.below("2.1") == []
 
     full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
@@ -446,7 +446,7 @@ def test_outcomes_for_the_reference_cars():
     assert (started.outcome, started.complete_profile, started.top_evidence) == (
         OUTCOME_ZEBRA_TOP, "2.1", "2.2"
     )
-    assert {r.requirement.id for r in started.below("2.2")} == {"ESP", "MCU_F", "MCU_R"}
+    assert {r.requirement.id for r in started.below("2.2")} == {"ESP", "IBS", "MCU_F", "MCU_R"}
     assert started.verdict == VERDICT_READY  # still Marlin-capable in the old sense
 
     marlin = evaluate(_fixture_report("olp_report_marlin.txt"), requirements)
@@ -501,3 +501,23 @@ def test_sport_without_rear_mcu_can_still_be_complete():
     evaluation = evaluate(report, requirements)
     assert evaluation.outcome == OUTCOME_FULL_TOP
     assert "MCU_R" not in {r.requirement.id for r in evaluation.results}
+
+
+def test_ibooster_must_follow_esp_to_the_22_generation():
+    """ESP and iBooster are Bosch units flashed together: a car with ESP at the
+    2.2 level but iBooster still on the 2.1 line (400) is a 2.2 zebra with IBS in
+    the below-2.2 list; iBooster 401 makes it full 2.2. The Marlin requirement
+    (400) is met by every car, so nothing loses Marlin readiness."""
+    from app.rules import OUTCOME_FULL_TOP, OUTCOME_ZEBRA_TOP
+
+    requirements = load_requirements(REQUIREMENTS)
+    stale = _with(_fixture_report("olp_report_22_full.txt"), IBS="88211V040000420131")
+    evaluation = evaluate(stale, requirements)
+    assert evaluation.outcome == OUTCOME_ZEBRA_TOP
+    assert [r.requirement.id for r in evaluation.below_top] == ["IBS"]
+    ibs = next(r for r in evaluation.results if r.requirement.id == "IBS")
+    assert (ibs.extracted, ibs.meets["2.1"], ibs.meets["2.2"]) == (400, True, False)
+
+    fresh = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
+    assert fresh.outcome == OUTCOME_FULL_TOP
+    assert next(r for r in fresh.results if r.requirement.id == "IBS").extracted == 401

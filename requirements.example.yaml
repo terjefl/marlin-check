@@ -41,7 +41,7 @@
 # In production this file is bind-mounted as /config/requirements.yaml and
 # re-read on every analysis — edit it on the host or via /admin (no rebuild).
 
-version: "2026-09-workbook-v2-draft"
+version: "2026-09-13-ibooster"
 
 notes: |
   STILL DRAFT ("V2 WIP ECU COMPARISON FOR MARLIN" workbook, received 2026-08-30).
@@ -68,6 +68,14 @@ notes: |
   VCU 21, BMS 21, ESP 402), a full 2.2 car (VCU 23, MCU 21, BCM 42, ESP 501,
   ECC 25), and two Marlin cars (VCU 24; one as 2.2, one with BCM 41, see above).
 
+  iBooster (IBS) added 2026-09-13 at the association's request (Jens): ESP and
+  iBooster are Bosch units that must be flashed to the same generation, so a car
+  with ESP at the 2.2 level but iBooster still on the 2.1 line counts as a 2.2
+  zebra. Level 401 is read from two 2.2 cars in the register (88211V0401...),
+  2.1 cars show 88211V0400... (400). Confirmation from Guillaume outstanding.
+  The Marlin requirement (2.1 profile) is 400, which every car has, so no car
+  loses "Marlin ready" because of this module.
+
   Right-hand drive: the workbook shows RHD-specific software lines only on
   EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
   (ADAS039021 vs ADAS039020). None of these is a required module, and ESP has
@@ -93,6 +101,13 @@ modules:
     match: [ESP]
     extract: 'V0*(\d{3})'           # 89324V040100960131 -> 401; 89819V0501... -> 501
     levels: {"2.0": 401, "2.1": 401, "2.2": 501}
+    critical: true
+
+  - id: IBS
+    label: iBooster
+    match: [IBS]
+    extract: 'V0*(\d{3})'           # 88211V040000420131 -> 400 (2.1); 88211V040100430131 -> 401 (2.2)
+    levels: {"2.0": 400, "2.1": 400, "2.2": 401}
     critical: true
 
   - id: ECC

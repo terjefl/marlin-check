@@ -139,7 +139,7 @@ def test_fleet_statistics_count_outcomes_levels_and_split_cars(tmp_path):
     assert stats["per_week"][0]["uploads"] == 6 and stats["per_week"][0]["vehicles"] == 5
     # The 2.2 zebra is held back by ESP and both MCUs; the 2.1 zebra by BCM
     assert stats["split"]["zebra_22"]["cars"] == 1
-    assert {m["module_id"] for m in stats["split"]["zebra_22"]["modules"]} == {"ESP", "MCU_F", "MCU_R"}
+    assert {m["module_id"] for m in stats["split"]["zebra_22"]["modules"]} == {"ESP", "IBS", "MCU_F", "MCU_R"}
     assert stats["split"]["zebra_21"] == {"cars": 1, "modules": [{"module_id": "BCM", "n": 1}]}
     # BCM over the five cars: 21 (below every profile), 30, 42, 42, 42
     assert stats["module_levels"]["BCM"] == {"below": 1, "2.1": 1, "2.2": 3}

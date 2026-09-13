@@ -64,7 +64,7 @@ def test_upload_stores_submission_file_and_all_module_readings(client):
     )
     esp = next(r for r in readings if r["code"] == "ESP")
     assert (esp["software"], esp["bootloader"]) == ("FM292045S020J", "FM292045B020B")
-    assert sum(1 for r in readings if r["status"] == "extra") == 30
+    assert sum(1 for r in readings if r["status"] == "extra") == 29
     stats = main.database.stats()
     assert stats["unique_vins"] == 1
     assert stats["total_submissions"] == 1
@@ -301,7 +301,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     c, _main, path = client_with_config
     good = path.read_text()
     assert c.get("/healthz").status_code == 200
-    assert "2026-09-workbook-v2-draft" in _upload(c).text
+    assert "2026-09-13-ibooster" in _upload(c).text
 
     path.write_text("modules: [\n")  # a bad edit on the host
     health = c.get("/healthz")
@@ -310,7 +310,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     # Analyses continue on the last valid set instead of failing with 500
     response = _upload(c)
     assert response.status_code == 200
-    assert "2026-09-workbook-v2-draft" in response.text
+    assert "2026-09-13-ibooster" in response.text
     assert c.get("/").status_code == 200
 
     path.unlink()  # mount gone entirely
