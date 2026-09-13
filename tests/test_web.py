@@ -301,7 +301,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     c, _main, path = client_with_config
     good = path.read_text()
     assert c.get("/healthz").status_code == 200
-    assert "2026-09-13-ibooster" in _upload(c).text
+    assert "2026-09-13" in _upload(c).text
 
     path.write_text("modules: [\n")  # a bad edit on the host
     health = c.get("/healthz")
@@ -310,7 +310,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     # Analyses continue on the last valid set instead of failing with 500
     response = _upload(c)
     assert response.status_code == 200
-    assert "2026-09-13-ibooster" in response.text
+    assert "2026-09-13" in response.text
     assert c.get("/").status_code == 200
 
     path.unlink()  # mount gone entirely

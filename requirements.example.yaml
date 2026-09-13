@@ -41,7 +41,7 @@
 # In production this file is bind-mounted as /config/requirements.yaml and
 # re-read on every analysis — edit it on the host or via /admin (no rebuild).
 
-version: "2026-09-13-ibooster"
+version: "2026-09-13"
 
 notes: |
   STILL DRAFT ("V2 WIP ECU COMPARISON FOR MARLIN" workbook, received 2026-08-30).

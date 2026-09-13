@@ -139,7 +139,7 @@ def test_save_requires_csrf_token_and_same_site(client):
     c, main = client
     original = main.REQUIREMENTS_PATH.read_text()
     _login(c, "terje", "hemmelig123")
-    new_text = original.replace('version: "2026-09-13-ibooster"', 'version: "csrf-test"')
+    new_text = original.replace('version: "2026-09-13"', 'version: "csrf-test"')
 
     # No token: what a cross-site form post would look like if the cookie leaked
     response = c.post("/admin/save", data={"yaml_text": new_text})
@@ -189,7 +189,7 @@ def test_save_rejects_invalid_yaml_without_writing(client):
 def test_save_writes_and_audits_with_user_ip_and_diff(client):
     c, main = client
     new_text = main.REQUIREMENTS_PATH.read_text().replace(
-        'version: "2026-09-13-ibooster"', 'version: "2026-09-official"'
+        'version: "2026-09-13"', 'version: "2026-09-official"'
     )
     _login(c, "styremedlem", "ogsåhemmelig")
     csrf = _csrf(c.get("/admin").text)
@@ -207,7 +207,7 @@ def test_save_writes_and_audits_with_user_ip_and_diff(client):
     entry = entries[0]
     assert entry["username"] == "styremedlem"
     assert entry["ip"] == "203.0.113.7"
-    assert '-version: "2026-09-13-ibooster"' in entry["detail"]
+    assert '-version: "2026-09-13"' in entry["detail"]
     assert '+version: "2026-09-official"' in entry["detail"]
 
     # The analysis uses the new requirements version immediately
@@ -484,7 +484,7 @@ def test_vehicle_page_history_and_deletion(client):
 
     page = c.get("/admin/fleet/VCF1ZBE20PG099905")
     assert page.status_code == 200
-    assert page.text.count("2026-09-13-ibooster") == 2  # two uploads listed
+    assert page.text.count("2026-09-13") == 2  # two uploads listed
     assert "2.2 zebra" in page.text and "Clean 2.1" in page.text
     assert "BCM395042" in page.text  # newest upload shown by default
     assert "FM298033S001K" in page.text  # the software version field, not only Supplier SW
