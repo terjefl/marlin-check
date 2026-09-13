@@ -1,5 +1,5 @@
 {
-  "site_title": "Marlin Readiness Check",
+  "site_title": "Ocean Software Check",
   "tagline": "Fisker Owners Association – compruebe si su Ocean está listo para la actualización Marlin",
   "nav_home": "Comprobar mi coche",
   "nav_stats": "Estadísticas",
@@ -81,15 +81,15 @@
     {
       "title": "Del texto a los números",
       "paragraphs": [
-        "Supplier SW Version es un texto que varía de un proveedor a otro, por ejemplo «BCM395030», «VCU039021», «ECC395 24» o una cadena larga para el sistema de estabilidad. Los requisitos, en cambio, son números. Por eso la comprobación tiene un patrón por unidad que indica qué parte del texto es el código de producto y qué parte es el nivel propiamente dicho. Para el BCM son las últimas cifras; para el ESP, tres cifras tras la letra V; y así sucesivamente.",
+        "Supplier SW Version es un texto que varía de un proveedor a otro, por ejemplo «BCM395030», «VCU039021», «ECC395 24» o una cadena larga para el sistema de estabilidad. Los requisitos, en cambio, son números. Por eso la comprobación tiene un patrón por unidad que indica qué parte del texto es el código de producto y qué parte es el nivel propiamente dicho. Para el BCM son las últimas cifras; para el ESP y el iBooster, tres cifras tras la letra V; y así sucesivamente.",
         "Los patrones se construyeron a partir de informes reales de coches en 2.1, 2.2 y Marlin, y todos los valores vistos hasta ahora se interpretan correctamente. Si aparece un texto que el patrón no reconoce, la unidad recibe el estado «versión no reconocida», que cuenta como no aprobada. Es una decisión deliberada: la comprobación nunca debe decir «lista» basándose en algo que no entiende. Si el campo está vacío en el informe, la unidad recibe un estado propio que lo indica, para que vea que el problema está en el informe y no en el coche."
       ]
     },
     {
       "title": "Los requisitos y el veredicto",
       "paragraphs": [
-        "Los requisitos se organizan por versión de software: 2.0, 2.1 y 2.2. Para cada una de las siete unidades que importan para Marlin – carrocería (BCM), sistema de estabilidad (ESP), climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU) – la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión. La página de resultados muestra esta tabla con una columna por versión y una marca o una cruz por unidad.",
-        "La comprobación determina primero hasta dónde ha llegado el coche. Una versión está «completa» cuando las siete unidades están en su nivel o por encima. También mira si alguna unidad ya tiene un nivel que solo instala una versión superior; cuando dos versiones comparten el mismo mínimo para una unidad (la climatización es 24 tanto en 2.1 como en 2.2, por ejemplo), esa unidad nunca se toma como prueba de la versión superior.",
+        "Los requisitos se organizan por versión de software: 2.0, 2.1 y 2.2. Para cada una de las ocho unidades que importan para Marlin – carrocería (BCM), sistema de estabilidad (ESP), servofreno (iBooster, IBS), climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU) – la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión. El ESP y el iBooster van juntos y deben estar en la misma generación de software, por eso se comprueban ambos. La página de resultados muestra esta tabla con una columna por versión y una marca o una cruz por unidad.",
+        "La comprobación determina primero hasta dónde ha llegado el coche. Una versión está «completa» cuando las ocho unidades están en su nivel o por encima. También mira si alguna unidad ya tiene un nivel que solo instala una versión superior; cuando dos versiones comparten el mismo mínimo para una unidad (la climatización es 24 tanto en 2.1 como en 2.2, por ejemplo), esa unidad nunca se toma como prueba de la versión superior.",
         "A partir de ahí, el coche recibe uno de cinco resultados. «2.2 completamente actualizado»: todas las unidades en el nivel 2.2, listo para Marlin. «2.1 completamente actualizado»: todas en 2.1 y ninguna en 2.2 – Marlin es posible, pero las unidades que eleva la actualización 2.2 se quedarían atrás, así que se recomienda hacer primero la 2.2. «Cebra 2.2»: todo al menos en 2.1, algunas unidades ya en 2.2 y otras no – una 2.2 iniciada pero incompleta; terminarla y después Marlin. «Cebra 2.1»: al menos una unidad por debajo de 2.1 – no listo para Marlin; elevar esas unidades a 2.1, luego 2.2 y luego Marlin. Y «ya en Marlin» para los coches cuyo controlador del vehículo muestra el nivel Marlin. En todos los casos, la página lista las unidades que frenan al coche, con el número leído y el requerido."
       ]
     },
@@ -115,7 +115,7 @@
     {
       "title": "Unidades sin requisito",
       "paragraphs": [
-        "La treintena de unidades que no están entre las siete se muestra bajo «otras unidades» con sus valores, pero no influye en el veredicto. Es el caso de los radares, la cámara frontal y la unidad de asistencia a la conducción, que no son un requisito para Marlin y que hemos visto en niveles antiguos en coches donde Marlin y la asistencia funcionan sin problema. Los coches con volante a la derecha tienen líneas de software propias en algunas unidades, pero ninguna está entre las siete, así que se tratan igual."
+        "La treintena de unidades que no están entre las ocho se muestra bajo «otras unidades» con sus valores, pero no influye en el veredicto. Es el caso de los radares, la cámara frontal y la unidad de asistencia a la conducción, que no son un requisito para Marlin y que hemos visto en niveles antiguos en coches donde Marlin y la asistencia funcionan sin problema. Los coches con volante a la derecha tienen líneas de software propias en algunas unidades, pero ninguna está entre las siete, así que se tratan igual."
       ]
     },
     {

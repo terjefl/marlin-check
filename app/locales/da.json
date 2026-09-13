@@ -1,5 +1,5 @@
 {
-  "site_title": "Marlin Readiness Check",
+  "site_title": "Ocean Software Check",
   "tagline": "Fisker Owners Association – tjek om din Ocean er klar til Marlin-opdateringen",
   "nav_home": "Tjek min bil",
   "nav_stats": "Statistik",
@@ -81,15 +81,15 @@
     {
       "title": "Fra tekst til tal",
       "paragraphs": [
-        "Supplier SW Version er en tekst, der ser forskellig ud fra leverandør til leverandør, for eksempel ”BCM395030”, ”VCU039021”, ”ECC395 24” eller en lang streng for stabilitetssystemet. Kravene er derimod tal. Tjekket har derfor et mønster pr. enhed, som siger, hvilken del af teksten der er produktkode, og hvilken del der er selve niveauet. For BCM er niveauet de sidste cifre, for ESP er det tre cifre efter bogstavet V, og så videre.",
+        "Supplier SW Version er en tekst, der ser forskellig ud fra leverandør til leverandør, for eksempel ”BCM395030”, ”VCU039021”, ”ECC395 24” eller en lang streng for stabilitetssystemet. Kravene er derimod tal. Tjekket har derfor et mønster pr. enhed, som siger, hvilken del af teksten der er produktkode, og hvilken del der er selve niveauet. For BCM er niveauet de sidste cifre, for ESP og iBooster er det tre cifre efter bogstavet V, og så videre.",
         "Mønstrene er bygget ud fra ægte rapporter fra biler på 2.1, 2.2 og Marlin, og alle værdier, vi har set, fortolkes korrekt. Dukker der en tekst op, som mønstret ikke genkender, får enheden status ”version ikke genkendt”, og det regnes som ikke godkendt. Det er et bevidst valg: tjekket må aldrig sige ”klar” på grundlag af noget, det ikke forstår. Er feltet tomt i rapporten, får enheden sin egen status, der siger netop det, så du kan se, at problemet ligger i rapporten og ikke i bilen."
       ]
     },
     {
       "title": "Kravene og vurderingen",
       "paragraphs": [
-        "Kravene er ordnet efter softwareudgave: 2.0, 2.1 og 2.2. For hver af de syv enheder, der betyder noget for Marlin – karosseristyring (BCM), stabilitetssystem (ESP), klimastyring (ECC), batteristyring (BMS), forreste og bageste motorstyring (MCU) og køretøjsstyring (VCU) – angiver tabellen det minimumsniveau, en enhed skal have for at tilhøre hver udgave. Resultatsiden viser tabellen med én kolonne per udgave og et flueben eller kryds per enhed.",
-        "Tjekket finder først ud af, hvor langt bilen er nået. En udgave er »fuldstændig«, når alle syv enheder er på dens niveau eller højere. Det ser også på, om nogen enhed allerede har et niveau, som kun en højere udgave installerer; hvor to udgaver deler samme minimum for en enhed (klimastyring er 24 på både 2.1 og 2.2, for eksempel), regnes den enhed aldrig som bevis på den højere udgave.",
+        "Kravene er ordnet efter softwareudgave: 2.0, 2.1 og 2.2. For hver af de otte enheder, der betyder noget for Marlin – karosseristyring (BCM), stabilitetssystem (ESP), bremseforstærker (iBooster, IBS), klimastyring (ECC), batteristyring (BMS), forreste og bageste motorstyring (MCU) og køretøjsstyring (VCU) – angiver tabellen det minimumsniveau, en enhed skal have for at tilhøre hver udgave. ESP og iBooster hører sammen og skal være på samme softwaregeneration, derfor tjekkes begge. Resultatsiden viser tabellen med én kolonne per udgave og et flueben eller kryds per enhed.",
+        "Tjekket finder først ud af, hvor langt bilen er nået. En udgave er »fuldstændig«, når alle otte enheder er på dens niveau eller højere. Det ser også på, om nogen enhed allerede har et niveau, som kun en højere udgave installerer; hvor to udgaver deler samme minimum for en enhed (klimastyring er 24 på både 2.1 og 2.2, for eksempel), regnes den enhed aldrig som bevis på den højere udgave.",
         "Ud fra det får bilen ét af fem resultater. »2.2 fuldstændigt opdateret«: alle enheder på 2.2-niveau, Marlin-klar. »2.1 fuldstændigt opdateret«: alle enheder på 2.1 og ingen på 2.2 – Marlin er mulig, men enhederne, som 2.2-opdateringen løfter, bliver stående, så 2.2 først anbefales. »2.2-zebra«: alt mindst 2.1, nogle enheder allerede på 2.2 og andre ikke – en påbegyndt, men ufuldstændig 2.2; fuldfør den, derefter Marlin. »2.1-zebra«: mindst én enhed under 2.1 – ikke Marlin-klar; løft disse enheder til 2.1, så 2.2, så Marlin. Og »allerede på Marlin« for biler, hvor køretøjsstyringen viser Marlin-niveauet. I alle tilfælde lister siden de enheder, der holder bilen tilbage, med aflæst tal og krav."
       ]
     },
@@ -115,7 +115,7 @@
     {
       "title": "Enheder uden krav",
       "paragraphs": [
-        "De omkring tredive enheder, der ikke er blandt de syv, vises under ”øvrige enheder” med deres værdier, men påvirker ikke vurderingen. Det gælder blandt andet radarerne, frontkameraet og førerassistanceenheden, som ikke er en forudsætning for Marlin, og som vi har set på ældre niveauer på biler, hvor Marlin og førerassistancen fungerer fint. Højrestyrede biler har egne softwarelinjer på nogle enheder, men ingen af dem er blandt de syv, så de behandles ens."
+        "De omkring tredive enheder, der ikke er blandt de otte, vises under ”øvrige enheder” med deres værdier, men påvirker ikke vurderingen. Det gælder blandt andet radarerne, frontkameraet og førerassistanceenheden, som ikke er en forudsætning for Marlin, og som vi har set på ældre niveauer på biler, hvor Marlin og førerassistancen fungerer fint. Højrestyrede biler har egne softwarelinjer på nogle enheder, men ingen af dem er blandt de syv, så de behandles ens."
       ]
     },
     {

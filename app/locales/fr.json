@@ -1,5 +1,5 @@
 {
-  "site_title": "Marlin Readiness Check",
+  "site_title": "Ocean Software Check",
   "tagline": "Fisker Owners Association – vérifiez si votre Ocean est prête pour la mise à jour Marlin",
   "nav_home": "Vérifier ma voiture",
   "nav_stats": "Statistiques",
@@ -81,15 +81,15 @@
     {
       "title": "Du texte aux nombres",
       "paragraphs": [
-        "Supplier SW Version est un texte dont la forme varie d’un fournisseur à l’autre, par exemple « BCM395030 », « VCU039021 », « ECC395 24 » ou une longue chaîne pour le système de stabilité. Les exigences, elles, sont des nombres. La vérification dispose donc d’un motif par calculateur qui indique quelle partie du texte est le code produit et quelle partie est le niveau proprement dit. Pour le BCM, ce sont les derniers chiffres ; pour l’ESP, trois chiffres après la lettre V ; et ainsi de suite.",
+        "Supplier SW Version est un texte dont la forme varie d’un fournisseur à l’autre, par exemple « BCM395030 », « VCU039021 », « ECC395 24 » ou une longue chaîne pour le système de stabilité. Les exigences, elles, sont des nombres. La vérification dispose donc d’un motif par calculateur qui indique quelle partie du texte est le code produit et quelle partie est le niveau proprement dit. Pour le BCM, ce sont les derniers chiffres ; pour l’ESP et l’iBooster, trois chiffres après la lettre V ; et ainsi de suite.",
         "Ces motifs ont été construits à partir de rapports réels de voitures en 2.1, 2.2 et Marlin, et toutes les valeurs rencontrées sont interprétées correctement. Si un texte apparaît que le motif ne reconnaît pas, le calculateur reçoit le statut « version non reconnue », ce qui compte comme non validé. C’est un choix délibéré : la vérification ne doit jamais dire « prête » sur la base de quelque chose qu’elle ne comprend pas. Si le champ est vide dans le rapport, le calculateur reçoit un statut propre qui le dit explicitement, pour que vous voyiez que le problème vient du rapport et non de la voiture."
       ]
     },
     {
       "title": "Les exigences et le verdict",
       "paragraphs": [
-        "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des sept calculateurs qui comptent pour Marlin – carrosserie (BCM), stabilité (ESP), climatisation (ECC), gestion de batterie (BMS), moteurs avant et arrière (MCU) et contrôle véhicule (VCU) – le tableau indique le niveau minimal qu'un calculateur doit avoir pour appartenir à chaque version. La page de résultat affiche ce tableau avec une colonne par version et une coche ou une croix par calculateur.",
-        "Le contrôle détermine d'abord jusqu'où la voiture est arrivée. Une version est « complète » quand les sept calculateurs sont à son niveau ou au-dessus. Il regarde aussi si un calculateur porte déjà un niveau que seule une version supérieure installe ; lorsque deux versions partagent le même minimum pour un calculateur (la climatisation est à 24 en 2.1 comme en 2.2, par exemple), ce calculateur n'est jamais pris comme preuve de la version supérieure.",
+        "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des huit calculateurs qui comptent pour Marlin – carrosserie (BCM), stabilité (ESP), assistance de freinage (iBooster, IBS), climatisation (ECC), gestion de batterie (BMS), moteurs avant et arrière (MCU) et contrôle véhicule (VCU) – le tableau indique le niveau minimal qu'un calculateur doit avoir pour appartenir à chaque version. L'ESP et l'iBooster vont de pair et doivent être sur la même génération logicielle, c'est pourquoi les deux sont vérifiés. La page de résultat affiche ce tableau avec une colonne par version et une coche ou une croix par calculateur.",
+        "Le contrôle détermine d'abord jusqu'où la voiture est arrivée. Une version est « complète » quand les huit calculateurs sont à son niveau ou au-dessus. Il regarde aussi si un calculateur porte déjà un niveau que seule une version supérieure installe ; lorsque deux versions partagent le même minimum pour un calculateur (la climatisation est à 24 en 2.1 comme en 2.2, par exemple), ce calculateur n'est jamais pris comme preuve de la version supérieure.",
         "La voiture obtient alors l'un de cinq résultats. « 2.2 entièrement à jour » : tous les calculateurs au niveau 2.2, prête pour Marlin. « 2.1 entièrement à jour » : tous au niveau 2.1 et aucun en 2.2 – Marlin est possible, mais les calculateurs que la mise à jour 2.2 fait évoluer resteraient en arrière, d'où la recommandation de faire la 2.2 d'abord. « Zèbre 2.2 » : tout au moins en 2.1, certains calculateurs déjà en 2.2 et d'autres non – une 2.2 commencée mais incomplète ; la terminer, puis Marlin. « Zèbre 2.1 » : au moins un calculateur sous 2.1 – pas prête pour Marlin ; remonter ces calculateurs en 2.1, puis 2.2, puis Marlin. Et « déjà sous Marlin » pour les voitures dont le contrôleur véhicule montre le niveau Marlin. Dans tous les cas, la page liste les calculateurs qui retiennent la voiture, avec la valeur lue et la valeur requise."
       ]
     },
@@ -115,7 +115,7 @@
     {
       "title": "Les calculateurs sans exigence",
       "paragraphs": [
-        "La trentaine de calculateurs qui ne font pas partie des sept sont affichés sous « autres calculateurs » avec leurs valeurs, mais n’influencent pas le verdict. C’est le cas des radars, de la caméra avant et du calculateur d’aide à la conduite, qui ne sont pas un prérequis pour Marlin et que nous avons vus à des niveaux plus anciens sur des voitures où Marlin et l’aide à la conduite fonctionnent parfaitement. Les voitures à conduite à droite ont leurs propres lignées logicielles sur certains calculateurs, mais aucun ne fait partie des sept, elles sont donc traitées de la même façon."
+        "La trentaine de calculateurs qui ne font pas partie des huit sont affichés sous « autres calculateurs » avec leurs valeurs, mais n’influencent pas le verdict. C’est le cas des radars, de la caméra avant et du calculateur d’aide à la conduite, qui ne sont pas un prérequis pour Marlin et que nous avons vus à des niveaux plus anciens sur des voitures où Marlin et l’aide à la conduite fonctionnent parfaitement. Les voitures à conduite à droite ont leurs propres lignées logicielles sur certains calculateurs, mais aucun ne fait partie des sept, elles sont donc traitées de la même façon."
       ]
     },
     {

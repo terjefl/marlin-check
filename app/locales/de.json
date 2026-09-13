@@ -1,5 +1,5 @@
 {
-  "site_title": "Marlin Readiness Check",
+  "site_title": "Ocean Software Check",
   "tagline": "Fisker Owners Association – prüfen Sie, ob Ihr Ocean bereit für das Marlin-Update ist",
   "nav_home": "Mein Auto prüfen",
   "nav_stats": "Statistik",
@@ -81,15 +81,15 @@
     {
       "title": "Vom Text zur Zahl",
       "paragraphs": [
-        "Supplier SW Version ist ein Text, der je nach Zulieferer anders aussieht, etwa „BCM395030“, „VCU039021“, „ECC395 24“ oder eine lange Zeichenkette beim Stabilitätssystem. Die Anforderungen sind dagegen Zahlen. Die Prüfung hat deshalb pro Gerät ein Muster, das festlegt, welcher Teil des Textes Produktcode und welcher Teil der eigentliche Stand ist. Beim BCM sind es die letzten Ziffern, beim ESP drei Ziffern nach dem Buchstaben V, und so weiter.",
+        "Supplier SW Version ist ein Text, der je nach Zulieferer anders aussieht, etwa „BCM395030“, „VCU039021“, „ECC395 24“ oder eine lange Zeichenkette beim Stabilitätssystem. Die Anforderungen sind dagegen Zahlen. Die Prüfung hat deshalb pro Gerät ein Muster, das festlegt, welcher Teil des Textes Produktcode und welcher Teil der eigentliche Stand ist. Beim BCM sind es die letzten Ziffern, bei ESP und iBooster drei Ziffern nach dem Buchstaben V, und so weiter.",
         "Die Muster wurden aus echten Berichten von Fahrzeugen auf 2.1, 2.2 und Marlin abgeleitet, und alle bisher gesehenen Werte werden korrekt gelesen. Taucht ein Text auf, den das Muster nicht erkennt, erhält das Gerät den Status „Version nicht erkannt“, und das gilt als nicht bestanden. Das ist eine bewusste Entscheidung: Die Prüfung darf niemals „bereit“ sagen aufgrund von etwas, das sie nicht versteht. Ist das Feld im Bericht leer, erhält das Gerät einen eigenen Status, der genau das sagt, damit Sie sehen, dass das Problem im Bericht liegt und nicht im Fahrzeug."
       ]
     },
     {
       "title": "Die Anforderungen und das Urteil",
       "paragraphs": [
-        "Die Anforderungen sind nach Software-Release geordnet: 2.0, 2.1 und 2.2. Für jedes der sieben Steuergeräte, die für Marlin zählen – Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Klimasteuerung (ECC), Batteriemanagement (BMS), vordere und hintere Motorsteuerung (MCU) und Fahrzeugsteuerung (VCU) – gibt die Tabelle die Mindeststufe an, die ein Gerät haben muss, um zu einem Release zu gehören. Die Ergebnisseite zeigt diese Tabelle mit einer Spalte pro Release und einem Haken oder Kreuz pro Gerät.",
-        "Die Prüfung ermittelt zuerst, wie weit das Fahrzeug gekommen ist. Ein Release ist „vollständig“, wenn alle sieben Geräte auf seiner Stufe oder höher liegen. Sie prüft auch, ob ein Gerät bereits eine Stufe trägt, die nur ein höheres Release installiert; wo zwei Releases dasselbe Minimum für ein Gerät teilen (die Klimasteuerung ist z. B. auf 2.1 und 2.2 gleichermaßen 24), gilt dieses Gerät nie als Beleg für das höhere Release.",
+        "Die Anforderungen sind nach Software-Release geordnet: 2.0, 2.1 und 2.2. Für jedes der acht Steuergeräte, die für Marlin zählen – Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Bremskraftverstärker (iBooster, IBS), Klimasteuerung (ECC), Batteriemanagement (BMS), vordere und hintere Motorsteuerung (MCU) und Fahrzeugsteuerung (VCU) – gibt die Tabelle die Mindeststufe an, die ein Gerät haben muss, um zu einem Release zu gehören. ESP und iBooster gehören zusammen und müssen auf derselben Softwaregeneration sein, deshalb werden beide geprüft. Die Ergebnisseite zeigt diese Tabelle mit einer Spalte pro Release und einem Haken oder Kreuz pro Gerät.",
+        "Die Prüfung ermittelt zuerst, wie weit das Fahrzeug gekommen ist. Ein Release ist „vollständig“, wenn alle acht Geräte auf seiner Stufe oder höher liegen. Sie prüft auch, ob ein Gerät bereits eine Stufe trägt, die nur ein höheres Release installiert; wo zwei Releases dasselbe Minimum für ein Gerät teilen (die Klimasteuerung ist z. B. auf 2.1 und 2.2 gleichermaßen 24), gilt dieses Gerät nie als Beleg für das höhere Release.",
         "Daraus ergibt sich eines von fünf Ergebnissen. „2.2 vollständig aktualisiert“: alle Geräte auf 2.2-Stufe, Marlin-bereit. „2.1 vollständig aktualisiert“: alle Geräte auf 2.1 und keines auf 2.2 – Marlin ist möglich, aber die Geräte, die das 2.2-Update anhebt, blieben zurück, daher wird 2.2 zuerst empfohlen. „2.2-Zebra“: alles mindestens 2.1, manche Geräte schon auf 2.2, andere nicht – ein begonnenes, aber unvollständiges 2.2; erst abschließen, dann Marlin. „2.1-Zebra“: mindestens ein Gerät unter 2.1 – nicht Marlin-bereit; diese Geräte auf 2.1 heben, dann 2.2, dann Marlin. Und „bereits auf Marlin“ für Fahrzeuge, deren Fahrzeugsteuerung die Marlin-Stufe zeigt. In jedem Fall listet die Seite die Geräte auf, die das Fahrzeug zurückhalten, mit gelesenem Wert und Anforderung."
       ]
     },
@@ -115,7 +115,7 @@
     {
       "title": "Geräte ohne Anforderung",
       "paragraphs": [
-        "Die rund dreißig Geräte, die nicht zu den sieben gehören, werden unter „weitere Geräte“ mit ihren Werten angezeigt, beeinflussen das Urteil aber nicht. Dazu gehören die Radarsensoren, die Frontkamera und das Fahrerassistenz-Steuergerät, die keine Voraussetzung für Marlin sind und die wir auf älteren Ständen bei Fahrzeugen gesehen haben, bei denen Marlin und die Fahrerassistenz einwandfrei funktionieren. Rechtsgelenkte Fahrzeuge haben bei einigen Geräten eigene Softwarelinien, aber keine davon gehört zu den sieben, daher werden sie gleich behandelt."
+        "Die rund dreißig Geräte, die nicht zu den acht gehören, werden unter „weitere Geräte“ mit ihren Werten angezeigt, beeinflussen das Urteil aber nicht. Dazu gehören die Radarsensoren, die Frontkamera und das Fahrerassistenz-Steuergerät, die keine Voraussetzung für Marlin sind und die wir auf älteren Ständen bei Fahrzeugen gesehen haben, bei denen Marlin und die Fahrerassistenz einwandfrei funktionieren. Rechtsgelenkte Fahrzeuge haben bei einigen Geräten eigene Softwarelinien, aber keine davon gehört zu den sieben, daher werden sie gleich behandelt."
       ]
     },
     {

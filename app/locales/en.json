@@ -1,5 +1,5 @@
 {
-  "site_title": "Marlin Readiness Check",
+  "site_title": "Ocean Software Check",
   "tagline": "Fisker Owners Association – check whether your Ocean is ready for the Marlin update",
   "nav_home": "Check my car",
   "nav_stats": "Statistics",
@@ -81,15 +81,15 @@
     {
       "title": "From text to numbers",
       "paragraphs": [
-        "Supplier SW Version is a text that looks different from supplier to supplier, for example “BCM395030”, “VCU039021”, “ECC395 24” or a long string for the stability system. The requirements, however, are numbers. The check therefore has a pattern per unit that says which part of the text is the product code and which part is the actual level. For BCM the level is the last digits, for ESP it is three digits after the letter V, and so on.",
+        "Supplier SW Version is a text that looks different from supplier to supplier, for example “BCM395030”, “VCU039021”, “ECC395 24” or a long string for the stability system. The requirements, however, are numbers. The check therefore has a pattern per unit that says which part of the text is the product code and which part is the actual level. For BCM the level is the last digits, for ESP and iBooster it is three digits after the letter V, and so on.",
         "The patterns were built from real reports from cars on 2.1, 2.2 and Marlin, and every value we have seen is interpreted correctly. If a text turns up that the pattern does not recognise, the unit gets the status “version not recognised”, which counts as not approved. That is a deliberate choice: the check must never say “ready” on the basis of something it does not understand. If the field is empty in the report, the unit gets its own status saying exactly that, so you can see the problem is in the report, not in the car."
       ]
     },
     {
       "title": "The requirements and the verdict",
       "paragraphs": [
-        "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the seven units that matter for Marlin, body control (BCM), stability system (ESP), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release. The result page shows this table with one column per release and a tick or cross per unit.",
-        "The check first works out how far the car has come. A release is “complete” when all seven units are at its level or higher. It also looks at whether any unit already carries a level that only a higher release installs; where two releases share the same minimum for a unit (climate control is 24 on both 2.1 and 2.2, for instance) that unit is never taken as proof of the higher release.",
+        "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the eight units that matter for Marlin, body control (BCM), stability system (ESP), brake booster (iBooster, IBS), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release. ESP and iBooster belong together and must be on the same software generation, which is why both are checked. The result page shows this table with one column per release and a tick or cross per unit.",
+        "The check first works out how far the car has come. A release is “complete” when all eight units are at its level or higher. It also looks at whether any unit already carries a level that only a higher release installs; where two releases share the same minimum for a unit (climate control is 24 on both 2.1 and 2.2, for instance) that unit is never taken as proof of the higher release.",
         "From that, the car gets one of five results. “2.2 fully updated”: every unit at the 2.2 level, Marlin ready. “2.1 fully updated”: every unit at 2.1 and none at 2.2 – Marlin is possible, but the units the 2.2 update lifts would stay behind, so 2.2 first is recommended. “2.2 zebra”: everything at least 2.1, some units already at 2.2 and others not – a started but incomplete 2.2; finish it, then Marlin. “2.1 zebra”: at least one unit below 2.1 – not Marlin ready; lift those units to 2.1, then 2.2, then Marlin. And “already on Marlin” for cars whose vehicle controller shows the Marlin level. In every case the page lists the units that are holding the car back, with the number read and the number required."
       ]
     },
@@ -115,7 +115,7 @@
     {
       "title": "Units without requirements",
       "paragraphs": [
-        "The roughly thirty units that are not among the seven are shown under “other units” with their values, but do not affect the verdict. That includes the radars, the front camera and the driver-assistance unit, which are not a prerequisite for Marlin and which we have seen at older levels on cars where Marlin and driver assistance work fine. Right-hand-drive cars have their own software lines on some units, but none of them are among the seven, so they are treated the same."
+        "The roughly thirty units that are not among the eight are shown under “other units” with their values, but do not affect the verdict. That includes the radars, the front camera and the driver-assistance unit, which are not a prerequisite for Marlin and which we have seen at older levels on cars where Marlin and driver assistance work fine. Right-hand-drive cars have their own software lines on some units, but none of them are among the seven, so they are treated the same."
       ]
     },
     {
