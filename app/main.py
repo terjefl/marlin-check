@@ -1,4 +1,4 @@
-"""Marlin Readiness Check — web portal for the Fisker Owners Association."""
+"""Ocean Software Check: web portal for the Fisker Owners Association."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ TEXT_TOP_PROFILE = "2.2"
 # pdfplumber's internal exception text) is only logged.
 _USER_VISIBLE_PARSE_DETAILS = {"too_many_pages"}
 
-app = FastAPI(title="Marlin Readiness Check", docs_url=None, redoc_url=None)
+app = FastAPI(title="Ocean Software Check", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
