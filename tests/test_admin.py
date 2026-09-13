@@ -484,7 +484,7 @@ def test_vehicle_page_history_and_deletion(client):
 
     page = c.get("/admin/fleet/VCF1ZBE20PG099905")
     assert page.status_code == 200
-    assert page.text.count("2026-09-13") == 2  # two uploads listed
+    assert page.text.count('<td class="mono">2026-09-13</td>') == 2  # two uploads listed (requirements version cell)
     assert "2.2 zebra" in page.text and "Clean 2.1" in page.text
     assert "BCM395042" in page.text  # newest upload shown by default
     assert "FM298033S001K" in page.text  # the software version field, not only Supplier SW
