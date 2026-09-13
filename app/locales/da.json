@@ -5,7 +5,7 @@
   "nav_stats": "Statistik",
   "nav_privacy": "Privatliv",
   "lang_label": "Sprog",
-  "intro_heading": "Fisker Ocean: fuldstændighedstjek af softwareversioner – er bilen klar til Marlin-opdateringen?",
+  "intro_heading": "Fisker Ocean: Nødvendigt tjek af softwareversioner for klarmelding til Marlin-opdatering",
   "intro_text": "Denne analyse tjekker, om din bil er fuldstændigt opdateret til 2.1 og 2.2 (inklusive 2.2.2 + 2.2.3 = fuld 2.2), og om bilen er klar til Marlin-softwareopdateringen.",
   "upload_label": "OLP Software Version Report – UPLOAD",
   "upload_button": "Analysér rapport",
