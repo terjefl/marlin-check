@@ -510,6 +510,26 @@ def test_vehicle_page_history_and_deletion(client):
     assert c.post("/admin/fleet/VCF1ZBE20PG099905/delete", data={}).status_code == 403
 
 
+def test_updated_vehicles_page_and_csv(client):
+    """Admins see which vehicles moved between their first and latest upload,
+    with the lifted modules, and can export the list."""
+    c, _ = client
+    _upload_car(c, "olp_report_21_full.txt", "07")
+    _upload_car(c, "olp_report_22_full.txt", "07")
+    _upload_car(c, "olp_report_21_full.txt", "08")
+    _login(c, "terje", "hemmelig123")
+
+    page = c.get("/admin/fleet/progress").text
+    assert "VCF1ZBE20PG099907" in page and "VCF1ZBE20PG099908" not in page
+    assert "▲ up" in page and "ESP 402→501" in page and "IBS 400→401" in page
+
+    csv_text = c.get("/admin/fleet/progress.csv").text.lstrip("\ufeff")
+    rows = csv_text.splitlines()
+    assert rows[0].startswith("vin;uploads;first_upload_utc;first_outcome;last_upload_utc;last_outcome;direction")
+    assert len(rows) == 2 and ";2;" in rows[1] and ";full_21;" in rows[1] and ";full_22;up;" in rows[1]
+    assert "VCU 21>23" in rows[1]
+
+
 def test_reevaluate_button_applies_the_current_requirements(client):
     c, main = client
     _upload_car(c, "olp_report_22_full.txt", "06")

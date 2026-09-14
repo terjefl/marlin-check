@@ -14,7 +14,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from .parser import ModuleReading, ParsedReport
@@ -127,6 +127,11 @@ _MIGRATIONS = {
         ("bootloader", "TEXT NOT NULL DEFAULT ''"),
     ],
 }
+
+
+# The update ladder: where a car sits on the road to Marlin. Used to say
+# whether a vehicle moved up between its first and latest upload.
+OUTCOME_RANK = {"zebra_21": 0, "full_21": 1, "zebra_22": 2, "full_22": 3, "marlin": 4}
 
 
 def _token_hash(token: str) -> str:
@@ -245,6 +250,144 @@ class Database:
             )
             conn.executemany(_INSERT_READING, _reading_rows(submission_id, evaluation))
         return submission_id
+
+    # --- time series and fleet movement ---------------------------------------
+
+    def uploads_over_time(self) -> dict[str, list[dict]]:
+        """Uploads and unique vehicles per day (last 60 days), per week (last
+        26 weeks, Monday-based like SQLite's %W) and per month (since the first
+        upload), oldest first and zero-filled so the axis is continuous."""
+        today = datetime.now(UTC).date()
+
+        def series(fmt: str, periods: list[str]) -> list[dict]:
+            with self._connect() as conn:
+                counted = {
+                    row["period"]: (row["uploads"], row["vehicles"])
+                    for row in conn.execute(
+                        f"SELECT strftime('{fmt}', uploaded_at) AS period, COUNT(*) AS uploads,"
+                        " COUNT(DISTINCT vin_hash) AS vehicles FROM submissions GROUP BY period"
+                    )
+                }
+            return [
+                {"period": key, "uploads": counted.get(key, (0, 0))[0], "vehicles": counted.get(key, (0, 0))[1]}
+                for key in periods
+            ]
+
+        days = [(today - timedelta(days=i)).isoformat() for i in range(59, -1, -1)]
+        weeks = []
+        for i in range(25, -1, -1):
+            key = (today - timedelta(days=7 * i)).strftime("%Y-W%W")
+            if key not in weeks:
+                weeks.append(key)
+        with self._connect() as conn:
+            first = conn.execute("SELECT MIN(uploaded_at) AS f FROM submissions").fetchone()["f"]
+        months: list[str] = []
+        if first:
+            y, m = int(first[:4]), int(first[5:7])
+            while (y, m) <= (today.year, today.month):
+                months.append(f"{y:04d}-{m:02d}")
+                y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+        return {
+            "day": series("%Y-%m-%d", days),
+            "week": series("%Y-W%W", weeks),
+            "month": series("%Y-%m", months),
+        }
+
+    def fleet_progress(self) -> dict:
+        """How vehicles with more than one upload have moved: first vs latest
+        outcome on the update ladder, and which required modules were lifted
+        (extracted number higher in the latest than in the first report).
+        `vehicles` carries VINs and is for the admin register only; the other
+        keys are aggregates safe for the public dashboard."""
+        with self._connect() as conn:
+            subs = conn.execute(
+                "SELECT id, vin, vin_hash, uploaded_at, outcome FROM submissions"
+                " ORDER BY vin_hash, uploaded_at"
+            ).fetchall()
+            by_vin: dict[str, list] = {}
+            for row in subs:
+                by_vin.setdefault(row["vin_hash"], []).append(row)
+
+            def readings(submission_id: str) -> dict[str, int]:
+                return {
+                    row["module_id"]: row["extracted"]
+                    for row in conn.execute(
+                        "SELECT module_id, extracted FROM module_readings"
+                        " WHERE submission_id = ? AND module_id IS NOT NULL",
+                        (submission_id,),
+                    )
+                    if row["extracted"] is not None
+                }
+
+            vehicles = []
+            for rows in by_vin.values():
+                if len(rows) < 2:
+                    continue
+                first, last = rows[0], rows[-1]
+                before, after = readings(first["id"]), readings(last["id"])
+                lifts = [
+                    {"module_id": m, "from": before[m], "to": after[m]}
+                    for m in sorted(after)
+                    if m in before and after[m] > before[m]
+                ]
+                rank_first = OUTCOME_RANK.get(first["outcome"], -1)
+                rank_last = OUTCOME_RANK.get(last["outcome"], -1)
+                vehicles.append({
+                    "vin": last["vin"],
+                    "uploads": len(rows),
+                    "first_at": first["uploaded_at"], "first_outcome": first["outcome"],
+                    "last_at": last["uploaded_at"], "last_outcome": last["outcome"],
+                    "lifts": lifts,
+                    "direction": "up" if rank_last > rank_first else ("down" if rank_last < rank_first else "same"),
+                })
+        vehicles.sort(key=lambda v: v["last_at"], reverse=True)
+        transitions: dict[tuple[str, str], int] = {}
+        for v in vehicles:
+            key = (v["first_outcome"], v["last_outcome"])
+            transitions[key] = transitions.get(key, 0) + 1
+        return {
+            "multi": len(vehicles),
+            "improved": sum(1 for v in vehicles if v["direction"] == "up"),
+            "reached_marlin": sum(
+                1 for v in vehicles if v["last_outcome"] == "marlin" and v["first_outcome"] != "marlin"
+            ),
+            "module_lifts": sum(len(v["lifts"]) for v in vehicles),
+            "transitions": [
+                {"from": a, "to": b, "n": n}
+                for (a, b), n in sorted(transitions.items(), key=lambda kv: (-kv[1], kv[0]))
+            ],
+            "vehicles": vehicles,
+        }
+
+    def fleet_status_by_month(self) -> list[dict]:
+        """For every month since the first upload: each vehicle's latest known
+        outcome at the end of that month, counted per outcome. Outcomes are the
+        current requirements' view of each stored report (re-evaluation
+        rewrites them), so the series shows real software status over time."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT vin_hash, uploaded_at, outcome FROM submissions ORDER BY uploaded_at"
+            ).fetchall()
+        if not rows:
+            return []
+        today = datetime.now(UTC).date()
+        y, m = int(rows[0]["uploaded_at"][:4]), int(rows[0]["uploaded_at"][5:7])
+        months = []
+        while (y, m) <= (today.year, today.month):
+            months.append(f"{y:04d}-{m:02d}")
+            y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+        state: dict[str, str] = {}
+        i = 0
+        out = []
+        for month in months:
+            while i < len(rows) and rows[i]["uploaded_at"][:7] <= month:
+                state[rows[i]["vin_hash"]] = rows[i]["outcome"]
+                i += 1
+            counts: dict[str, int] = {}
+            for outcome in state.values():
+                counts[outcome] = counts.get(outcome, 0) + 1
+            out.append({"month": month, "counts": counts, "total": len(state)})
+        return out
 
     # --- permanent per-vehicle links -----------------------------------------
 

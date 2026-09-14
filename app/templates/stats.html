@@ -108,12 +108,92 @@
       {% for row in stats.countries %}<tr><td>{{ row.country or t('stats_unknown') }}</td><td class="num">{{ row.n }}</td></tr>{% endfor %}
     </tbody></table>
   </section>
-  <section class="card">
-    <h2>{{ t('stats_weeks_heading') }}</h2>
+</div>
+
+<section class="card">
+  <h2>{{ t('stats_time_heading') }}</h2>
+  <p class="meta">{{ t('stats_time_intro') }}</p>
+  <div class="tabs">
+    {% for key in ['day', 'week', 'month'] %}
+    <input type="radio" name="ts" id="ts-{{ key }}" {% if key == 'week' %}checked{% endif %}>
+    <label for="ts-{{ key }}">{{ t('stats_tab_' + key) }}</label>
+    {% endfor %}
+    {% for key in ['day', 'week', 'month'] %}
+    {% set rows = timeseries[key] %}
+    {% set peak = (rows | map(attribute='uploads') | max) if rows else 0 %}
+    {% set step = ((rows | length) / 12) | round(0, 'ceil') | int %}
+    <div class="tabpanel" id="panel-{{ key }}">
+      {% if not rows or peak == 0 %}
+      <p class="meta">{{ t('stats_split_none') }}</p>
+      {% else %}
+      <div class="timeseries" role="img" aria-label="{{ t('stats_tab_' + key) }}">
+        {% for r in rows %}
+        <div class="col" title="{{ r.period }}: {{ r.uploads }} / {{ r.vehicles }}">
+          <div class="col-bars">
+            <div class="col-bar uploads" style="height: {{ (100 * r.uploads / peak) | round(1) }}%"></div>
+            <div class="col-bar vehicles" style="height: {{ (100 * r.vehicles / peak) | round(1) }}%"></div>
+          </div>
+          <span class="col-label">{% if loop.index0 % step == 0 %}{{ r.period[5:] if key != 'month' else r.period }}{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <ul class="legend">
+        <li><i class="swatch ts-uploads"></i>{{ t('stats_series_uploads') }}</li>
+        <li><i class="swatch ts-vehicles"></i>{{ t('stats_series_vehicles') }}</li>
+      </ul>
+      <table class="visually-hidden"><thead><tr><th>{{ t('stats_tab_' + key) }}</th><th>{{ t('stats_col_uploads') }}</th><th>{{ t('stats_col_vehicles') }}</th></tr></thead><tbody>
+        {% for r in rows %}<tr><td>{{ r.period }}</td><td>{{ r.uploads }}</td><td>{{ r.vehicles }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <details class="extra">
+    <summary>{{ t('stats_weeks_heading') }}</summary>
     <table class="modules"><thead><tr><th>{{ t('stats_col_week') }}</th><th class="num">{{ t('stats_col_uploads') }}</th><th class="num">{{ t('stats_col_vehicles') }}</th></tr></thead><tbody>
       {% for row in stats.per_week %}<tr><td>{{ row.week }}</td><td class="num">{{ row.uploads }}</td><td class="num">{{ row.vehicles }}</td></tr>{% endfor %}
     </tbody></table>
-  </section>
-</div>
+  </details>
+</section>
+
+<section class="card">
+  <h2>{{ t('stats_progress_heading') }}</h2>
+  <p class="meta">{{ t('stats_progress_intro') }}</p>
+  <div class="statgrid">
+    <div class="stat"><span class="num">{{ progress.multi }}</span><span class="label">{{ t('stats_progress_multi') }}</span></div>
+    <div class="stat"><span class="num">{{ progress.improved }}</span><span class="label">{{ t('stats_progress_improved') }}</span></div>
+    <div class="stat oc-marlin"><span class="num">{{ progress.reached_marlin }}</span><span class="label">🐟 {{ t('stats_progress_marlin') }}</span></div>
+    <div class="stat"><span class="num">{{ progress.module_lifts }}</span><span class="label">{{ t('stats_progress_lifts') }}</span></div>
+  </div>
+  <h3>{{ t('stats_transitions_heading') }}</h3>
+  {% if not progress.transitions %}
+  <p class="meta">{{ t('stats_transitions_none') }}</p>
+  {% else %}
+  <table class="modules"><thead><tr><th>{{ t('stats_col_from') }}</th><th>{{ t('stats_col_to') }}</th><th class="num">{{ t('stats_col_vehicles') }}</th></tr></thead><tbody>
+    {% for x in progress.transitions %}
+    <tr>
+      <td><span class="pill oc-{{ x.from }}">{{ icons.get(x.from, '') }} {{ t('outcome_' + x.from + '_short') if x.from else '?' }}</span></td>
+      <td><span class="pill oc-{{ x.to }}">{{ icons.get(x.to, '') }} {{ t('outcome_' + x.to + '_short') if x.to else '?' }}</span></td>
+      <td class="num">{{ x.n }}</td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+  {% endif %}
+  <h3>{{ t('stats_history_heading') }}</h3>
+  {% for row in history %}
+  <div class="levelrow">
+    <span class="bar-label">{{ row.month }}</span>
+    <div class="stack small">
+      {% for o in order %}{% set n = row.counts.get(o, 0) %}{% if n %}
+      <div class="seg oc-{{ o }}" style="flex-grow: {{ n }}" title="{{ t('outcome_' + o + '_short') }}: {{ n }}"><span>{{ n }}</span></div>
+      {% endif %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <ul class="legend">
+    {% for o in order %}<li><i class="swatch oc-{{ o }}"></i>{{ icons[o] }} {{ t('outcome_' + o + '_short') }}</li>{% endfor %}
+  </ul>
+  <p class="hint">{{ t('stats_history_note') }}</p>
+</section>
 {% endif %}
 {% endblock %}

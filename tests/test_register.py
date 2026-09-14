@@ -144,3 +144,70 @@ def test_fleet_statistics_count_outcomes_levels_and_split_cars(tmp_path):
     # BCM over the five cars: 21 (below every profile), 30, 42, 42, 42
     assert stats["module_levels"]["BCM"] == {"below": 1, "2.1": 1, "2.2": 3}
     assert stats["profiles"] == ["2.0", "2.1", "2.2"]
+
+
+def test_time_series_and_fleet_movement(tmp_path):
+    """Uploads per day/week/month are zero-filled and consistent, and vehicles
+    with several uploads are classified by how they moved on the update ladder
+    and which modules were lifted between the first and the latest report."""
+    from datetime import UTC, datetime, timedelta
+
+    db = Database(tmp_path / "m.sqlite3")
+    requirements = load_requirements(REQUIREMENTS)
+
+    def _store(name, vin_suffix, days_ago, **overrides):
+        report = parse_report((FIXTURES / name).read_bytes(), name)
+        report.vin = report.vin[:-2] + vin_suffix
+        for m in report.modules:
+            if m.code in overrides:
+                m.supplier_sw = overrides[m.code]
+        sid = db.store_submission(report, evaluate(report, requirements), "en", None)
+        when = (datetime.now(UTC) - timedelta(days=days_ago)).isoformat()
+        with db._connect() as conn:  # backdate: store_submission stamps "now"
+            conn.execute("UPDATE submissions SET uploaded_at = ? WHERE id = ?", (when, sid))
+
+    # Car 01: clean 2.1 (40 days ago) -> full 2.2 (2 days ago): BCM, ESP, IBS, MCUs, VCU lifted
+    _store("olp_report_21_full.txt", "01", 40)
+    _store("olp_report_22_full.txt", "01", 2)
+    # Car 02: full 2.2 (10 days ago) -> Marlin (1 day ago): VCU 23 -> 24
+    _store("olp_report_22_full.txt", "02", 10)
+    _store("olp_report_marlin.txt", "02", 1)
+    # Car 03: two identical uploads, nothing changed
+    _store("olp_report_21_full.txt", "03", 5)
+    _store("olp_report_21_full.txt", "03", 0)
+    # Car 04: one upload only
+    _store("olp_report.txt", "04", 3)
+
+    ts = db.uploads_over_time()
+    assert len(ts["day"]) == 60 and len(ts["week"]) == 26
+    assert sum(p["uploads"] for p in ts["day"]) == 7  # all within 60 days
+    assert sum(p["uploads"] for p in ts["week"]) == 7
+    assert sum(p["uploads"] for p in ts["month"]) == 7
+    assert ts["day"][-1]["uploads"] == 1 and ts["day"][-1]["vehicles"] == 1  # today: car 03
+    assert ts["day"][-3]["uploads"] == 1  # two days ago: car 01
+    assert ts["month"][-1]["period"] == datetime.now(UTC).strftime("%Y-%m")
+    assert all(p["uploads"] >= p["vehicles"] for p in ts["day"] + ts["week"] + ts["month"])
+
+    progress = db.fleet_progress()
+    assert (progress["multi"], progress["improved"], progress["reached_marlin"]) == (3, 2, 1)
+    by_vin = {v["vin"][-2:]: v for v in progress["vehicles"]}
+    assert by_vin["01"]["direction"] == "up" and by_vin["01"]["first_outcome"] == "full_21"
+    assert {(lift["module_id"], lift["from"], lift["to"]) for lift in by_vin["01"]["lifts"]} == {
+        ("BCM", 30, 42), ("ESP", 402, 501), ("IBS", 400, 401), ("ECC", 24, 25),
+        ("MCU_F", 19, 21), ("MCU_R", 19, 21), ("VCU", 21, 23),
+    }
+    assert by_vin["02"]["lifts"] == [{"module_id": "VCU", "from": 23, "to": 24}]
+    assert by_vin["03"]["direction"] == "same" and by_vin["03"]["lifts"] == []
+    assert progress["module_lifts"] == 8
+    assert {(x["from"], x["to"], x["n"]) for x in progress["transitions"]} == {
+        ("full_21", "full_22", 1), ("full_22", "marlin", 1), ("full_21", "full_21", 1),
+    }
+    assert progress["vehicles"][0]["vin"].endswith("03")  # newest last upload first
+
+    history = db.fleet_status_by_month()
+    assert history[-1]["total"] == 4
+    assert history[-1]["counts"] == {"full_22": 1, "marlin": 1, "full_21": 1, "zebra_21": 1}
+    assert history[0]["total"] >= 1  # the month of the oldest upload has at least car 01
+
+    assert Database(tmp_path / "empty.sqlite3").fleet_status_by_month() == []
+    assert Database(tmp_path / "empty.sqlite3").uploads_over_time()["month"] == []

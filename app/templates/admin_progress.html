@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Updated vehicles – {{ t('site_title') }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>Updated vehicles</h1>
+{% include "_admin_nav.html" %}
+{% set icons = {'marlin': '🐟', 'full_22': '✅', 'full_21': '🟣', 'zebra_22': '🦓', 'zebra_21': '⚠️'} %}
+<p class="meta">Vehicles with more than one upload, newest upload first. "Lifted" lists the required modules whose level is higher in the latest report than in the first one.</p>
+<div class="statgrid">
+  <div class="stat"><span class="num">{{ progress.multi }}</span><span class="label">Vehicles with several uploads</span></div>
+  <div class="stat"><span class="num">{{ progress.improved }}</span><span class="label">Moved up the ladder</span></div>
+  <div class="stat"><span class="num">{{ progress.reached_marlin }}</span><span class="label">Reached Marlin</span></div>
+  <div class="stat"><span class="num">{{ progress.module_lifts }}</span><span class="label">Module updates observed</span></div>
+</div>
+<p><a class="button small" href="/admin/fleet/progress.csv">⬇ Updated vehicles CSV</a></p>
+{% if not progress.vehicles %}
+<p class="meta">No vehicle has more than one upload yet.</p>
+{% else %}
+<div class="tablescroll">
+<table class="modules fleet">
+  <thead><tr><th>VIN</th><th class="num">Uploads</th><th>First upload (UTC)</th><th>First outcome</th><th>Latest upload (UTC)</th><th>Latest outcome</th><th>Direction</th><th>Lifted</th></tr></thead>
+  <tbody>
+    {% for v in progress.vehicles %}
+    <tr>
+      <td class="mono"><a href="/admin/fleet/{{ v.vin }}">{{ v.vin }}</a></td>
+      <td class="num">{{ v.uploads }}</td>
+      <td>{{ v.first_at[:16].replace('T', ' ') }}</td>
+      <td><span class="pill oc-{{ v.first_outcome }}">{{ icons.get(v.first_outcome, '') }} {{ t('outcome_' + v.first_outcome + '_short') if v.first_outcome else '?' }}</span></td>
+      <td>{{ v.last_at[:16].replace('T', ' ') }}</td>
+      <td><span class="pill oc-{{ v.last_outcome }}">{{ icons.get(v.last_outcome, '') }} {{ t('outcome_' + v.last_outcome + '_short') if v.last_outcome else '?' }}</span></td>
+      <td>{% if v.direction == 'up' %}▲ up{% elif v.direction == 'down' %}▼ down{% else %}= same{% endif %}</td>
+      <td class="mono">{% for x in v.lifts %}{{ x.module_id }} {{ x.from }}→{{ x.to }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

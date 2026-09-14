@@ -196,3 +196,18 @@ table.fleet td.lvl.mid { color: #b07d00; }
 .stat a { text-decoration: none; color: inherit; }
 tr.selectedrow td { background: #e8f0fe; }
 .danger-zone { border: 1px solid var(--warn); border-radius: 8px; padding: 0.6rem 1rem; }
+
+/* Time series (uploads per day/week/month): pure CSS columns, tabs via radio buttons */
+.tabs > input { display: none; }
+.tabs > label { display: inline-block; padding: 0.3rem 0.9rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.88rem; cursor: pointer; margin: 0 0.3rem 0.8rem 0; color: var(--muted); }
+.tabs > input:checked + label { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs > .tabpanel { display: none; }
+#ts-day:checked ~ #panel-day, #ts-week:checked ~ #panel-week, #ts-month:checked ~ #panel-month { display: block; }
+.timeseries { display: flex; align-items: flex-end; gap: 2px; height: 160px; padding-top: 0.4rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.timeseries .col { flex: 1 1 0; min-width: 6px; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.timeseries .col-bars { position: relative; flex: 1; }
+.timeseries .col-bar { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 2px 2px 0 0; }
+.timeseries .col-bar.uploads { background: #9bbfe6; }
+.timeseries .col-bar.vehicles { background: #1a73e8; left: 15%; right: 15%; }
+.timeseries .col-label { font-size: 0.65rem; color: var(--muted); text-align: center; height: 1rem; overflow: visible; white-space: nowrap; }
+.swatch.ts-uploads { background: #9bbfe6; } .swatch.ts-vehicles { background: #1a73e8; }

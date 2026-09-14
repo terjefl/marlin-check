@@ -483,7 +483,17 @@ def _fleet_stats() -> dict:
 
 @app.get("/stats", response_class=HTMLResponse)
 def stats(request: Request):
-    return _render(request, "stats.html", {"stats": _fleet_stats(), "trim_names": TRIM_NAMES})
+    progress = database.fleet_progress()
+    progress.pop("vehicles")  # VINs stay in the admin register
+    return _render(
+        request, "stats.html",
+        {
+            "stats": _fleet_stats(), "trim_names": TRIM_NAMES,
+            "timeseries": database.uploads_over_time(),
+            "progress": progress,
+            "history": database.fleet_status_by_month(),
+        },
+    )
 
 
 @app.get("/privacy", response_class=HTMLResponse)
@@ -866,6 +876,34 @@ def admin_fleet_vehicles_csv(request: Request, username: str = Depends(require_a
     stamp = datetime.now(UTC).strftime("%Y%m%d")
     database.add_audit(username, client_ip(request), "export", "vehicles.csv")
     return _csv_response(f"marlin-vehicles_{stamp}.csv", header, rows())
+
+
+@app.get("/admin/fleet/progress", response_class=HTMLResponse)
+def admin_fleet_progress(request: Request, username: str = Depends(require_admin)):
+    """Vehicles with more than one upload: how they moved and which modules
+    were lifted between the first and the latest report."""
+    return _render(
+        request, "admin_progress.html",
+        {
+            "username": username, "csrf": request.state.csrf,
+            "progress": database.fleet_progress(), "trim_names": TRIM_NAMES,
+        },
+    )
+
+
+@app.get("/admin/fleet/progress.csv")
+def admin_fleet_progress_csv(request: Request, username: str = Depends(require_admin)):
+    header = ["vin", "uploads", "first_upload_utc", "first_outcome", "last_upload_utc", "last_outcome",
+              "direction", "modules_lifted", "lifts"]
+    rows = (
+        [v["vin"], v["uploads"], v["first_at"], v["first_outcome"], v["last_at"], v["last_outcome"],
+         v["direction"], len(v["lifts"]),
+         " ".join(f"{x['module_id']} {x['from']}>{x['to']}" for x in v["lifts"])]
+        for v in database.fleet_progress()["vehicles"]
+    )
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    database.add_audit(username, client_ip(request), "export", "progress.csv")
+    return _csv_response(f"marlin-progress_{stamp}.csv", header, rows)
 
 
 @app.get("/admin/fleet/readings.csv")

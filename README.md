@@ -29,6 +29,13 @@ car's control modules meet the minimum software levels required for the
   fields, outcome. Public dashboard (`/stats`, aggregated, no VINs) and an
   admin register with per-VIN history, filters, CSV exports, re-evaluation
   against changed requirements and deletion per VIN.
+- Time series and fleet movement on `/stats`: uploads and distinct vehicles per
+  day/week/month (pure-CSS charts, tabs without JavaScript), and for vehicles
+  with more than one upload how they moved on the update ladder (2.1 zebra,
+  clean 2.1, 2.2 zebra, full 2.2, on Marlin), which transitions occurred, how
+  many modules were lifted, and the fleet's status month by month. The admin
+  page `/admin/fleet/progress` lists the same per VIN with the lifted modules
+  and a CSV export.
 - 7 languages (en, nb, sv, da, de, fr, es) with browser auto-detection.
 - Deterministic parsing and comparison – no LLMs involved.
 
