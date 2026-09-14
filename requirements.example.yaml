@@ -44,57 +44,23 @@
 version: "2026-09-14"
 
 notes: |
-  STILL DRAFT ("V2 WIP ECU COMPARISON FOR MARLIN" workbook, received 2026-08-30).
-  To be confirmed by the association.
-
-  Resolved 2026-09-14 (workbook re-read + 36 cars in the uploads folder):
-  - ECC at 2.2 is 25, not 24: the workbook's own 2.2 report (MAIN, column
-    "2.2 or 2.2.3") and Edward's "expected in 2.2" list both say ECC39525, and
-    all 8 fully updated 2.2 cars in our uploads show 25 while every car with
-    old ESP shows 24. The hand-written minimum table (Addl Source 1) had 24.
-    Terje set 25 in production via /admin on 2026-09-14. Consequence: ECC 25
-    is now evidence of 2.2, so a car with ECC 25 and the rest on 2.1 is a 2.2
-    zebra (none seen so far: ECC 25 and ESP 501 always go together).
-  - iBooster 401 is confirmed by the workbook (MAIN shows 88211V0400... on
-    2.0/2.1 and 88211V0401... on 2.2 and Marlin; Edward's list agrees).
-  - The "2.0 column shows 2.1 values" worry: MAIN's 2.0 reference car really
-    has BCM 30, ECC 19, MCU 17, VCU 20, so the table is right; BCM is 30 on
-    both 2.0 and 2.1.
-  - The 2.1 profile as the direct-Marlin requirement (B-vs-C): Addl Source 1
-    now says it in words (a 100% 2.1 car can go directly, a 2.1 zebra must go
-    via 2.2 first, jumping from 2.1 gives a "Marlin zebra").
+  Source: the association's "V2 WIP ECU COMPARISON FOR MARLIN" workbook (MAIN
+  sheet with OLP reference reports per OS version; "Addl Source 1" minimum
+  table by Jens; "Addl Source 2" expected-in-2.2 list by Edward), still marked
+  draft by the association. Verified against real uploads on 2.1, 2.2 and
+  Marlin (Sep 2026). ECC at 2.2 is 25 (the 2.2 reports and every full-2.2 car;
+  Jens's table says 24). iBooster (IBS) is the eighth critical module since
+  2026-09-13: ESP and iBooster must be on the same generation (400 on 2.1, 401
+  on 2.2). The version field is the date of the last change.
 
   Open points:
   - One Marlin car has BCM 41 where the table says 42 for 2.2.
-  - The Sport/LFP BMS level (15) is read from a Sport reference report
-    ("Z/E/U: BMSN39021 | S: BMSL39015" in the MAIN sheet), not from a minimum
-    table, so it may not be the true 2.1 minimum for the LFP line.
-  - The trim letter (5th VIN character) is verified for One (Z), Extreme (E,
-    2026-09-12) and Ultra (U, 2026-09-13) by real uploads, all on the BMSN
-    line. Sport (S) is unverified, and it is the letter that matters: it
-    exempts MCU_R.
+  - The Sport/LFP BMS level (15) is read from one Sport reference report, not
+    from a minimum table. The trim letter S (Sport, exempts MCU_R) has not been
+    seen in a real upload; Z, E and U are verified.
 
-  Verified against uploads (Sep 2026): a 100% 2.1 car (BCM 30, ECC 24, MCU 19,
-  VCU 21, BMS 21, ESP 402), a full 2.2 car (VCU 23, MCU 21, BCM 42, ESP 501,
-  ECC 25), and two Marlin cars (VCU 24; one as 2.2, one with BCM 41, see above).
-
-  iBooster (IBS) added 2026-09-13 at the association's request (Jens): ESP and
-  iBooster are Bosch units that must be flashed to the same generation, so a car
-  with ESP at the 2.2 level but iBooster still on the 2.1 line counts as a 2.2
-  zebra. Level 401 is read from two 2.2 cars in the register (88211V0401...),
-  2.1 cars show 88211V0400... (400). Confirmed by the workbook 2026-09-14.
-  The Marlin requirement (2.1 profile) is 400, which every car has, so no car
-  loses "Marlin ready" because of this module.
-
-    Register after re-evaluation 2026-09-13 (20 cars): 8 cars have iBooster 401
-  but only 6 have ESP 501 (the 4 Marlin and 2 full-2.2 cars, all with iBooster
-  401). So no car has new ESP with old iBooster; two cars have the opposite,
-  iBooster flashed without ESP. The version field is the date of the change.
-
-  Right-hand drive: the workbook shows RHD-specific software lines only on
-  EPS (EPS3950R01 vs EPS395001), AMP (C63A63M39 vs C62A63M39) and HYDRA/ADAS
-  (ADAS039021 vs ADAS039020). None of these is a required module, and ESP has
-  no RHD variant, so RHD cars need no special handling.
+  Right-hand drive: RHD-specific software lines exist only on EPS, AMP and
+  HYDRA/ADAS, none of them required, so RHD cars need no special handling.
 # Profiles in ascending order, and the profile required for direct Marlin.
 # NOTE: the result-page texts in the portal (7 languages) are written for
 # target "2.1" and highest profile "2.2". The rule engine is generic, but if
