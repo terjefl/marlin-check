@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS module_readings (
 CREATE INDEX IF NOT EXISTS idx_readings_module ON module_readings(module_id);
 CREATE INDEX IF NOT EXISTS idx_readings_submission ON module_readings(submission_id);
 
+-- Permanent per-vehicle link: an unguessable key that always shows the
+-- vehicle's latest report. Created on the first upload of a VIN, reused
+-- afterwards, removed with the vehicle.
+CREATE TABLE IF NOT EXISTS vehicle_links (
+    vin_hash TEXT PRIMARY KEY,
+    vin TEXT NOT NULL,
+    link_key TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+);
+
 -- Anonymous usage statistics: never VIN, report content, or raw IP.
 -- ip_hash is a daily-rotating hash, only used to count unique users per day.
 CREATE TABLE IF NOT EXISTS usage_events (
@@ -155,7 +165,7 @@ def _reading_rows(submission_id: str, evaluation: Evaluation) -> list[tuple]:
     return rows
 
 
-def _report_from_rows(vin: str, rows) -> ParsedReport:
+def _report_from_rows(vin: str, rows, report_date: str = "") -> ParsedReport:
     """Rebuilds a ParsedReport from stored readings. Rows from before v2 have
     no `code`; it is recovered from raw_name ("CODE - Name")."""
     modules = []
@@ -167,7 +177,8 @@ def _report_from_rows(vin: str, rows) -> ParsedReport:
             software=row["software"] or "", hardware=row["hardware"] or "",
             bootloader=row["bootloader"] or "",
         ))
-    return ParsedReport(vin=vin, modules=modules)
+    meta = {"report_date": report_date} if report_date else {}
+    return ParsedReport(vin=vin, modules=modules, meta=meta)
 
 
 class Database:
@@ -234,6 +245,46 @@ class Database:
             )
             conn.executemany(_INSERT_READING, _reading_rows(submission_id, evaluation))
         return submission_id
+
+    # --- permanent per-vehicle links -----------------------------------------
+
+    def link_key_for(self, vin: str) -> str:
+        """The vehicle's permanent link key, created on first use."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT link_key FROM vehicle_links WHERE vin_hash = ?", (vin_hash(vin),)
+            ).fetchone()
+            if row:
+                return row["link_key"]
+            key = secrets.token_urlsafe(16)
+            conn.execute(
+                "INSERT INTO vehicle_links (vin_hash, vin, link_key, created_at) VALUES (?, ?, ?, ?)",
+                (vin_hash(vin), vin.upper(), key, datetime.now(UTC).isoformat()),
+            )
+            return key
+
+    def latest_report_by_key(self, key: str) -> tuple[ParsedReport, dict] | None:
+        """The latest stored report for the vehicle behind a link key, rebuilt
+        from its readings, plus the submission row. None for unknown keys or a
+        vehicle whose submissions were deleted."""
+        with self._connect() as conn:
+            link = conn.execute(
+                "SELECT vin, vin_hash FROM vehicle_links WHERE link_key = ?", (key,)
+            ).fetchone()
+            if not link:
+                return None
+            sub = conn.execute(
+                "SELECT * FROM submissions WHERE vin_hash = ? ORDER BY uploaded_at DESC LIMIT 1",
+                (link["vin_hash"],),
+            ).fetchone()
+            if not sub:
+                return None
+            rows = conn.execute(
+                "SELECT raw_name, version, code, section, software, hardware, bootloader"
+                " FROM module_readings WHERE submission_id = ? ORDER BY rowid",
+                (sub["id"],),
+            ).fetchall()
+        return _report_from_rows(sub["vin"], rows, sub["report_date"]), dict(sub)
 
     # --- the vehicle register (admin) ----------------------------------------
 
@@ -360,6 +411,7 @@ class Database:
                 if row["stored_filename"]
             ]
             conn.execute("DELETE FROM submissions WHERE vin_hash = ?", (vin_hash(vin),))
+            conn.execute("DELETE FROM vehicle_links WHERE vin_hash = ?", (vin_hash(vin),))
         return files
 
     def add_usage(self, *, country: str, ui_lang: str, browser_lang: str,

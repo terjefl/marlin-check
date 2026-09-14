@@ -481,3 +481,39 @@ def test_heavy_jobs_are_limited():
 
     asyncio.run(burst())
     assert 0 < peak <= main.MAX_HEAVY_JOBS
+
+
+def test_permanent_vehicle_link(client):
+    """Every result page carries a permanent /vehicle/<key> link that shows the
+    car's latest report (evaluated against the current requirements), survives
+    a restart of the in-memory result cache, keeps the same key across uploads
+    of the same VIN, serves a PDF, and rejects unknown keys."""
+    import re
+
+    c, main = client
+    page = _upload(c, headers={"x-forwarded-proto": "https", "host": "check.example"}).text
+    m = re.search(r"https://check\.example/vehicle/([A-Za-z0-9_-]{16,})", page)
+    assert m, "permanent link missing on the result page"
+    key = m.group(1)
+    assert "Permanent link for this car" in page
+
+    main._recent_results.clear()  # a restart forgets the 30-minute tokens ...
+    vehicle = c.get(f"/vehicle/{key}")
+    assert vehicle.status_code == 200  # ... but the permanent link still works
+    assert "2.1 zebra" in vehicle.text and "Latest report for this car" in vehicle.text
+    assert vehicle.headers["cache-control"] == "private, no-store"
+    assert f"/vehicle/{key}/pdf" in vehicle.text
+
+    # A second upload of the same VIN keeps the key and the link now shows the new report
+    body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030")
+    page2 = _upload(c, body=body).text
+    assert f"/vehicle/{key}" in page2
+    assert "Clean 2.1" in c.get(f"/vehicle/{key}").text or "2.1 fully installed" in c.get(f"/vehicle/{key}").text
+
+    pdf = c.get(f"/vehicle/{key}/pdf")
+    assert pdf.status_code == 200 and pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content[:5] == b"%PDF-"
+
+    unknown = c.get("/vehicle/" + "x" * 22)
+    assert unknown.status_code == 404 and "no vehicle behind this link" in unknown.text
+    assert c.get("/vehicle/short").status_code == 404

@@ -2,8 +2,14 @@
 {% block title %}{{ t('result_title', vin=report.vin) }} – {{ t('site_title') }}{% endblock %}
 {% block content %}
 {% include "_result_body.html" %}
+{% if uploaded_at %}<p class="meta">{{ t('latest_report_note', date=uploaded_at) }}</p>{% endif %}
 <div class="actions">
-  <a class="button" href="/pdf/{{ token }}">{{ t('download_pdf') }}</a>
+  <a class="button" href="{{ pdf_url }}">{{ t('download_pdf') }}</a>
   <a class="button secondary" href="/">{{ t('check_another') }}</a>
+</div>
+<div class="permalink">
+  <strong>{{ t('permanent_link_title') }}</strong>
+  <a class="mono" href="{{ permanent_url }}">{{ permanent_url }}</a>
+  <p class="hint">{{ t('permanent_link_text') }}</p>
 </div>
 {% endblock %}

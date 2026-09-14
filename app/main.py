@@ -54,6 +54,10 @@ RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
 # dev over plain http). Behind the Cloudflare tunnel the origin only sees http,
 # so this cannot be derived from the request.
 COOKIE_SECURE = os.environ.get("MARLIN_COOKIE_SECURE", "1").strip().lower() not in ("0", "false", "no", "")
+# Absolute base for the permanent per-vehicle links shown on the result page
+# and in the PDF. Empty = derive from the request (X-Forwarded-Proto + Host,
+# which is what the Cloudflare tunnel provides).
+PUBLIC_URL = os.environ.get("MARLIN_PUBLIC_URL", "").strip().rstrip("/")
 RATE_LIMIT_UPLOADS = 10       # per IP per window
 RATE_LIMIT_WINDOW = 60        # seconds
 # Heavy, CPU- and memory-bound work (pdfplumber parsing and WeasyPrint PDF
@@ -335,11 +339,69 @@ async def analyze(request: Request, report: UploadFile):
 
     _prune_results()
     token = secrets.token_urlsafe(16)
-    _recent_results[token] = {"report": parsed, "evaluation": evaluation, "at": time.time()}
+    _recent_results[token] = {
+        "report": parsed, "evaluation": evaluation, "at": time.time(),
+        "link_key": database.link_key_for(parsed.vin),
+    }
 
     # POST-redirect-GET: the result page is a GET page, so switching language
     # and reloading work without re-submitting the report.
     return RedirectResponse(f"/result/{token}", status_code=303)
+
+
+def _public_base(request: Request) -> str:
+    if PUBLIC_URL:
+        return PUBLIC_URL
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    return f"{scheme}://{request.headers.get('host', request.url.netloc)}"
+
+
+def _permanent_url(request: Request, link_key: str) -> str:
+    return f"{_public_base(request)}/vehicle/{link_key}"
+
+
+def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key: str,
+                 uploaded_at: str = "") -> Response:
+    response = _render(
+        request,
+        "result.html",
+        {
+            "report": report, "evaluation": evaluation, "pdf_url": pdf_url,
+            "permanent_url": _permanent_url(request, link_key),
+            "uploaded_at": uploaded_at,
+        },
+    )
+    response.headers["Cache-Control"] = "private, no-store"  # contains the VIN
+    return response
+
+
+async def _pdf_response(request: Request, report, evaluation, link_key: str) -> Response:
+    lang = negotiate_language(request)
+    html = templates.get_template("pdf.html").render(
+        lang=lang,
+        t=translator(lang),
+        report=report,
+        evaluation=evaluation,
+        permanent_url=_permanent_url(request, link_key),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    pdf_bytes = await _run_heavy(_render_pdf, html)
+    filename = f"ocean-software-check_{report.vin}.pdf"
+    return Response(
+        pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+def _unknown_vehicle_link(request: Request) -> Response:
+    t = translator(negotiate_language(request))
+    return _render(request, "index.html",
+                   {"error": t("permanent_link_unknown"), "requirements": _current_requirements()},
+                   status_code=404)
 
 
 def _expired_result(request: Request) -> Response:
@@ -357,13 +419,8 @@ def result(request: Request, token: str):
     cached = _recent_results.get(token)
     if cached is None:
         return _expired_result(request)
-    response = _render(
-        request,
-        "result.html",
-        {"report": cached["report"], "evaluation": cached["evaluation"], "token": token},
-    )
-    response.headers["Cache-Control"] = "private, no-store"  # contains the VIN
-    return response
+    return _result_page(request, cached["report"], cached["evaluation"],
+                        pdf_url=f"/pdf/{token}", link_key=cached["link_key"])
 
 
 @app.get("/pdf/{token}")
@@ -372,25 +429,48 @@ async def download_pdf(request: Request, token: str):
     cached = _recent_results.get(token)
     if cached is None:
         return _expired_result(request)
+    return await _pdf_response(request, cached["report"], cached["evaluation"], cached["link_key"])
 
-    lang = negotiate_language(request)
-    html = templates.get_template("pdf.html").render(
-        lang=lang,
-        t=translator(lang),
-        report=cached["report"],
-        evaluation=cached["evaluation"],
-        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
-    )
-    pdf_bytes = await _run_heavy(_render_pdf, html)
-    filename = f"marlin-check_{cached['report'].vin}.pdf"
-    return Response(
-        pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Cache-Control": "private, no-store",
-        },
-    )
+
+# --- permanent per-vehicle link ---------------------------------------------
+# /vehicle/<key> always shows the vehicle's latest stored report, evaluated
+# against the current requirements, so it survives restarts and requirement
+# changes. The key is random (128 bits) and only shown to whoever uploaded, so
+# the register cannot be enumerated through it.
+
+_LINK_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+
+
+def _vehicle_by_key(key: str):
+    if not _LINK_KEY_RE.fullmatch(key):
+        return None
+    found = database.latest_report_by_key(key)
+    if found is None:
+        return None
+    requirements = _current_requirements()
+    if requirements is None:
+        raise HTTPException(status_code=503, detail="Requirements unavailable.")
+    report, submission = found
+    return report, evaluate(report, requirements), submission
+
+
+@app.get("/vehicle/{key}", response_class=HTMLResponse)
+def vehicle_page(request: Request, key: str):
+    found = _vehicle_by_key(key)
+    if found is None:
+        return _unknown_vehicle_link(request)
+    report, evaluation, submission = found
+    return _result_page(request, report, evaluation, pdf_url=f"/vehicle/{key}/pdf",
+                        link_key=key, uploaded_at=submission["uploaded_at"][:16].replace("T", " "))
+
+
+@app.get("/vehicle/{key}/pdf")
+async def vehicle_pdf(request: Request, key: str):
+    found = _vehicle_by_key(key)
+    if found is None:
+        return _unknown_vehicle_link(request)
+    report, evaluation, _submission = found
+    return await _pdf_response(request, report, evaluation, key)
 
 
 def _fleet_stats() -> dict:
@@ -824,6 +904,7 @@ def admin_vehicle(request: Request, vin: str, username: str = Depends(require_ad
         {
             "username": username, "csrf": request.state.csrf, "vin": vin,
             "history": history, "selected": selected, "trim_names": TRIM_NAMES,
+            "permanent_url": _permanent_url(request, database.link_key_for(vin)),
         },
     )
 

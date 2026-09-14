@@ -85,6 +85,8 @@ tr.status-ok td { background: var(--surface); }
 details.extra { margin-top: 1rem; }
 details.extra summary { cursor: pointer; font-weight: 600; }
 .actions { margin-top: 1.4rem; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.permalink { margin-top: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; max-width: 640px; }
+.permalink a.mono { display: block; word-break: break-all; margin: 0.3rem 0; }
 
 .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; margin: 1rem 0 1.6rem; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem; text-align: center; }

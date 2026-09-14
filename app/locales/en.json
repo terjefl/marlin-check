@@ -40,7 +40,7 @@
   "stats_module_heading": "Version distribution per module",
   "stats_empty": "No data yet – statistics appear once members upload reports.",
   "privacy_title": "Privacy",
-  "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. To use the service you must accept that the report file, your VIN, the software versions of every control module, the country you uploaded from (from Cloudflare) and the upload time are stored in the association's vehicle register. The register is used to build aggregated statistics (number of cars per software status, version distribution per module) and to help the association plan updates; the public statistics page never shows individual VINs. The full register, including VINs, is available only to the association's administrators. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have your data removed, contact the association; administrators can delete every record for a VIN. Separately from the register, each upload is also counted in an anonymous usage statistic for the administrators: country, language, outcome and a daily-changing hash for counting unique users. That count is not linked to the register entry and contains no VIN, no report and no IP address.",
+  "privacy_text": "This portal is run by volunteers for members of the Fisker Owners Association. When you upload a report it is analyzed on our server and the result is shown to you. To use the service you must accept that the report file, your VIN, the software versions of every control module, the country you uploaded from (from Cloudflare) and the upload time are stored in the association's vehicle register. The register is used to build aggregated statistics (number of cars per software status, version distribution per module) and to help the association plan updates; the public statistics page never shows individual VINs. The full register, including VINs, is available only to the association's administrators. No data is shared with third parties and no tracking cookies are used (only a cookie remembering your language choice). To have your data removed, contact the association; administrators can delete every record for a VIN. Separately from the register, each upload is also counted in an anonymous usage statistic for the administrators: country, language, outcome and a daily-changing hash for counting unique users. That count is not linked to the register entry and contains no VIN, no report and no IP address. The result page also gives a permanent link with a random key that always shows the car's latest report; the link is shown only to whoever uploaded, and anyone who has it can see the report.",
   "footer_disclaimer": "Community tool – not affiliated with Fisker Inc. Updates are carried out by a service partner. Confirm the result with your service partner before the car is updated.",
   "alpha_title": "BETA",
   "alpha_text": "The check has been verified against real cars on 2.1, 2.2 and Marlin, but a few requirement values are still being confirmed by the association. Always confirm with a service partner before an update is performed.",
@@ -62,6 +62,10 @@
   "parse_too_many_pages": "The PDF has too many pages to be an OLP diagnostics report.",
   "error_requirements_unavailable": "The portal's requirements file is currently unavailable, so reports cannot be analyzed right now. The administrators have been notified – please try again later.",
   "result_expired": "This result link has expired (results are kept for 30 minutes). Please upload the report again.",
+  "permanent_link_title": "Permanent link for this car",
+  "permanent_link_text": "This link always shows the latest report uploaded for the car, evaluated against the current requirements. Bookmark it or share it with your service partner. Anyone who has the link can see the report.",
+  "permanent_link_unknown": "There is no vehicle behind this link. Check that the whole link was copied, or upload the report again.",
+  "latest_report_note": "Latest report for this car, uploaded {date} UTC. Upload a new report to refresh it.",
   "verdict_marlin": "Already on Marlin",
   "verdict_marlin_text": "This car already runs Marlin (VCU 2.4 or later). The Marlin check does not apply to it. The table below is for information only.",
   "marlin_below_top_note": "Note: Marlin does not update every module. These modules are still below the 2.2 level:",
@@ -136,7 +140,7 @@
         },
         {
           "lead": "Every report is stored.",
-          "text": "The result is available for 30 minutes behind a link nobody can guess. The report, the VIN and every module version go into the association's vehicle register, which its administrators use for statistics and update planning; the public statistics never show individual cars. See the privacy page for what is stored and how to have it removed."
+          "text": "The result is available for 30 minutes behind a link nobody can guess, and the result page also gives a permanent link with a random key that always shows the car's latest report. The report, the VIN and every module version go into the association's vehicle register, which its administrators use for statistics and update planning; the public statistics never show individual cars. See the privacy page for what is stored and how to have it removed."
         }
       ]
     },

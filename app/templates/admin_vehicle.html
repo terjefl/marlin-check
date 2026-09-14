@@ -4,7 +4,7 @@
 {% block content %}
 <h1 class="mono">{{ vin }}</h1>
 {% include "_admin_nav.html" %}
-<p class="meta"><a href="/admin/fleet">← Vehicle register</a> · Trim: {{ trim_names.get(selected.trim, selected.trim or 'unknown') }} · {{ history | length }} upload(s)</p>
+<p class="meta"><a href="/admin/fleet">← Vehicle register</a> · Trim: {{ trim_names.get(selected.trim, selected.trim or 'unknown') }} · {{ history | length }} upload(s){% if permanent_url %} · Permanent link: <a class="mono" href="{{ permanent_url }}">{{ permanent_url }}</a>{% endif %}</p>
 
 <h2>Uploads</h2>
 <table class="modules">

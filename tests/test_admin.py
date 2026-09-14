@@ -488,6 +488,8 @@ def test_vehicle_page_history_and_deletion(client):
     assert "2.2 zebra" in page.text and "Clean 2.1" in page.text
     assert "BCM395042" in page.text  # newest upload shown by default
     assert "FM298033S001K" in page.text  # the software version field, not only Supplier SW
+    key = main.database.link_key_for("VCF1ZBE20PG099905")
+    assert f"/vehicle/{key}" in page.text  # admins see the permanent link too
     assert c.get("/admin/fleet/VCF1ZBE20PG000000").status_code == 404
     assert c.get("/admin/fleet/not-a-vin").status_code == 404
 
@@ -498,6 +500,7 @@ def test_vehicle_page_history_and_deletion(client):
     assert response.status_code == 303
     assert main.database.stats()["unique_vins"] == 0
     assert list(Path(main.UPLOADS_DIR).iterdir()) == []
+    assert main.database.latest_report_by_key(key) is None  # the permanent link dies with the vehicle
     assert c.get("/admin/fleet/VCF1ZBE20PG099905").status_code == 404
     deletions = [e for e in main.database.audit_entries() if e["action"] == "vehicle_delete"]
     assert len(deletions) == 1 and "VCF1ZBE20PG099905" in deletions[0]["detail"]

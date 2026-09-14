@@ -17,6 +17,11 @@ car's control modules meet the minimum software levels required for the
   so it is not counted as missing there. Battery management is checked per
   software line (NMC vs LFP pack).
 - Downloadable PDF report (WeasyPrint), generated in the active language.
+- A permanent link per vehicle (`/vehicle/<random key>`, 128-bit key created on the
+  first upload of a VIN and shown on the result page, in the PDF and in the admin
+  register). It always renders the vehicle's latest stored report against the
+  current requirements, so it survives restarts and requirement changes. There is
+  deliberately no lookup by VIN: the register must not be enumerable.
 - A public "How it works" page (`/how-it-works`) explaining the interpretation
   at processing level, in all languages.
 - Storage is mandatory (association decision, Sep 2026): every analyzed
@@ -234,6 +239,7 @@ changing `requirements.txt`, regenerate the lock with
 | `MARLIN_REQUIREMENTS_PATH` | `./requirements.example.yaml` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
 | `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
+| `MARLIN_PUBLIC_URL` | (empty) | same | Absolute base for the permanent vehicle links, e.g. `https://marlin.flagan.net`. Empty = derived from `X-Forwarded-Proto` and `Host`, which the Cloudflare tunnel provides. |
 | `MARLIN_MAX_HEAVY_JOBS` | `4` | same | How many report analyses and PDF renderings may run at once; further requests wait in line. Protects the container's memory limit under a burst of uploads. |
 | `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | same | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). Set to empty to use the socket address when no proxy is in front. |
 
@@ -261,14 +267,16 @@ over the threadpool. Measured on a laptop: ~0.12 s per PDF analysis, 40
 parallel uploads complete in ~5 s with no errors.
 
 Run exactly **one** uvicorn worker/replica: result tokens, upload rate limits
-and the admin login lockout live in process memory. A restart invalidates all
-open result/PDF links. The origin must only be reachable through the proxy
+and the admin login lockout live in process memory. A restart invalidates the
+30-minute result/PDF links (the permanent vehicle links are in the database and
+survive). The origin must only be reachable through the proxy
 that sets the trusted client-IP header.
 
 ## Privacy model
 
 - Storage is mandatory: the member must tick the acceptance box, otherwise
-  the upload is refused (422) and nothing is stored. Every analyzed report is
+  the upload is refused (422) and nothing is stored. The result page also shows
+  the vehicle's permanent link; whoever has the link can see the latest report. Every analyzed report is
   stored: the file, the VIN, every ECU block with all four version fields,
   trim, outcome, upload country (`CF-IPCountry`) and time. The result page
   lives 30 minutes behind an unguessable token (`/result/<token>`).

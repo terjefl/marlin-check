@@ -40,7 +40,7 @@
   "stats_module_heading": "Versionsfördelning per modul",
   "stats_empty": "Inga data ännu – statistiken visas när medlemmar laddar upp rapporter.",
   "privacy_title": "Integritet",
-  "privacy_text": "Den här portalen drivs av frivilliga för medlemmar i Fisker Owners Association. När du laddar upp en rapport analyseras den på vår server och resultatet visas för dig. För att använda tjänsten måste du acceptera att rapportfilen, ditt VIN, programvaruversionerna för alla styrenheter, landet du laddade upp från (från Cloudflare) och tidpunkten lagras i föreningens fordonsregister. Registret används för aggregerad statistik (antal bilar per programvarustatus, versionsfördelning per modul) och för att hjälpa föreningen planera uppdateringar; den offentliga statistiksidan visar aldrig enskilda VIN. Hela registret, inklusive VIN, är endast tillgängligt för föreningens administratörer. Inga data delas med tredje part och inga spårningskakor används (endast en kaka som kommer ihåg ditt språkval). Kontakta föreningen för att få dina data raderade; administratörerna kan radera allt som lagrats om ett VIN. Oberoende av registret räknas varje uppladdning också i en anonym användningsstatistik för administratörerna: land, språk, utfall och en dagligen skiftande hash för att räkna unika användare. Den räkningen är inte kopplad till registerposten och innehåller varken VIN, rapport eller IP-adress.",
+  "privacy_text": "Den här portalen drivs av frivilliga för medlemmar i Fisker Owners Association. När du laddar upp en rapport analyseras den på vår server och resultatet visas för dig. För att använda tjänsten måste du acceptera att rapportfilen, ditt VIN, programvaruversionerna för alla styrenheter, landet du laddade upp från (från Cloudflare) och tidpunkten lagras i föreningens fordonsregister. Registret används för aggregerad statistik (antal bilar per programvarustatus, versionsfördelning per modul) och för att hjälpa föreningen planera uppdateringar; den offentliga statistiksidan visar aldrig enskilda VIN. Hela registret, inklusive VIN, är endast tillgängligt för föreningens administratörer. Inga data delas med tredje part och inga spårningskakor används (endast en kaka som kommer ihåg ditt språkval). Kontakta föreningen för att få dina data raderade; administratörerna kan radera allt som lagrats om ett VIN. Oberoende av registret räknas varje uppladdning också i en anonym användningsstatistik för administratörerna: land, språk, utfall och en dagligen skiftande hash för att räkna unika användare. Den räkningen är inte kopplad till registerposten och innehåller varken VIN, rapport eller IP-adress. Resultatsidan ger också en fast länk med slumpmässig nyckel som alltid visar bilens senaste rapport; länken visas bara för den som laddade upp, och alla som har den kan se rapporten.",
   "footer_disclaimer": "Ideellt verktyg – inte kopplat till Fisker Inc. Uppdateringar utförs av en servicepartner. Stäm av resultatet med din servicepartner innan bilen uppdateras.",
   "alpha_title": "BETA",
   "alpha_text": "Kontrollen är verifierad mot riktiga bilar på 2.1, 2.2 och Marlin, men vissa kravvärden bekräftas fortfarande av föreningen. Stäm alltid av med en servicepartner innan en uppdatering utförs.",
@@ -62,6 +62,10 @@
   "parse_too_many_pages": "PDF-filen har för många sidor för att vara en OLP-diagnosrapport.",
   "error_requirements_unavailable": "Portalens kravfil är inte tillgänglig just nu, så rapporter kan inte analyseras. Administratörerna är informerade – försök igen senare.",
   "result_expired": "Den här resultatlänken har gått ut (resultat sparas i 30 minuter). Ladda upp rapporten igen.",
+  "permanent_link_title": "Fast länk till den här bilen",
+  "permanent_link_text": "Länken visar alltid den senaste rapporten som laddats upp för bilen, bedömd mot dagens krav. Spara den som bokmärke eller dela den med din servicepartner. Alla som har länken kan se rapporten.",
+  "permanent_link_unknown": "Det finns ingen bil bakom den här länken. Kontrollera att hela länken kopierades, eller ladda upp rapporten igen.",
+  "latest_report_note": "Senaste rapporten för den här bilen, uppladdad {date} UTC. Ladda upp en ny rapport för att uppdatera.",
   "verdict_marlin": "Redan på Marlin",
   "verdict_marlin_text": "Den här bilen kör redan Marlin (VCU 2.4 eller senare). Marlin-kontrollen gäller inte för den. Tabellen nedan är endast information.",
   "marlin_below_top_note": "Obs: Marlin uppdaterar inte alla moduler. Dessa moduler ligger fortfarande under 2.2-nivån:",
@@ -136,7 +140,7 @@
         },
         {
           "lead": "Alla rapporter lagras.",
-          "text": "Resultatet är tillgängligt i 30 minuter bakom en länk ingen kan gissa. Rapporten, VIN och alla modulversioner går in i föreningens fordonsregister, som administratörerna använder för statistik och planering av uppdateringar; den offentliga statistiken visar aldrig enskilda bilar. Se integritetssidan för vad som lagras och hur du får det raderat."
+          "text": "Resultatet är tillgängligt i 30 minuter bakom en länk ingen kan gissa, och resultatsidan ger också en fast länk med slumpmässig nyckel som alltid visar bilens senaste rapport. Rapporten, VIN och alla modulversioner går in i föreningens fordonsregister, som administratörerna använder för statistik och planering av uppdateringar; den offentliga statistiken visar aldrig enskilda bilar. Se integritetssidan för vad som lagras och hur du får det raderat."
         }
       ]
     },
