@@ -70,7 +70,7 @@ pyproject.toml              ruff configuration
 | Area | State |
 |---|---|
 | Parser | Verified against a real OLP PDF export (fixture) and the consented uploads of the BETA period |
-| Requirements | The association's minimum table (2.0/2.1/2.2) plus iBooster as the eighth critical module (2026-09-13, ESP and iBooster must be on the same generation), still marked draft by the association. Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points are listed below and tracked in the `notes:` field of the requirements file |
+| Requirements | The association's minimum table (2.0/2.1/2.2) plus iBooster as the eighth critical module (2026-09-13, ESP and iBooster must be on the same generation); ECC 2.2 = 25 since 2026-09-14. Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points are listed below and tracked in the `notes:` field of the requirements file |
 | Trim logic | Verified for One (Z), Extreme (E, 2026-09-12) and Ultra (U, 2026-09-13) by real uploads, all on the NMC battery line as expected; the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
 
@@ -78,22 +78,19 @@ pyproject.toml              ruff configuration
 
 Waiting on the association (Jens):
 
-1. **ECC at 2.2**: the table says 24, all 2.2/Marlin reference cars show 25.
-   Changing it to 25 makes ECC evidence of 2.2 (today 2.1 and 2.2 share the
-   minimum, so ECC never proves 2.2) and shifts some cars from "clean 2.1"
-   to "2.2 zebra". The how-it-works page names ECC 24 as the example of a
-   shared minimum and must be rewritten in 7 languages at the same time.
-2. **BCM 41 vs 42**: one Marlin car shows BCM 41 where the table says 42
+1. **BCM 41 vs 42**: one Marlin car shows BCM 41 where the table says 42
    for 2.2.
-3. **Sport**: the LFP BMS level (15) rests on one reference report, and the
+2. **Sport**: the LFP BMS level (15) rests on one reference report, and the
    trim letter S has never been seen in a real upload. S is the letter that
    exempts MCU_R, so this is the one trim rule that is still unverified.
-4. **Workbook questions**: the B-vs-C interpretation of the comparison
-   sheet, and the 2.0 column that shows 2.1 values.
-5. **Privacy**: controller/contact and retention period for the register
+3. **Privacy**: controller/contact and retention period for the register
    (see Privacy model below).
-6. **iBooster 2.2 level (401)**: read from two 2.2 cars in the register; confirmation
-   from Guillaume outstanding.
+
+Resolved 2026-09-14 by re-reading the association's workbook and the 36 cars in
+the uploads folder: ECC at 2.2 is **25** (the workbook's own 2.2 report and
+every fully updated 2.2 car say 25; the hand-written table had 24), iBooster
+401 is confirmed by the workbook, the 2.0 column is correct, and the 2.1
+profile as the direct-Marlin requirement is stated in words.
 
 Operational, on Terje's signal only: reset all data at go-live (delete
 `marlin.sqlite3` + `-wal`/`-shm` and `uploads/*` on the host with the

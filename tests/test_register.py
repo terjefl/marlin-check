@@ -83,9 +83,9 @@ def test_reevaluation_applies_changed_requirements(tmp_path):
     db.store_submission(report, evaluate(report, requirements), "en", None)
     assert db.stats()["outcomes"] == {"full_22": 1}
 
-    # Raise the ECC 2.2 requirement to 25 (an open point): the 2.2 car shows 25, still full 2.2.
-    stricter = REQUIREMENTS.read_text().replace('levels: {"2.0": 19, "2.1": 24, "2.2": 24}',
-                                                'levels: {"2.0": 19, "2.1": 24, "2.2": 25}')
+    # Re-evaluating against the same requirements changes nothing (ECC 2.2 is 25, the car shows 25)
+    stricter = REQUIREMENTS.read_text()
+    assert 'levels: {"2.0": 19, "2.1": 24, "2.2": 25}' in stricter
     from app.rules import parse_requirements_text
     db.reevaluate_all(parse_requirements_text(stricter))
     assert db.stats()["outcomes"] == {"full_22": 1}
@@ -139,7 +139,7 @@ def test_fleet_statistics_count_outcomes_levels_and_split_cars(tmp_path):
     assert stats["per_week"][0]["uploads"] == 6 and stats["per_week"][0]["vehicles"] == 5
     # The 2.2 zebra is held back by ESP and both MCUs; the 2.1 zebra by BCM
     assert stats["split"]["zebra_22"]["cars"] == 1
-    assert {m["module_id"] for m in stats["split"]["zebra_22"]["modules"]} == {"ESP", "IBS", "MCU_F", "MCU_R"}
+    assert {m["module_id"] for m in stats["split"]["zebra_22"]["modules"]} == {"ECC", "ESP", "IBS", "MCU_F", "MCU_R"}
     assert stats["split"]["zebra_21"] == {"cars": 1, "modules": [{"module_id": "BCM", "n": 1}]}
     # BCM over the five cars: 21 (below every profile), 30, 42, 42, 42
     assert stats["module_levels"]["BCM"] == {"below": 1, "2.1": 1, "2.2": 3}

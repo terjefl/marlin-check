@@ -136,9 +136,9 @@ def test_evaluate_full_21_car():
     assert all(r.status == OK for r in evaluation.results)
     # Jens' note 2: a direct 2.1->Marlin jump leaves the 2.2-only ECUs behind.
     # This car meets 2.1 but not 2.2 on BCM (30<42), ESP (402<501), IBS (400<401),
-    # MCU_F/R (19<21) and VCU (21<23); ECC (24) and BMS (21) already meet 2.2.
+    # ECC (24<25), MCU_F/R (19<21) and VCU (21<23); only BMS (21) already meets 2.2.
     assert {r.requirement.id for r in evaluation.ok_below_top} == {
-        "BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU",
+        "BCM", "ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU",
     }
 
 
@@ -295,8 +295,8 @@ def test_reference_cars_from_the_fleet():
     full_21 = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
     assert full_21.verdict == VERDICT_READY
     assert all(r.status == OK for r in full_21.results)
-    # Every module exactly at the 2.1 minimum -> all six 2.2-only ECUs are left behind
-    assert {r.requirement.id for r in full_21.ok_below_top} == {"BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU"}
+    # Every module exactly at the 2.1 minimum -> all seven 2.2-only ECUs are left behind
+    assert {r.requirement.id for r in full_21.ok_below_top} == {"BCM", "ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU"}
 
     full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
     assert full_22.verdict == VERDICT_READY
@@ -424,7 +424,7 @@ def test_outcomes_for_the_reference_cars():
     assert (full_21.outcome, full_21.complete_profile, full_21.top_evidence) == (
         OUTCOME_FULL_TARGET, "2.1", "2.1"
     )
-    assert {r.requirement.id for r in full_21.below("2.2")} == {"BCM", "ESP", "IBS", "MCU_F", "MCU_R", "VCU"}
+    assert {r.requirement.id for r in full_21.below("2.2")} == {"BCM", "ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU"}
     assert full_21.below("2.1") == []
 
     full_22 = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
@@ -440,13 +440,13 @@ def test_outcomes_for_the_reference_cars():
     assert [r.requirement.id for r in zebra.below("2.1")] == ["BCM"]
     assert zebra.verdict == VERDICT_ZEBRA
 
-    # A started-but-incomplete 2.2: BCM and VCU already at 2.2, MCU/ESP still 2.1
+    # A started-but-incomplete 2.2: BCM and VCU already at 2.2, ECC/MCU/ESP/IBS still 2.1
     started = _with(_fixture_report("olp_report_21_full.txt"), BCM="BCM395042", VCU="VCU039023")
     started = evaluate(started, requirements)
     assert (started.outcome, started.complete_profile, started.top_evidence) == (
         OUTCOME_ZEBRA_TOP, "2.1", "2.2"
     )
-    assert {r.requirement.id for r in started.below("2.2")} == {"ESP", "IBS", "MCU_F", "MCU_R"}
+    assert {r.requirement.id for r in started.below("2.2")} == {"ECC", "ESP", "IBS", "MCU_F", "MCU_R"}
     assert started.verdict == VERDICT_READY  # still Marlin-capable in the old sense
 
     marlin = evaluate(_fixture_report("olp_report_marlin.txt"), requirements)
@@ -454,14 +454,16 @@ def test_outcomes_for_the_reference_cars():
 
 
 def test_shared_minimums_are_not_evidence_of_the_higher_profile():
-    """ECC is 24 on both 2.1 and 2.2 and BMS 21 on every profile: such readings
-    must not turn a clean 2.1 car into a '2.2 zebra'."""
+    """BMS is 21 on every profile and BCM 30 on both 2.0 and 2.1: such readings
+    must not count as evidence of the higher profile, so a clean 2.1 car is not
+    turned into a '2.2 zebra'. ECC 24 is the 2.1 level (2.2 is 25 since
+    2026-09-14), so it is evidence of 2.1 only."""
     from app.rules import OUTCOME_FULL_TARGET
 
     requirements = load_requirements(REQUIREMENTS)
     evaluation = evaluate(_fixture_report("olp_report_21_full.txt"), requirements)
     by_id = {r.requirement.id: r for r in evaluation.results}
-    assert by_id["ECC"].level == "2.2" and by_id["ECC"].evidence_level == "2.1"
+    assert by_id["ECC"].level == "2.1" and by_id["ECC"].evidence_level == "2.1"
     assert by_id["BMS"].level == "2.2" and by_id["BMS"].evidence_level == "2.0"
     assert by_id["BCM"].level == "2.1" and by_id["BCM"].evidence_level == "2.0"
     assert by_id["VCU"].level == "2.1" and by_id["VCU"].evidence_level == "2.1"
