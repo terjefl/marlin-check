@@ -4,7 +4,7 @@ Web portal for the Fisker Owners Association, renamed from "Marlin Readiness
 Check" on 2026-09-13 (the URL stays): members upload an ECU diagnostics
 report exported from **OceanLink Pro (OLP)**, and the portal checks whether the
 car's control modules meet the minimum software levels required for the
-**Marlin** software update. Live at <https://marlin.flagan.net> (BETA since 2026-09-05).
+**Marlin** software update. Live at <https://oceansoftwarecheck.com> (BETA since 2026-09-05; marlin.flagan.net redirects there since 2026-09-15).
 
 - Per-module result (OK / outdated / missing / version not recognised / empty
   field), one column per software release (2.0 / 2.1 / 2.2) with the minimum
@@ -251,7 +251,7 @@ changing `requirements.txt`, regenerate the lock with
 | `MARLIN_REQUIREMENTS_PATH` | `./requirements.example.yaml` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
 | `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
-| `MARLIN_PUBLIC_URL` | (empty) | same | Absolute base for the permanent vehicle links, e.g. `https://marlin.flagan.net`. Empty = derived from `X-Forwarded-Proto` and `Host`, which the Cloudflare tunnel provides. |
+| `MARLIN_PUBLIC_URL` | (empty) | same | Absolute base for the permanent vehicle links, e.g. `https://oceansoftwarecheck.com`. Empty = derived from `X-Forwarded-Proto` and `Host`, which the Cloudflare tunnel provides. |
 | `MARLIN_MAX_HEAVY_JOBS` | `4` | same | How many report analyses and PDF renderings may run at once; further requests wait in line. Protects the container's memory limit under a burst of uploads. |
 | `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | same | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). Set to empty to use the socket address when no proxy is in front. |
 
