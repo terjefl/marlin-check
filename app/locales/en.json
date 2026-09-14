@@ -94,7 +94,7 @@
       "paragraphs": [
         "The requirements are organised by software release: 2.0, 2.1 and 2.2. For each of the eight units that matter for Marlin, body control (BCM), stability system (ESP), brake booster (iBooster, IBS), climate control (ECC), battery management (BMS), front and rear motor control (MCU) and vehicle control (VCU), the table states the minimum level a unit must have to belong to each release. ESP and iBooster belong together and must be on the same software generation, which is why both are checked. The result page shows this table with one column per release and a tick or cross per unit.",
         "The check first works out how far the car has come. A release is “complete” when all eight units are at its level or higher. It also looks at whether any unit already carries a level that only a higher release installs; where two releases share the same minimum for a unit (battery management is 21 on 2.0, 2.1 and 2.2, for instance) that unit is never taken as proof of the higher release.",
-        "From that, the car gets one of five results. “2.2 fully updated”: every unit at the 2.2 level, Marlin ready. “2.1 fully updated”: every unit at 2.1 and none at 2.2 – Marlin is possible, but the units the 2.2 update lifts would stay behind, so 2.2 first is recommended. “2.2 zebra”: everything at least 2.1, some units already at 2.2 and others not – a started but incomplete 2.2; finish it, then Marlin. “2.1 zebra”: at least one unit below 2.1 – not Marlin ready; lift those units to 2.1, then 2.2, then Marlin. And “already on Marlin” for cars whose vehicle controller shows the Marlin level. In every case the page lists the units that are holding the car back, with the number read and the number required."
+        "From that, the car gets one of five results. “2.2 fully installed”: every unit at the 2.2 level, ready for Marlin. “2.1 fully installed”: every unit at 2.1 and none at 2.2. You can update to Marlin from here, but the car will then not be at the recommended level, and the association recommends full 2.2 first. “2.2 zebra”: everything at least 2.1, some units already at 2.2 and others not. “2.1 zebra”: at least one unit below 2.1. A zebra, of either kind, cannot be updated to Marlin until 2.2 is complete. And “already on Marlin” for cars whose vehicle controller shows the Marlin level. Whenever units are missing for 2.2, the page lists them with code and name, the version they are on and its level, and the version and level they need, followed by a recommendation and whom to contact: the service partner for the updates, or the association’s regional or country liaison when the car is on full 2.2 and ready for Marlin."
       ]
     },
     {
@@ -113,13 +113,13 @@
     {
       "title": "Cars that already run Marlin",
       "paragraphs": [
-        "Marlin gives the vehicle controller (VCU) level 24, “VCU 2.4”, which no earlier release has. If the report shows VCU 24 or higher, the car gets the verdict “already on Marlin” instead of ready or zebra, since the question of updating no longer applies. The table is shown for information, together with a list of units that are still below the 2.2 level. Marlin does not update every unit, and it can be useful to know which ones are left behind."
+        "Marlin gives the vehicle controller (VCU) level 24, “VCU 2.4”, which no earlier release has. If the report shows VCU 24 or higher, the car gets the verdict “already on Marlin” instead of ready or zebra, since the question of updating no longer applies. Marlin does not update every unit, so the page still lists the units that are below the 2.2 level, with a recommendation to have them updated so the car also meets the 2.2 requirement."
       ]
     },
     {
       "title": "Units without requirements",
       "paragraphs": [
-        "The roughly thirty units that are not among the eight are shown under “other units” with their values, but do not affect the verdict. That includes the radars, the front camera and the driver-assistance unit, which are not a prerequisite for Marlin and which we have seen at older levels on cars where Marlin and driver assistance work fine. Right-hand-drive cars have their own software lines on some units, but none of them are among the seven, so they are treated the same."
+        "The roughly thirty units that are not among the eight are shown under “other units” with their values, but do not affect the verdict. That includes the radars, the front camera and the driver-assistance unit, which are not a prerequisite for Marlin and which we have seen at older levels on cars where Marlin and driver assistance work fine. Right-hand-drive cars have their own software lines on some units, but none of them are among the eight, so they are treated the same."
       ]
     },
     {
@@ -147,7 +147,7 @@
     {
       "title": "What the check does not tell you",
       "paragraphs": [
-        "It does not assess hardware versions, bootloaders or whether units are faulty, and it does not say whether an update will succeed, only whether the prerequisites in the association’s table are met. Updates are carried out by a service partner. Bring the result along when you contact them, so they can see which units need attention first."
+        "It does not assess hardware versions, bootloaders or whether units are faulty, and it does not say whether an update will succeed, only whether the prerequisites in the association’s table are met. Updates are carried out by a service partner. Bring the result along when you contact them, so they can see which units need attention first. A car on full 2.2 is organised for the Marlin update through the association’s regional or country liaison."
       ]
     }
   ],

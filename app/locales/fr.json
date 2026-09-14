@@ -94,7 +94,7 @@
       "paragraphs": [
         "Les exigences sont organisées par version logicielle : 2.0, 2.1 et 2.2. Pour chacun des huit calculateurs qui comptent pour Marlin – carrosserie (BCM), stabilité (ESP), assistance de freinage (iBooster, IBS), climatisation (ECC), gestion de batterie (BMS), moteurs avant et arrière (MCU) et contrôle véhicule (VCU) – le tableau indique le niveau minimal qu'un calculateur doit avoir pour appartenir à chaque version. L'ESP et l'iBooster vont de pair et doivent être sur la même génération logicielle, c'est pourquoi les deux sont vérifiés. La page de résultat affiche ce tableau avec une colonne par version et une coche ou une croix par calculateur.",
         "Le contrôle détermine d'abord jusqu'où la voiture est arrivée. Une version est « complète » quand les huit calculateurs sont à son niveau ou au-dessus. Il regarde aussi si un calculateur porte déjà un niveau que seule une version supérieure installe ; lorsque deux versions partagent le même minimum pour un calculateur (la gestion de batterie est à 21 en 2.0, 2.1 et 2.2, par exemple), ce calculateur n'est jamais pris comme preuve de la version supérieure.",
-        "La voiture obtient alors l'un de cinq résultats. « 2.2 entièrement à jour » : tous les calculateurs au niveau 2.2, prête pour Marlin. « 2.1 entièrement à jour » : tous au niveau 2.1 et aucun en 2.2 – Marlin est possible, mais les calculateurs que la mise à jour 2.2 fait évoluer resteraient en arrière, d'où la recommandation de faire la 2.2 d'abord. « Zèbre 2.2 » : tout au moins en 2.1, certains calculateurs déjà en 2.2 et d'autres non – une 2.2 commencée mais incomplète ; la terminer, puis Marlin. « Zèbre 2.1 » : au moins un calculateur sous 2.1 – pas prête pour Marlin ; remonter ces calculateurs en 2.1, puis 2.2, puis Marlin. Et « déjà sous Marlin » pour les voitures dont le contrôleur véhicule montre le niveau Marlin. Dans tous les cas, la page liste les calculateurs qui retiennent la voiture, avec la valeur lue et la valeur requise."
+        "À partir de là, la voiture obtient l’un de cinq résultats. « 2.2 entièrement installée » : tous les calculateurs au niveau 2.2, prête pour Marlin. « 2.1 entièrement installée » : tous les calculateurs en 2.1 et aucun en 2.2. Vous pouvez passer à Marlin depuis ce niveau, mais la voiture ne sera alors pas au niveau recommandé, et l’association recommande d’abord la 2.2 complète. « Zèbre 2.2 » : tout au moins en 2.1, certains calculateurs déjà en 2.2 et d’autres non. « Zèbre 2.1 » : au moins un calculateur sous 2.1. Un zèbre, de l’un ou l’autre type, ne peut pas passer à Marlin tant que la 2.2 n’est pas terminée. Et « déjà sous Marlin » pour les voitures dont la commande véhicule montre le niveau Marlin. Quand des calculateurs manquent pour la 2.2, la page les liste avec code et nom, la version où ils sont et son niveau, et la version et le niveau dont ils ont besoin, puis une recommandation et la personne à contacter : le partenaire de service pour les mises à jour, ou le correspondant régional ou national de l’association quand la voiture est en 2.2 complète et prête pour Marlin."
       ]
     },
     {
@@ -113,13 +113,13 @@
     {
       "title": "Les voitures déjà sous Marlin",
       "paragraphs": [
-        "Marlin porte la commande véhicule (VCU) au niveau 24, « VCU 2.4 », qu’aucune version antérieure ne possède. Si le rapport montre VCU 24 ou plus, la voiture reçoit le verdict « déjà sous Marlin » au lieu de prête ou zèbre, puisque la question de la mise à jour ne se pose plus. Le tableau est affiché à titre d’information, avec la liste des calculateurs encore en dessous du niveau 2.2. Marlin ne met pas à jour tous les calculateurs, et il peut être utile de savoir lesquels restent en arrière."
+        "Marlin porte la commande véhicule (VCU) au niveau 24, « VCU 2.4 », qu’aucune version antérieure ne possède. Si le rapport montre VCU 24 ou plus, la voiture reçoit le verdict « déjà sous Marlin » au lieu de prête ou zèbre, puisque la question de la mise à jour ne se pose plus. Marlin ne met pas à jour tous les calculateurs, la page liste donc toujours ceux qui sont sous le niveau 2.2, avec la recommandation de les faire mettre à jour pour que la voiture satisfasse aussi à l’exigence 2.2."
       ]
     },
     {
       "title": "Les calculateurs sans exigence",
       "paragraphs": [
-        "La trentaine de calculateurs qui ne font pas partie des huit sont affichés sous « autres calculateurs » avec leurs valeurs, mais n’influencent pas le verdict. C’est le cas des radars, de la caméra avant et du calculateur d’aide à la conduite, qui ne sont pas un prérequis pour Marlin et que nous avons vus à des niveaux plus anciens sur des voitures où Marlin et l’aide à la conduite fonctionnent parfaitement. Les voitures à conduite à droite ont leurs propres lignées logicielles sur certains calculateurs, mais aucun ne fait partie des sept, elles sont donc traitées de la même façon."
+        "La trentaine de calculateurs qui ne font pas partie des huit sont affichés sous « autres calculateurs » avec leurs valeurs, mais n’influencent pas le verdict. C’est le cas des radars, de la caméra avant et du calculateur d’aide à la conduite, qui ne sont pas un prérequis pour Marlin et que nous avons vus à des niveaux plus anciens sur des voitures où Marlin et l’aide à la conduite fonctionnent parfaitement. Les voitures à conduite à droite ont leurs propres lignées logicielles sur certains calculateurs, mais aucun ne fait partie des huit, elles sont donc traitées de la même façon."
       ]
     },
     {
@@ -147,7 +147,7 @@
     {
       "title": "Ce que la vérification ne dit pas",
       "paragraphs": [
-        "Elle n’évalue ni les versions matérielles, ni les bootloaders, ni l’état de fonctionnement des calculateurs, et elle ne dit pas si une mise à jour réussira, seulement si les prérequis du tableau de l’association sont remplis. Les mises à jour sont réalisées par un partenaire de service. Apportez le résultat lorsque vous le contactez, pour qu’il voie quels calculateurs traiter en premier."
+        "Elle n’évalue ni les versions matérielles, ni les bootloaders, ni l’état de fonctionnement des calculateurs, et elle ne dit pas si une mise à jour réussira, seulement si les prérequis du tableau de l’association sont remplis. Les mises à jour sont réalisées par un partenaire de service. Apportez le résultat lorsque vous le contactez, pour qu’il voie quels calculateurs traiter en premier. Pour une voiture en 2.2 complète, la mise à jour Marlin s’organise avec le correspondant régional ou national de l’association."
       ]
     }
   ],

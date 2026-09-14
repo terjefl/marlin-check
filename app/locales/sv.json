@@ -94,7 +94,7 @@
       "paragraphs": [
         "Kraven är ordnade efter programvaruversion: 2.0, 2.1 och 2.2. För var och en av de åtta enheter som spelar roll för Marlin – karosstyrning (BCM), stabilitetssystem (ESP), bromsförstärkare (iBooster, IBS), klimatstyrning (ECC), batteristyrning (BMS), främre och bakre motorstyrning (MCU) och fordonsstyrning (VCU) – anger tabellen den miniminivå en enhet måste ha för att tillhöra varje version. ESP och iBooster hör ihop och måste ligga på samma programvarugeneration, därför kontrolleras båda. Resultatsidan visar tabellen med en kolumn per version och en bock eller ett kryss per enhet.",
         "Kontrollen tar först reda på hur långt bilen har kommit. En version är ”fullständig” när alla åtta enheter ligger på dess nivå eller högre. Den tittar också på om någon enhet redan har en nivå som bara en högre version installerar; där två versioner delar samma minimum för en enhet (batteristyrning är 21 på 2.0, 2.1 och 2.2, till exempel) räknas den enheten aldrig som bevis på den högre versionen.",
-        "Utifrån det får bilen ett av fem resultat. ”2.2 fullständigt uppdaterad”: alla enheter på 2.2-nivå, Marlin-redo. ”2.1 fullständigt uppdaterad”: alla enheter på 2.1 och ingen på 2.2 – Marlin är möjlig, men enheterna som 2.2-uppdateringen lyfter blir kvar, så 2.2 först rekommenderas. ”2.2-zebra”: allt minst 2.1, vissa enheter redan på 2.2 och andra inte – en påbörjad men ofullständig 2.2; slutför den, sedan Marlin. ”2.1-zebra”: minst en enhet under 2.1 – inte Marlin-redo; lyft dessa enheter till 2.1, sedan 2.2, sedan Marlin. Och ”redan på Marlin” för bilar där fordonsstyrningen visar Marlin-nivån. I alla fall listar sidan enheterna som håller bilen tillbaka, med avläst tal och krav."
+        "Utifrån det får bilen ett av fem resultat. ”2.2 fullständigt installerad”: alla enheter på 2.2-nivå, redo för Marlin. ”2.1 fullständigt installerad”: alla enheter på 2.1 och ingen på 2.2. Du kan uppdatera till Marlin härifrån, men bilen ligger då inte på rekommenderad nivå, och föreningen rekommenderar fullständig 2.2 först. ”2.2-zebra”: allt minst 2.1, vissa enheter redan på 2.2 och andra inte. ”2.1-zebra”: minst en enhet under 2.1. En zebra, av båda slagen, kan inte uppdateras till Marlin förrän 2.2 är slutförd. Och ”redan på Marlin” för bilar där fordonsstyrningen visar Marlin-nivån. När enheter saknas för 2.2 listar sidan dem med kod och namn, versionen de ligger på och dess nivå, samt versionen och nivån de behöver, följt av en rekommendation och vem du kontaktar: servicepartnern för uppdateringarna, eller föreningens region- eller landskontakt när bilen är på fullständig 2.2 och redo för Marlin."
       ]
     },
     {
@@ -113,13 +113,13 @@
     {
       "title": "Bilar som redan har Marlin",
       "paragraphs": [
-        "Marlin ger fordonsstyrningen (VCU) nivå 24, ”VCU 2.4”, som ingen tidigare version har. Visar rapporten VCU 24 eller högre får bilen utlåtandet ”redan på Marlin” i stället för klar eller zebra, eftersom frågan om uppdatering inte längre är relevant. Tabellen visas som information, tillsammans med en lista över enheter som fortfarande ligger under 2.2-nivån. Marlin uppdaterar nämligen inte alla enheter, och det kan vara bra att veta vilka som blir kvar."
+        "Marlin ger fordonsstyrningen (VCU) nivå 24, ”VCU 2.4”, som ingen tidigare version har. Visar rapporten VCU 24 eller högre får bilen utlåtandet ”redan på Marlin” i stället för klar eller zebra, eftersom frågan om uppdatering inte längre är relevant. Marlin uppdaterar inte alla enheter, så sidan listar fortfarande de enheter som ligger under 2.2-nivån, med en rekommendation att uppdatera dem så att bilen även uppfyller 2.2-kravet."
       ]
     },
     {
       "title": "Enheter utan krav",
       "paragraphs": [
-        "De omkring trettio enheter som inte hör till de åtta visas under ”övriga enheter” med sina värden, men påverkar inte utlåtandet. Det gäller bland annat radarerna, frontkameran och förarassistansenheten, som inte är en förutsättning för Marlin och som vi sett på äldre nivåer på bilar där Marlin och förarassistansen fungerar bra. Högerstyrda bilar har egna programvarulinjer på vissa enheter, men ingen av dem hör till de sju, så de behandlas lika."
+        "De omkring trettio enheter som inte hör till de åtta visas under ”övriga enheter” med sina värden, men påverkar inte utlåtandet. Det gäller bland annat radarerna, frontkameran och förarassistansenheten, som inte är en förutsättning för Marlin och som vi sett på äldre nivåer på bilar där Marlin och förarassistansen fungerar bra. Högerstyrda bilar har egna programvarulinjer på vissa enheter, men ingen av dem hör till de åtta, så de behandlas lika."
       ]
     },
     {
@@ -147,7 +147,7 @@
     {
       "title": "Vad kontrollen inte säger något om",
       "paragraphs": [
-        "Den bedömer inte hårdvaruversioner, bootloaders eller om enheter är trasiga, och den säger inte om en uppdatering kommer att lyckas, bara om förutsättningarna i föreningens tabell är uppfyllda. Uppdateringar utförs av en servicepartner. Ta med resultatet när du kontaktar dem, så ser de vilka enheter som behöver åtgärdas först."
+        "Den bedömer inte hårdvaruversioner, bootloaders eller om enheter är trasiga, och den säger inte om en uppdatering kommer att lyckas, bara om förutsättningarna i föreningens tabell är uppfyllda. Uppdateringar utförs av en servicepartner. Ta med resultatet när du kontaktar dem, så ser de vilka enheter som behöver åtgärdas först. En bil på fullständig 2.2 får Marlin-uppdateringen organiserad via föreningens region- eller landskontakt."
       ]
     }
   ],

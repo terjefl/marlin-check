@@ -94,7 +94,7 @@
       "paragraphs": [
         "Los requisitos se organizan por versión de software: 2.0, 2.1 y 2.2. Para cada una de las ocho unidades que importan para Marlin – carrocería (BCM), sistema de estabilidad (ESP), servofreno (iBooster, IBS), climatización (ECC), gestión de batería (BMS), control de motor delantero y trasero (MCU) y control del vehículo (VCU) – la tabla indica el nivel mínimo que debe tener una unidad para pertenecer a cada versión. El ESP y el iBooster van juntos y deben estar en la misma generación de software, por eso se comprueban ambos. La página de resultados muestra esta tabla con una columna por versión y una marca o una cruz por unidad.",
         "La comprobación determina primero hasta dónde ha llegado el coche. Una versión está «completa» cuando las ocho unidades están en su nivel o por encima. También mira si alguna unidad ya tiene un nivel que solo instala una versión superior; cuando dos versiones comparten el mismo mínimo para una unidad (la gestión de batería es 21 en 2.0, 2.1 y 2.2, por ejemplo), esa unidad nunca se toma como prueba de la versión superior.",
-        "A partir de ahí, el coche recibe uno de cinco resultados. «2.2 completamente actualizado»: todas las unidades en el nivel 2.2, listo para Marlin. «2.1 completamente actualizado»: todas en 2.1 y ninguna en 2.2 – Marlin es posible, pero las unidades que eleva la actualización 2.2 se quedarían atrás, así que se recomienda hacer primero la 2.2. «Cebra 2.2»: todo al menos en 2.1, algunas unidades ya en 2.2 y otras no – una 2.2 iniciada pero incompleta; terminarla y después Marlin. «Cebra 2.1»: al menos una unidad por debajo de 2.1 – no listo para Marlin; elevar esas unidades a 2.1, luego 2.2 y luego Marlin. Y «ya en Marlin» para los coches cuyo controlador del vehículo muestra el nivel Marlin. En todos los casos, la página lista las unidades que frenan al coche, con el número leído y el requerido."
+        "A partir de ahí, el coche obtiene uno de cinco resultados. «2.2 completamente instalada»: todas las unidades en el nivel 2.2, listo para Marlin. «2.1 completamente instalada»: todas las unidades en 2.1 y ninguna en 2.2. Puede actualizar a Marlin desde aquí, pero el coche no estará entonces en el nivel recomendado, y la asociación recomienda primero la 2.2 completa. «Cebra 2.2»: todo al menos en 2.1, algunas unidades ya en 2.2 y otras no. «Cebra 2.1»: al menos una unidad por debajo de 2.1. Una cebra, de cualquiera de los dos tipos, no puede actualizarse a Marlin hasta completar la 2.2. Y «ya en Marlin» para coches cuyo control del vehículo muestra el nivel Marlin. Cuando faltan unidades para la 2.2, la página las lista con código y nombre, la versión en la que están y su nivel, y la versión y el nivel que necesitan, seguido de una recomendación y de a quién contactar: al socio de servicio para las actualizaciones, o al enlace regional o nacional de la asociación cuando el coche está en 2.2 completa y listo para Marlin."
       ]
     },
     {
@@ -113,13 +113,13 @@
     {
       "title": "Coches que ya tienen Marlin",
       "paragraphs": [
-        "Marlin lleva el control del vehículo (VCU) al nivel 24, «VCU 2.4», que ninguna versión anterior tiene. Si el informe muestra VCU 24 o superior, el coche recibe el veredicto «ya en Marlin» en lugar de listo o cebra, ya que la cuestión de actualizar deja de tener sentido. La tabla se muestra a título informativo, junto con una lista de las unidades que siguen por debajo del nivel 2.2. Marlin no actualiza todas las unidades, y puede ser útil saber cuáles se quedan atrás."
+        "Marlin lleva el control del vehículo (VCU) al nivel 24, «VCU 2.4», que ninguna versión anterior tiene. Si el informe muestra VCU 24 o superior, el coche recibe el veredicto «ya en Marlin» en lugar de listo o cebra, ya que la cuestión de actualizar deja de tener sentido. Marlin no actualiza todas las unidades, así que la página sigue listando las que están por debajo del nivel 2.2, con la recomendación de actualizarlas para que el coche cumpla también el requisito de 2.2."
       ]
     },
     {
       "title": "Unidades sin requisito",
       "paragraphs": [
-        "La treintena de unidades que no están entre las ocho se muestra bajo «otras unidades» con sus valores, pero no influye en el veredicto. Es el caso de los radares, la cámara frontal y la unidad de asistencia a la conducción, que no son un requisito para Marlin y que hemos visto en niveles antiguos en coches donde Marlin y la asistencia funcionan sin problema. Los coches con volante a la derecha tienen líneas de software propias en algunas unidades, pero ninguna está entre las siete, así que se tratan igual."
+        "La treintena de unidades que no están entre las ocho se muestra bajo «otras unidades» con sus valores, pero no influye en el veredicto. Es el caso de los radares, la cámara frontal y la unidad de asistencia a la conducción, que no son un requisito para Marlin y que hemos visto en niveles antiguos en coches donde Marlin y la asistencia funcionan sin problema. Los coches con volante a la derecha tienen líneas de software propias en algunas unidades, pero ninguna está entre las ocho, así que se tratan igual."
       ]
     },
     {
@@ -147,7 +147,7 @@
     {
       "title": "Sobre qué no se pronuncia la comprobación",
       "paragraphs": [
-        "No evalúa versiones de hardware, cargadores de arranque ni si las unidades están averiadas, y no dice si una actualización tendrá éxito, solo si se cumplen los requisitos de la tabla de la asociación. Las actualizaciones las realiza un socio de servicio. Lleve el resultado cuando contacte con él, para que vea qué unidades necesitan atención primero."
+        "No evalúa versiones de hardware, cargadores de arranque ni si las unidades están averiadas, y no dice si una actualización tendrá éxito, solo si se cumplen los requisitos de la tabla de la asociación. Las actualizaciones las realiza un socio de servicio. Lleve el resultado cuando contacte con él, para que vea qué unidades necesitan atención primero. Para un coche en 2.2 completa, la actualización a Marlin se organiza a través del enlace regional o nacional de la asociación."
       ]
     }
   ],

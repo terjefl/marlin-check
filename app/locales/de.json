@@ -94,7 +94,7 @@
       "paragraphs": [
         "Die Anforderungen sind nach Software-Release geordnet: 2.0, 2.1 und 2.2. Für jedes der acht Steuergeräte, die für Marlin zählen – Karosseriesteuerung (BCM), Stabilitätssystem (ESP), Bremskraftverstärker (iBooster, IBS), Klimasteuerung (ECC), Batteriemanagement (BMS), vordere und hintere Motorsteuerung (MCU) und Fahrzeugsteuerung (VCU) – gibt die Tabelle die Mindeststufe an, die ein Gerät haben muss, um zu einem Release zu gehören. ESP und iBooster gehören zusammen und müssen auf derselben Softwaregeneration sein, deshalb werden beide geprüft. Die Ergebnisseite zeigt diese Tabelle mit einer Spalte pro Release und einem Haken oder Kreuz pro Gerät.",
         "Die Prüfung ermittelt zuerst, wie weit das Fahrzeug gekommen ist. Ein Release ist „vollständig“, wenn alle acht Geräte auf seiner Stufe oder höher liegen. Sie prüft auch, ob ein Gerät bereits eine Stufe trägt, die nur ein höheres Release installiert; wo zwei Releases dasselbe Minimum für ein Gerät teilen (das Batteriemanagement ist z. B. auf 2.0, 2.1 und 2.2 gleichermaßen 21), gilt dieses Gerät nie als Beleg für das höhere Release.",
-        "Daraus ergibt sich eines von fünf Ergebnissen. „2.2 vollständig aktualisiert“: alle Geräte auf 2.2-Stufe, Marlin-bereit. „2.1 vollständig aktualisiert“: alle Geräte auf 2.1 und keines auf 2.2 – Marlin ist möglich, aber die Geräte, die das 2.2-Update anhebt, blieben zurück, daher wird 2.2 zuerst empfohlen. „2.2-Zebra“: alles mindestens 2.1, manche Geräte schon auf 2.2, andere nicht – ein begonnenes, aber unvollständiges 2.2; erst abschließen, dann Marlin. „2.1-Zebra“: mindestens ein Gerät unter 2.1 – nicht Marlin-bereit; diese Geräte auf 2.1 heben, dann 2.2, dann Marlin. Und „bereits auf Marlin“ für Fahrzeuge, deren Fahrzeugsteuerung die Marlin-Stufe zeigt. In jedem Fall listet die Seite die Geräte auf, die das Fahrzeug zurückhalten, mit gelesenem Wert und Anforderung."
+        "Daraus ergibt sich eines von fünf Ergebnissen. „2.2 vollständig installiert“: alle Geräte auf 2.2-Stufe, bereit für Marlin. „2.1 vollständig installiert“: alle Geräte auf 2.1 und keines auf 2.2. Sie können von hier aus auf Marlin aktualisieren, das Fahrzeug ist dann aber nicht auf der empfohlenen Stufe, und der Verein empfiehlt zuerst das vollständige 2.2. „2.2-Zebra“: alles mindestens 2.1, einige Geräte bereits auf 2.2 und andere nicht. „2.1-Zebra“: mindestens ein Gerät unter 2.1. Ein Zebra, gleich welcher Art, kann erst auf Marlin aktualisiert werden, wenn 2.2 abgeschlossen ist. Und „bereits auf Marlin“ für Fahrzeuge, deren Fahrzeugsteuerung den Marlin-Stand zeigt. Fehlen Geräte für 2.2, listet die Seite sie mit Code und Namen, der Version, auf der sie stehen, und deren Stufe sowie der Version und Stufe, die sie brauchen, gefolgt von einer Empfehlung und der Angabe, an wen Sie sich wenden: an den Servicepartner für die Updates oder an den Regional- oder Länderkontakt des Vereins, wenn das Fahrzeug auf vollständigem 2.2 und bereit für Marlin ist."
       ]
     },
     {
@@ -113,13 +113,13 @@
     {
       "title": "Fahrzeuge, die bereits Marlin haben",
       "paragraphs": [
-        "Marlin bringt die Fahrzeugsteuerung (VCU) auf Stand 24, „VCU 2.4“, den kein früherer Softwarestand hat. Zeigt der Bericht VCU 24 oder höher, erhält das Fahrzeug das Urteil „bereits auf Marlin“ statt bereit oder Zebra, weil sich die Frage nach einem Update nicht mehr stellt. Die Tabelle wird zur Information angezeigt, zusammen mit einer Liste der Geräte, die noch unter dem Stand 2.2 liegen. Marlin aktualisiert nämlich nicht jedes Gerät, und es kann nützlich sein zu wissen, welche zurückbleiben."
+        "Marlin bringt die Fahrzeugsteuerung (VCU) auf Stand 24, „VCU 2.4“, den kein früherer Softwarestand hat. Zeigt der Bericht VCU 24 oder höher, erhält das Fahrzeug das Urteil „bereits auf Marlin“ statt bereit oder Zebra, weil sich die Frage nach einem Update nicht mehr stellt. Marlin aktualisiert nicht jedes Gerät, daher listet die Seite weiterhin die Geräte unter der Stufe 2.2, mit der Empfehlung, sie aktualisieren zu lassen, damit das Fahrzeug auch die 2.2-Anforderung erfüllt."
       ]
     },
     {
       "title": "Geräte ohne Anforderung",
       "paragraphs": [
-        "Die rund dreißig Geräte, die nicht zu den acht gehören, werden unter „weitere Geräte“ mit ihren Werten angezeigt, beeinflussen das Urteil aber nicht. Dazu gehören die Radarsensoren, die Frontkamera und das Fahrerassistenz-Steuergerät, die keine Voraussetzung für Marlin sind und die wir auf älteren Ständen bei Fahrzeugen gesehen haben, bei denen Marlin und die Fahrerassistenz einwandfrei funktionieren. Rechtsgelenkte Fahrzeuge haben bei einigen Geräten eigene Softwarelinien, aber keine davon gehört zu den sieben, daher werden sie gleich behandelt."
+        "Die rund dreißig Geräte, die nicht zu den acht gehören, werden unter „weitere Geräte“ mit ihren Werten angezeigt, beeinflussen das Urteil aber nicht. Dazu gehören die Radarsensoren, die Frontkamera und das Fahrerassistenz-Steuergerät, die keine Voraussetzung für Marlin sind und die wir auf älteren Ständen bei Fahrzeugen gesehen haben, bei denen Marlin und die Fahrerassistenz einwandfrei funktionieren. Rechtsgelenkte Fahrzeuge haben bei einigen Geräten eigene Softwarelinien, aber keine davon gehört zu den acht, daher werden sie gleich behandelt."
       ]
     },
     {
@@ -147,7 +147,7 @@
     {
       "title": "Worüber die Prüfung nichts sagt",
       "paragraphs": [
-        "Sie bewertet weder Hardwarestände noch Bootloader oder ob Geräte defekt sind, und sie sagt nicht, ob ein Update gelingen wird, sondern nur, ob die Voraussetzungen der Vereinstabelle erfüllt sind. Updates führt ein Servicepartner durch. Nehmen Sie das Ergebnis mit, wenn Sie ihn kontaktieren, damit er sieht, welche Geräte zuerst dran sind."
+        "Sie bewertet weder Hardwarestände noch Bootloader oder ob Geräte defekt sind, und sie sagt nicht, ob ein Update gelingen wird, sondern nur, ob die Voraussetzungen der Vereinstabelle erfüllt sind. Updates führt ein Servicepartner durch. Nehmen Sie das Ergebnis mit, wenn Sie ihn kontaktieren, damit er sieht, welche Geräte zuerst dran sind. Für ein Fahrzeug auf vollständigem 2.2 wird das Marlin-Update über den Regional- oder Länderkontakt des Vereins organisiert."
       ]
     }
   ],
