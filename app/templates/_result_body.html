@@ -6,45 +6,59 @@
 {% set target = evaluation.target_profile %}
 <h1>{{ t('result_title', vin=report.vin) }}</h1>
 
+{% macro mark(ok) -%}
+{%- if for_pdf %}<span class="mark {{ 'ok' if ok else 'bad' }}">{{ '✓' if ok else '✗' }}</span>{% else %}{{ '✅' if ok else '❌' }}{% endif -%}
+{%- endmacro %}
+{% macro module_line(r, profile) -%}
+{%- set needed = r.levels.get(profile) if r.levels.get(profile) is not none else r.top_required -%}
+{%- if r.extracted is none -%}
+{{ t('module_line_unread', code=r.requirement.id, label=r.requirement.label, status=t('status_' + r.status), needed=needed, profile=profile) }}
+{%- elif r.level -%}
+{{ t('module_line_update', code=r.requirement.id, label=r.requirement.label, found=r.extracted, level=r.level, needed=needed, profile=profile) }}
+{%- else -%}
+{{ t('module_line_below_all', code=r.requirement.id, label=r.requirement.label, found=r.extracted, first=evaluation.profiles[0], needed=needed, profile=profile) }}
+{%- endif -%}
+{%- endmacro %}
+{% set complete = evaluation.complete_profile %}
+{% set below_top = evaluation.below(top) %}
+{% set n_total = evaluation.results | length %}
 <div class="verdict {{ box_class }}">
   <p class="yourcar">{{ t('your_car_has') }}</p>
-  <strong>{{ icon }} {{ t('outcome_' + outcome) }}</strong>
+  <strong>{% if not for_pdf %}{{ icon }} {% endif %}{{ t('outcome_' + outcome) }}</strong>
   <p>{{ t('outcome_' + outcome + '_text') }}</p>
 
-  <ul class="levelstatus">
-    {% for p in evaluation.profiles %}
-    {% set n_below = evaluation.below(p) | length %}
-    {% set n_total = evaluation.results | length %}
-    <li>{% if n_below == 0 %}✅{% else %}❌{% endif %} <strong>{{ t('sw_profile', profile=p) }}</strong>: {% if n_below == 0 %}{{ t('level_complete', n=n_total) }}{% else %}{{ t('level_incomplete', met=n_total - n_below, n=n_total) }}{% endif %}</li>
-    {% endfor %}
-    <li>{% if outcome == 'marlin' %}🐟 <strong>Marlin</strong>: {{ t('marlin_status_on') }}{% elif outcome == 'zebra_21' %}❌ <strong>Marlin</strong>: {{ t('marlin_status_not_ready') }}{% else %}✅ <strong>Marlin</strong>: {{ t('marlin_status_ready') }}{% endif %}</li>
-  </ul>
-
-  {% if outcome == 'marlin' and evaluation.below_top %}
-  <p>{{ t('marlin_below_top_note') }}</p>
-  <ul>
-    {% for r in evaluation.below_top %}
-    <li>{{ r.requirement.label }} – {{ r.version }} ({{ r.extracted }} &lt; {{ r.top_required }})</li>
-    {% endfor %}
-  </ul>
-  {% elif outcome == 'zebra_21' %}
-  <p>{{ t('below_list_intro', profile=target) }}</p>
-  <ul>
-    {% for r in evaluation.below(target) %}
-    <li>{{ r.requirement.label }} – {{ t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }} &lt; {{ r.required }}){% endif %}</li>
-    {% endfor %}
-  </ul>
-  {% elif outcome in ('full_21', 'zebra_22') and evaluation.below(top) %}
-  <p>{{ t('below_list_intro', profile=top) }}</p>
-  <ul>
-    {% for r in evaluation.below(top) %}
-    <li>{{ r.requirement.label }} – {{ r.version }} ({{ r.extracted }} &lt; {{ r.levels.get(top) }})</li>
+  {% if below_top %}
+  <p class="modules-heading">{% if outcome == 'marlin' %}{{ t('marlin_below_top_note', profile=top) }}{% else %}{{ t('modules_heading_top', profile=top) }}{% endif %}</p>
+  {% if outcome != 'marlin' %}<p class="hint">{{ t('multistep_note') }}</p>{% endif %}
+  <ul class="modulelist">
+    {% for r in below_top %}
+    <li>{{ mark(false) }} {{ module_line(r, top) }}</li>
     {% endfor %}
   </ul>
   {% endif %}
 
-  {% if outcome != 'marlin' %}
-  <p class="recommendation"><strong>{{ t('recommendation_label') }}:</strong> {{ t('outcome_' + outcome + '_rec') }}</p>
+  <ul class="levelstatus">
+    {% for p in evaluation.profiles %}
+    {% if complete is none or evaluation.profiles.index(p) >= evaluation.profiles.index(complete) %}
+    {% set n_below = evaluation.below(p) | length %}
+    <li>{{ mark(n_below == 0) }} <strong>{{ t('sw_profile', profile=p) }}</strong>: {% if n_below == 0 %}{{ t('level_complete', n=n_total) }}{% else %}{{ t('level_incomplete', missing=n_below, n=n_total) }}{% endif %}</li>
+    {% endif %}
+    {% endfor %}
+    <li>{% if outcome == 'marlin' %}{{ mark(true) }} <strong>Marlin</strong>: {{ t('marlin_status_on') }}{% elif outcome in ('full_22', 'full_21') %}{{ mark(true) }} <strong>Marlin</strong>: {{ t('marlin_status_ready') }}{% else %}{{ mark(false) }} <strong>Marlin</strong>: {{ t('marlin_status_not_ready') }}{% endif %}</li>
+  </ul>
+
+  <p class="recommendation"><strong>{{ t('recommendation_label') }}:</strong>
+    {% if outcome == 'full_22' %}{{ t('rec_full_22') }}
+    {% elif outcome == 'full_21' %}{{ t('rec_update_then_marlin') }} {{ t('rec_marlin_alone') }}
+    {% elif outcome == 'zebra_22' %}{{ t('rec_update_then_marlin') }}
+    {% elif outcome == 'zebra_21' %}{{ t('rec_update_via_21') }}
+    {% elif below_top %}{{ t('rec_marlin_incomplete') }}
+    {% else %}{{ t('rec_marlin_complete') }}{% endif %}
+  </p>
+  {% if outcome == 'full_22' %}
+  <p class="contact">{{ t('contact_liaison') }}</p>
+  {% elif outcome != 'marlin' or below_top %}
+  <p class="contact">{{ t('contact_service') }}</p>
   {% endif %}
 </div>
 
@@ -76,7 +90,7 @@
       {% set tmet = r.meets.get(target) %}
       <td class="num lvl {% if tmet is true %}met{% elif tmet is false %}unmet{% endif %}">{% if r.required is none %}–{% else %}≥ {{ r.required }} {% if tmet %}✓{% else %}✗{% endif %}{% endif %}</td>
       <td>
-        {% if r.status == 'ok' %}✅{% elif r.status == 'outdated' %}❌{% else %}❓{% endif %} {{ t('status_' + r.status) }}
+        {% if r.status == 'ok' %}{{ mark(true) }}{% elif r.status == 'outdated' %}{{ mark(false) }}{% else %}{% if for_pdf %}?{% else %}❓{% endif %}{% endif %} {{ t('status_' + r.status) }}
         {% if r.level and r.status != 'ok' %} <span class="crit">({{ t('level_label') }} {{ r.level }})</span>{% endif %}
       </td>
     </tr>

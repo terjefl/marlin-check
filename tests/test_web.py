@@ -383,7 +383,8 @@ def test_marlin_car_result_page_and_statistics(client):
     assert "Already on Marlin" in response.text
     assert "can be updated directly to Marlin" not in response.text
     assert "Marlin does not update every module" in response.text
-    assert "Body Control Module \u2013 BCM395041 (41 &lt; 42)" in response.text
+    assert "BCM \u2013 Body Control Module: is at version 41 (2.1 level) and needs to be updated to 42 (2.2 level)" in response.text
+    assert "Your car is on Marlin. Update the modules above" in response.text
 
     stats = main.database.stats()
     assert stats["verdicts"] == {"marlin": 1}
@@ -532,3 +533,53 @@ def test_stats_page_shows_time_series_and_fleet_movement(client):
     assert "Movement in the fleet" in page and "From first to latest report" in page
     assert "Fleet status month by month" in page
     assert "VCF1ZBE20PG099999" not in page
+
+
+def test_result_page_layout_follows_the_working_group(client):
+    """Module list before the level lines, only the highest complete level in
+    green with every level above it in red, counts of modules that do NOT meet,
+    module lines with code first and both versions, the multi-step note, the
+    recommendation and the red contact line. A 2.2 zebra never gets a green
+    Marlin line."""
+    c, _ = client
+    body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030")  # clean 2.1 car
+    page = _upload(c, body=body).text
+    assert "SW 2.0" not in page.split("Requirements version")[0]  # 2.0 line hidden for a full 2.1 car
+    assert "SW 2.1</strong>: Complete" in page and "SW 2.2</strong>: Not complete \u2013 7 of 8 modules do not meet" in page
+    assert page.index("BCM \u2013 Body Control Module: is at version 30 (2.1 level) and needs to be updated to 42 (2.2 level)") < page.index("SW 2.1</strong>")
+    assert "The following modules are recommended to be updated to meet the minimum 2.2 requirements." in page
+    assert "multi-step installation process" in page
+    assert "Update the modules above so that your car meets the minimum 2.2 requirement, then update to Marlin. You could update to Marlin alone, but it is not recommended." in page
+    assert '<p class="contact">Contact your service provider.</p>' in page
+    assert "\u2705 <strong>Marlin</strong>: Ready for the update" in page
+    assert "You can save this address" in page
+
+    zebra22 = body.replace(b"VCU039021", b"VCU039023")  # one module lifted to 2.2 -> 2.2 zebra
+    page = _upload(c, body=zebra22).text
+    assert "2.2 zebra" in page and "\u274c <strong>Marlin</strong>: Not ready" in page
+    assert "must complete 2.2 before it can be updated to Marlin" in page
+
+    full22 = Path(__file__).parent / "fixtures" / "olp_report_22_full.txt"
+    page = _upload(c, body=full22.read_bytes()).text
+    assert "SW 2.1</strong>" not in page.split("Requirements version")[0] and "SW 2.2</strong>: Complete" in page
+    assert "recommended to be updated" not in page
+    assert "regional or country liaison" in page and "meets the minimum 2.2 requirement and can be updated to Marlin" in page
+
+
+def test_pdf_uses_coloured_marks_and_no_link(client):
+    """The PDF has no emoji font, so it renders coloured ticks and crosses, and
+    the permanent link stays out of it."""
+    from app import main
+
+    c, _ = client
+    body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030")
+    token = _upload(c, body=body, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
+    cached = main._recent_results[token]
+    html = main.templates.get_template("pdf.html").render(
+        lang="en", t=main.translator("en"), report=cached["report"], evaluation=cached["evaluation"],
+        for_pdf=True, generated_at="now",
+    )
+    assert '<span class="mark ok">\u2713</span>' in html and '<span class="mark bad">\u2717</span>' in html
+    assert "\u2705" not in html and "\u274c" not in html
+    assert "/vehicle/" not in html and "Permanent link" not in html
+    assert '<p class="contact">Contact your service provider.</p>' in html

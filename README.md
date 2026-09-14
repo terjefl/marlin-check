@@ -16,7 +16,15 @@ car's control modules meet the minimum software levels required for the
 - Trim read from the VIN (5th character): a Sport has no rear motor controller,
   so it is not counted as missing there. Battery management is checked per
   software line (NMC vs LFP pack).
-- Downloadable PDF report (WeasyPrint), generated in the active language.
+- Result page laid out as the association's working group asked (Sep 2026):
+  outcome and explanation, then the modules that must be updated for 2.2 (code
+  first, current version and level, needed version and level), then only the
+  highest complete level in green with every level above in red (counting the
+  modules that do not meet), then the recommendation and a red contact line
+  (service partner, or the regional/country liaison for full-2.2 cars). A zebra
+  never gets a green Marlin line; a Marlin car still sees what it lacks for 2.2.
+- Downloadable PDF report (WeasyPrint), generated in the active language, with
+  coloured ticks/crosses (the image has no emoji font) and without the permanent link.
 - A permanent link per vehicle (`/vehicle/<random key>`, 128-bit key created on the
   first upload of a VIN and shown on the result page, in the PDF and in the admin
   register). It always renders the vehicle's latest stored report against the

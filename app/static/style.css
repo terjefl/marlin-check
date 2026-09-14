@@ -148,6 +148,10 @@ pre.diff { overflow-x: auto; font-size: 0.78rem; background: var(--bg); padding:
 .levelstatus { list-style: none; padding: 0; margin: 0.8rem 0; }
 .levelstatus li { margin: 0.2rem 0; }
 .recommendation { margin-bottom: 0; }
+.contact { color: var(--warn); font-weight: 600; margin: 0.4rem 0 0; }
+.modules-heading { margin: 0.8rem 0 0.2rem; font-weight: 600; }
+.modulelist { list-style: none; margin: 0.2rem 0 0.4rem; padding-left: 0.2rem; }
+.modulelist li { margin: 0.2rem 0; }
 table.modules th.num, table.modules td.num { text-align: center; white-space: nowrap; }
 td.lvl.met { color: var(--ok); }
 td.lvl.unmet { color: var(--warn); font-weight: 600; }

@@ -18,6 +18,13 @@
     td.lvl.met { color: #1e8e3e; }
     td.lvl.unmet { color: #d93025; font-weight: bold; }
     .meta { color: #666; font-size: 9pt; }
+    .mark { font-weight: bold; }
+    .mark.ok { color: #1e8e3e; }
+    .mark.bad { color: #d93025; }
+    .contact { color: #d93025; font-weight: bold; margin: 4pt 0 0; }
+    .modules-heading { margin: 8pt 0 2pt; }
+    .modulelist { list-style: none; margin: 2pt 0 6pt; padding-left: 4pt; }
+    .hint { color: #666; font-size: 9pt; margin: 0 0 4pt; }
     table.modules { width: 100%; border-collapse: collapse; margin-top: 8pt; }
     table.modules { font-size: 8.5pt; }
     table.modules th, table.modules td { border: 0.5pt solid #ccc; padding: 3pt 4pt; text-align: left; }
@@ -34,7 +41,6 @@
     ℹ️ <strong>{{ t('alpha_title') }}</strong> – {{ t('alpha_text') }}
   </div>
   {% include "_result_body.html" %}
-  <p style="margin-top: 12pt; font-size: 9pt;"><strong>{{ t('permanent_link_title') }}</strong> <a href="{{ permanent_url }}">{{ permanent_url }}</a><br><span style="color: #666;">{{ t('permanent_link_text') }}</span></p>
   <footer>{{ t('footer_disclaimer') }}</footer>
 </body>
 </html>

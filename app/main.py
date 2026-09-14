@@ -375,14 +375,14 @@ def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key
     return response
 
 
-async def _pdf_response(request: Request, report, evaluation, link_key: str) -> Response:
+async def _pdf_response(request: Request, report, evaluation) -> Response:
     lang = negotiate_language(request)
     html = templates.get_template("pdf.html").render(
         lang=lang,
         t=translator(lang),
         report=report,
         evaluation=evaluation,
-        permanent_url=_permanent_url(request, link_key),
+        for_pdf=True,  # DejaVu has no emoji: the template uses coloured ✓/✗ instead
         generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
     pdf_bytes = await _run_heavy(_render_pdf, html)
@@ -429,7 +429,7 @@ async def download_pdf(request: Request, token: str):
     cached = _recent_results.get(token)
     if cached is None:
         return _expired_result(request)
-    return await _pdf_response(request, cached["report"], cached["evaluation"], cached["link_key"])
+    return await _pdf_response(request, cached["report"], cached["evaluation"])
 
 
 # --- permanent per-vehicle link ---------------------------------------------
@@ -470,7 +470,7 @@ async def vehicle_pdf(request: Request, key: str):
     if found is None:
         return _unknown_vehicle_link(request)
     report, evaluation, _submission = found
-    return await _pdf_response(request, report, evaluation, key)
+    return await _pdf_response(request, report, evaluation)
 
 
 def _fleet_stats() -> dict:
