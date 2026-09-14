@@ -452,3 +452,32 @@ def test_how_it_works_page_in_every_language(client):
         assert table["how_sections"][-1]["paragraphs"][0][:40] in page.text
         assert f'href="/how-it-works">{table["nav_how"]}</a>' in c.get(f"/?lang={lang}").text
         assert "<script>" not in page.text  # CSP: no inline scripts
+
+
+def test_heavy_jobs_are_limited():
+    """Report parsing and PDF rendering go through a semaphore so a burst of
+    uploads queues instead of fanning out over the whole threadpool."""
+    import asyncio
+    import threading
+    import time
+
+    from app import main
+
+    running = 0
+    peak = 0
+    lock = threading.Lock()
+
+    def job():
+        nonlocal running, peak
+        with lock:
+            running += 1
+            peak = max(peak, running)
+        time.sleep(0.05)
+        with lock:
+            running -= 1
+
+    async def burst():
+        await asyncio.gather(*(main._run_heavy(job) for _ in range(main.MAX_HEAVY_JOBS * 3)))
+
+    asyncio.run(burst())
+    assert 0 < peak <= main.MAX_HEAVY_JOBS

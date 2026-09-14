@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import difflib
 import hashlib
@@ -55,6 +56,20 @@ RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
 COOKIE_SECURE = os.environ.get("MARLIN_COOKIE_SECURE", "1").strip().lower() not in ("0", "false", "no", "")
 RATE_LIMIT_UPLOADS = 10       # per IP per window
 RATE_LIMIT_WINDOW = 60        # seconds
+# Heavy, CPU- and memory-bound work (pdfplumber parsing and WeasyPrint PDF
+# rendering) is limited to a few jobs at a time. Without a cap, a burst of
+# uploads or PDF downloads would fan out over the whole threadpool (40
+# threads) and could push the container past its memory limit; with it,
+# extra requests simply wait their turn. The event loop stays free, so pages
+# and statistics remain responsive while the queue drains.
+MAX_HEAVY_JOBS = int(os.environ.get("MARLIN_MAX_HEAVY_JOBS", "4"))
+_heavy_jobs = asyncio.Semaphore(MAX_HEAVY_JOBS)
+
+
+async def _run_heavy(func, *args):
+    """Run a CPU-bound function in the threadpool, at most MAX_HEAVY_JOBS at once."""
+    async with _heavy_jobs:
+        return await run_in_threadpool(func, *args)
 
 # The result-page wording (verdict_ready_text, verdict_zebra_text, ready_22_note
 # in all seven locales) is written for the Marlin world where "2.1" is the
@@ -246,6 +261,14 @@ def _parse_and_evaluate(data: bytes, filename: str, requirements: RequirementSet
     return parsed, evaluate(parsed, requirements)
 
 
+def _render_pdf(html: str) -> bytes:
+    """WeasyPrint rendering: heavy import deferred until the first PDF, and
+    run through the heavy-job limiter like report parsing."""
+    from weasyprint import HTML
+
+    return HTML(string=html).write_pdf()
+
+
 async def _read_upload(report: UploadFile) -> bytes | None:
     """Reads the upload in chunks; None if it exceeds MAX_REPORT_BYTES, so a
     large file never has to sit in memory in full before being rejected."""
@@ -279,7 +302,7 @@ async def analyze(request: Request, report: UploadFile):
         return _render(request, "index.html", {"error": t("error_consent_required"), "requirements": requirements}, status_code=422)
 
     try:
-        parsed, evaluation = await run_in_threadpool(
+        parsed, evaluation = await _run_heavy(
             _parse_and_evaluate, data, report.filename or "", requirements
         )
     except ReportParseError as exc:
@@ -344,7 +367,7 @@ def result(request: Request, token: str):
 
 
 @app.get("/pdf/{token}")
-def download_pdf(request: Request, token: str):
+async def download_pdf(request: Request, token: str):
     _prune_results()
     cached = _recent_results.get(token)
     if cached is None:
@@ -358,9 +381,7 @@ def download_pdf(request: Request, token: str):
         evaluation=cached["evaluation"],
         generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
-    from weasyprint import HTML  # heavy import — deferred until the first PDF
-
-    pdf_bytes = HTML(string=html).write_pdf()
+    pdf_bytes = await _run_heavy(_render_pdf, html)
     filename = f"marlin-check_{cached['report'].vin}.pdf"
     return Response(
         pdf_bytes,

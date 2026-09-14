@@ -234,6 +234,7 @@ changing `requirements.txt`, regenerate the lock with
 | `MARLIN_REQUIREMENTS_PATH` | `./requirements.example.yaml` | `/config/requirements.yaml` | The requirements file |
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
 | `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
+| `MARLIN_MAX_HEAVY_JOBS` | `4` | same | How many report analyses and PDF renderings may run at once; further requests wait in line. Protects the container's memory limit under a burst of uploads. |
 | `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | same | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). Set to empty to use the socket address when no proxy is in front. |
 
 ## Build and deploy
@@ -253,6 +254,11 @@ proxy that sets the trusted client-IP header. Country statistics use
 Cloudflare's `CF-IPCountry` header and degrade gracefully without it.
 Production runs as a Portainer git stack behind a Cloudflare Tunnel; the
 compose file lives in the operator's infrastructure repo.
+
+Heavy work (PDF parsing, WeasyPrint) is capped at `MARLIN_MAX_HEAVY_JOBS`
+concurrent jobs (default 4); a burst of uploads queues rather than fanning out
+over the threadpool. Measured on a laptop: ~0.12 s per PDF analysis, 40
+parallel uploads complete in ~5 s with no errors.
 
 Run exactly **one** uvicorn worker/replica: result tokens, upload rate limits
 and the admin login lockout live in process memory. A restart invalidates all
