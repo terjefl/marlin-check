@@ -652,6 +652,9 @@ def test_user_management_panel(client):
     _login(c, "terje", "hemmelig123")
     page = c.get("/admin/users")
     assert page.status_code == 200 and "styremedlem" in page.text
+    assert "Last login (UTC)" in page.text
+    assert main.database.get_user("terje")["last_login_at"] is not None  # set when the code was accepted
+    assert main.database.get_user("styremedlem")["last_login_at"] is None
     csrf = _csrf(page.text)
     headers = {"Sec-Fetch-Site": "same-origin"}
 

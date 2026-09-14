@@ -16,7 +16,7 @@
 <p class="meta"><strong>Full admin</strong> can change requirements, re-evaluate, delete vehicles and manage users. <strong>Read-only</strong> sees everything, including exports, but cannot change anything. Two-factor authentication is required for both.</p>
 
 <table class="modules">
-  <thead><tr><th>User</th><th>Role</th><th>Two-factor</th><th>Password changed</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+  <thead><tr><th>User</th><th>Role</th><th>Two-factor</th><th>Password changed</th><th>Last login (UTC)</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
   <tbody>
     {% for u in users %}
     <tr>
@@ -30,6 +30,7 @@
       </td>
       <td>{% if u.totp_confirmed_at %}✅ {{ u.totp_confirmed_at[:10] }}{% else %}<span class="crit">not set up</span>{% endif %}</td>
       <td>{{ (u.password_changed_at or '')[:10] or '–' }}</td>
+      <td>{{ (u.last_login_at or '')[:16].replace('T', ' ') or '–' }}</td>
       <td>{% if u.disabled %}<span class="pill oc-zebra_21">disabled</span>{% else %}<span class="pill oc-full_22">active</span>{% endif %}</td>
       <td class="meta">{{ u.created_at[:10] }} by {{ u.created_by }}</td>
       <td class="actions-cell">

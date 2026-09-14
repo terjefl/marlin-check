@@ -691,6 +691,7 @@ async def admin_login_code(request: Request):
         return _render(request, "admin_login_code.html",
                        {"error": "Wrong code. Codes are valid once and change every 30 seconds.", "next": next_path}, status_code=401)
     database.session_mfa_done(request.cookies.get(auth.SESSION_COOKIE, ""))
+    database.record_login(username)
     database.add_audit(username, ip, "login", "TOTP code ok")
     return RedirectResponse(next_path, status_code=303)
 
@@ -963,6 +964,7 @@ async def admin_profile_totp_confirm(request: Request, username: str = Depends(r
         return _render_profile(request, username, error="That code did not match. Scan the QR code again and enter the current code.", setup=setup, status_code=400)
     database.confirm_totp(username, step)
     database.session_setup_done(request.cookies.get(auth.SESSION_COOKIE, ""))
+    database.record_login(username)  # the first full login
     database.add_audit(username, client_ip(request), "mfa_setup", "TOTP confirmed")
     return _render_profile(request, username, message="Two-factor authentication is set up. You will be asked for a code at every login.")
 

@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
     disabled INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     created_by TEXT NOT NULL DEFAULT '',
-    password_changed_at TEXT
+    password_changed_at TEXT,
+    last_login_at TEXT
 );
 
 -- Prepared for passkeys (WebAuthn); not used yet.
@@ -140,6 +141,9 @@ _MIGRATIONS = {
         ("top_evidence", "TEXT"),
         ("report_date", "TEXT NOT NULL DEFAULT ''"),
         ("country", "TEXT NOT NULL DEFAULT ''"),
+    ],
+    "admin_users": [
+        ("last_login_at", "TEXT"),
     ],
     "admin_sessions": [
         ("mfa_pending", "INTEGER NOT NULL DEFAULT 0"),
@@ -684,6 +688,12 @@ class Database:
         with self._connect() as conn:
             conn.execute("UPDATE admin_sessions SET mfa_pending = 0 WHERE token_hash = ?", (_token_hash(token),))
 
+    def record_login(self, username: str) -> None:
+        """A completed login (password and, when set up, the TOTP code)."""
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_users SET last_login_at = ? WHERE username = ?",
+                         (datetime.now(UTC).isoformat(), username))
+
     def session_setup_done(self, token: str) -> None:
         with self._connect() as conn:
             conn.execute("UPDATE admin_sessions SET mfa_setup_required = 0 WHERE token_hash = ?", (_token_hash(token),))
@@ -749,7 +759,7 @@ class Database:
         with self._connect() as conn:
             return [dict(r) for r in conn.execute(
                 "SELECT username, role, totp_confirmed_at, disabled, created_at, created_by,"
-                " password_changed_at FROM admin_users ORDER BY username"
+                " password_changed_at, last_login_at FROM admin_users ORDER BY username"
             )]
 
     def get_user(self, username: str) -> dict | None:
