@@ -23,6 +23,12 @@ car's control modules meet the minimum software levels required for the
   modules that do not meet), then the recommendation and a red contact line
   (service partner, or the regional/country liaison for full-2.2 cars). A zebra
   never gets a green Marlin line; a Marlin car still sees what it lacks for 2.2.
+- Cars on Marlin also see whether the whole Marlin package is in place: the
+  requirements file's `marlin_modules` (VCU 24, PDU 4000, FCM PSOP09, HYDRA
+  ADAS039051, from the workbook's Marlin column and 7 of the 9 Marlin cars in
+  the register) are checked and shown as a level line, a list of what is
+  missing and a small table. Never part of the outcome; not counted on `/stats`
+  yet (that would need re-evaluation to store it).
 - Downloadable PDF report (WeasyPrint), generated in the active language, with
   coloured ticks/crosses (the image has no emoji font) and without the permanent link.
 - A permanent link per vehicle (`/vehicle/<random key>`, 128-bit key created on the

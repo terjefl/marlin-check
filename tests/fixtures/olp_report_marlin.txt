@@ -98,7 +98,7 @@ Bootloader Version: FM2915900021H
 PDU - Power Distribution Unit
 Software Version: FM291584S001F
 Hardware Version: FM291584H001D
-Supplier SW Version: PDU3900D02
+Supplier SW Version: PDU4000D02
 Bootloader Version: UDSBOOT-V1.20
 MCU_F - Motor Control Unit Front
 Software Version: FM291040S100P
@@ -160,7 +160,7 @@ ADAS
 FCM - Front Camera Module
 Software Version: FM298014S002H
 Hardware Version: FM298014H002C
-Supplier SW Version: FCMSORP0E
+Supplier SW Version: FCMPSOP09
 Bootloader Version: FCM2302220101
 MRR - Mid Range Radar
 Software Version: FM298014S080H
@@ -190,5 +190,5 @@ Bootloader Version: MRRBTLD039507
 HYDRA - Advanced Driver Assist System
 Software Version: FM298014S120J
 Hardware Version: FM298014H120E
-Supplier SW Version: ADAS039017
+Supplier SW Version: ADAS039051
 Bootloader Version: ADAS000000500

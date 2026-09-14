@@ -96,12 +96,34 @@ class Requirement:
 
 
 @dataclass
+class MarlinRequirement:
+    """A module that the Marlin update installs, and the level it installs.
+    Only used to tell a car that is already on Marlin whether the whole
+    Marlin package is in place; it never affects the outcome."""
+    id: str
+    match: list[str]
+    marlin_level: int
+    extract: str | None = None
+    label: str = ""
+
+
+@dataclass
+class MarlinResult:
+    requirement: MarlinRequirement
+    version: str = ""             # Supplier SW Version as found, "" if the module is missing
+    extracted: int | None = None
+    ok: bool = False              # extracted >= marlin_level; doubt never gives ok
+    status: str = MISSING         # ok / outdated / missing / unparseable / empty
+
+
+@dataclass
 class RequirementSet:
     version: str
     target_profile: str           # profile required for direct Marlin (currently "2.1")
     profiles: list[str]           # ascending order, e.g. ["2.0", "2.1"]
     modules: list[Requirement]
     notes: str = ""               # free text: sources and open points, kept by the admin form
+    marlin_modules: list[MarlinRequirement] = field(default_factory=list)
 
 
 @dataclass
@@ -143,6 +165,16 @@ class Evaluation:
     outcome: str = ""             # one of OUTCOMES
     complete_profile: str | None = None  # highest profile every required module meets
     top_evidence: str | None = None      # highest evidence_level over the modules
+    marlin_results: list[MarlinResult] = field(default_factory=list)  # the Marlin package, per module
+
+    @property
+    def marlin_below(self) -> list[MarlinResult]:
+        """Modules the Marlin update installs that are not at the Marlin level."""
+        return [r for r in self.marlin_results if not r.ok]
+
+    @property
+    def marlin_complete(self) -> bool:
+        return bool(self.marlin_results) and not self.marlin_below
 
     def below(self, profile: str) -> list[ModuleResult]:
         """Modules that do not meet `profile` (no number counts as below)."""
@@ -349,12 +381,42 @@ def _build_requirement_set(raw: dict) -> RequirementSet:
     notes = raw.get("notes", "")
     if notes is not None and not isinstance(notes, str):
         raise RequirementsValidationError("`notes` must be a string.")
+    raw_marlin = raw.get("marlin_modules")
+    if raw_marlin is None:
+        raw_marlin = []
+    if not isinstance(raw_marlin, list):
+        raise RequirementsValidationError("`marlin_modules` must be a list.")
+    marlin_modules = []
+    for index, m in enumerate(raw_marlin):
+        m = _mapping(m, f"marlin_modules[{index}]")
+        if not isinstance(m.get("id"), str) or not m["id"].strip():
+            raise RequirementsValidationError(f"marlin_modules[{index}]: `id` is missing or not a string.")
+        where = f"Marlin module {m['id'].strip()}"
+        level = m.get("marlin_level")
+        if isinstance(level, bool) or not isinstance(level, int):
+            raise RequirementsValidationError(f"{where}: `marlin_level` must be an integer.")
+        extract = _optional_str(m.get("extract"), f"{where}: `extract`")
+        if extract:
+            try:
+                if re.compile(extract).groups < 1:
+                    raise RequirementsValidationError(f"{where}: the extract regex has no capture group.")
+            except re.error as exc:
+                raise RequirementsValidationError(f"{where}: invalid extract regex: {exc}") from exc
+        marlin_modules.append(MarlinRequirement(
+            id=m["id"].strip(),
+            match=[c.upper() for c in _str_list(m.get("match", [m["id"]]), f"{where}: `match`")],
+            marlin_level=level,
+            extract=extract,
+            label=str(m.get("label") or m["id"]).strip(),
+        ))
+
     return RequirementSet(
         version=str(raw.get("version", "unknown")),
         target_profile=str(raw.get("target_profile")),
         profiles=_str_list(raw.get("profiles"), "`profiles`"),
         modules=modules,
         notes=notes or "",
+        marlin_modules=marlin_modules,
     )
 
 
@@ -515,6 +577,7 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
     profiles = list(requirements.profiles)
     complete_profile, top_evidence = _classify_levels(results, profiles)
     outcome = _outcome(verdict, complete_profile, top_evidence, target, profiles)
+    marlin_results = [_marlin_result(req, report) for req in requirements.marlin_modules]
     return Evaluation(
         verdict=verdict,
         requirements_version=requirements.version,
@@ -527,7 +590,24 @@ def evaluate(report: ParsedReport, requirements: RequirementSet) -> Evaluation:
         outcome=outcome,
         complete_profile=complete_profile,
         top_evidence=top_evidence,
+        marlin_results=marlin_results,
     )
+
+
+def _marlin_result(req: MarlinRequirement, report: ParsedReport) -> MarlinResult:
+    """Is this module at the level the Marlin update installs? Uses the first
+    reading whose code matches; anything unreadable counts as not ok."""
+    reading = next((m for m in report.modules if m.code.upper() in req.match), None)
+    if reading is None:
+        return MarlinResult(requirement=req, status=MISSING)
+    if not reading.supplier_sw.strip():
+        return MarlinResult(requirement=req, version="", status=EMPTY)
+    extracted = _extract_number(reading.supplier_sw, req.extract)
+    if extracted is None:
+        return MarlinResult(requirement=req, version=reading.supplier_sw, status=UNPARSEABLE)
+    ok = extracted >= req.marlin_level
+    return MarlinResult(requirement=req, version=reading.supplier_sw, extracted=extracted,
+                        ok=ok, status=OK if ok else OUTDATED)
 
 
 def _classify_levels(results: list[ModuleResult], profiles: list[str]) -> tuple[str | None, str | None]:

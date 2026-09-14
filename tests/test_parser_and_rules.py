@@ -338,14 +338,14 @@ def test_car_already_on_marlin_gets_marlin_verdict_not_ready():
     assert evaluate(report, requirements).verdict == VERDICT_READY
 
     # Without any marlin_level in the file, no car can be "on Marlin"
-    plain = parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", ""))
+    plain = parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", "", 1))  # the VCU module marker, not marlin_modules
     assert all(m.marlin_level is None for m in plain.modules)
     assert evaluate(_fixture_report("olp_report_marlin.txt"), plain).verdict == VERDICT_READY
 
 
 def test_marlin_level_must_be_an_integer():
     with pytest.raises(RequirementsValidationError) as excinfo:
-        parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", "marlin_level: soon"))
+        parse_requirements_text(REQUIREMENTS.read_text().replace("marlin_level: 24", "marlin_level: soon", 1))
     assert "marlin_level" in str(excinfo.value)
 
 
@@ -523,3 +523,31 @@ def test_ibooster_must_follow_esp_to_the_22_generation():
     fresh = evaluate(_fixture_report("olp_report_22_full.txt"), requirements)
     assert fresh.outcome == OUTCOME_FULL_TOP
     assert next(r for r in fresh.results if r.requirement.id == "IBS").extracted == 401
+
+
+def test_marlin_package_completeness():
+    """`marlin_modules` says whether a Marlin car got the whole Marlin package
+    (VCU 24, PDU 4000, FCM PSOP09, HYDRA ADAS039051). It never changes the
+    outcome or the module counts, and doubt never gives ok."""
+    requirements = load_requirements(REQUIREMENTS)
+    assert [m.id for m in requirements.marlin_modules] == ["VCU", "PDU", "FCM", "HYDRA"]
+
+    full = evaluate(_fixture_report("olp_report_marlin.txt"), requirements)
+    assert full.outcome == "marlin" and full.marlin_complete and full.marlin_below == []
+    assert [(r.requirement.id, r.extracted) for r in full.marlin_results] == [("VCU", 24), ("PDU", 4000), ("FCM", 9), ("HYDRA", 51)]
+
+    partial = evaluate(_fixture_report("olp_report_marlin_bcm41.txt"), requirements)
+    assert partial.outcome == "marlin" and not partial.marlin_complete
+    assert [(r.requirement.id, r.extracted, r.status) for r in partial.marlin_below] == [
+        ("PDU", 3900, "outdated"), ("FCM", 0, "outdated"), ("HYDRA", 17, "outdated"),
+    ]
+    assert len(partial.results) == 8 and len(partial.extra_modules) == 29  # unchanged by marlin_modules
+
+    missing = _with(_fixture_report("olp_report_marlin.txt"), FCM="weird")
+    missing.modules = [m for m in missing.modules if m.code != "PDU"]
+    ev = evaluate(missing, requirements)
+    assert [(r.requirement.id, r.status) for r in ev.marlin_below] == [("PDU", "missing"), ("FCM", "unparseable")]
+
+    for bad in ['marlin_modules: {}', 'marlin_modules: [{id: X, marlin_level: "a"}]', 'marlin_modules: [{id: X, marlin_level: 1, extract: "nogroup"}]']:
+        with pytest.raises(RequirementsValidationError):
+            parse_requirements_text(REQUIREMENTS.read_text().split("\nmarlin_modules:")[0] + "\n" + bad + "\n")

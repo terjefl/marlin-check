@@ -79,6 +79,18 @@
 
 {% endif %}
 
+{% if requirements and requirements.marlin_modules %}
+<h3>Modules the Marlin update installs</h3>
+<p class="meta">Shown to cars that are already on Marlin, to say whether the whole Marlin package is in place. Never part of the outcome. Edit in the YAML editor (<code>marlin_modules</code>).</p>
+<table class="modules">
+  <thead><tr><th>Module</th><th>Match</th><th>Extract</th><th class="num">Marlin level</th></tr></thead>
+  <tbody>
+    {% for m in requirements.marlin_modules %}
+    <tr><td>{{ m.id }} – {{ m.label }}</td><td class="mono">{{ m.match | join(', ') }}</td><td class="mono">{{ m.extract or '' }}</td><td class="num">≥ {{ m.marlin_level }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 <details class="extra" {% if not requirements %}open{% endif %}>
   <summary>Advanced: edit the YAML directly</summary>
   <form method="post" action="/admin/save">

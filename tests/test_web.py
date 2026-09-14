@@ -301,7 +301,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     c, _main, path = client_with_config
     good = path.read_text()
     assert c.get("/healthz").status_code == 200
-    assert "2026-09-14" in _upload(c).text
+    assert "2026-09-15" in _upload(c).text
 
     path.write_text("modules: [\n")  # a bad edit on the host
     health = c.get("/healthz")
@@ -310,7 +310,7 @@ def test_corrupt_requirements_keeps_last_good_and_degrades_healthz(client_with_c
     # Analyses continue on the last valid set instead of failing with 500
     response = _upload(c)
     assert response.status_code == 200
-    assert "2026-09-14" in response.text
+    assert "2026-09-15" in response.text
     assert c.get("/").status_code == 200
 
     path.unlink()  # mount gone entirely
@@ -385,13 +385,23 @@ def test_marlin_car_result_page_and_statistics(client):
     assert "Marlin does not update every module" in response.text
     assert "BCM \u2013 Body Control Module: is at version 41 (2.1 level) and needs to be updated to 42 (2.2 level)" in response.text
     assert "Your car is on Marlin. Update the modules above" in response.text
+    # The Marlin package: this car only got VCU 24
+    assert "Not complete \u2013 3 of 4 modules the Marlin update installs are not at the Marlin level" in response.text
+    assert "PDU \u2013 Power Distribution Unit: is at version 3900 and needs to be updated to 4000 (Marlin level)" in response.text
+    assert "Modules the Marlin update installs" in response.text and "Your car has received Marlin, but not every module" in response.text
+    assert '<p class="contact">Contact your service provider.</p>' in response.text
+
+    full = Path(__file__).parent / "fixtures" / "olp_report_marlin.txt"
+    page = c.post("/analyze?lang=en", files={"report": ("r.txt", full.read_bytes(), "text/plain")}, data=CONSENT).text
+    assert "Complete \u2013 all 4 modules the Marlin update installs are at the Marlin level" in page
+    assert "with every Marlin module in place" in page and "Have them updated" not in page
 
     stats = main.database.stats()
-    assert stats["verdicts"] == {"marlin": 1}
-    assert stats["outcomes"] == {"marlin": 1}
+    assert stats["verdicts"] == {"marlin": 2}
+    assert stats["outcomes"] == {"marlin": 2}
     page = c.get("/stats?lang=en")
     assert "On Marlin" in page.text and "Vehicles per software status" in page.text
-    assert main.database.usage_stats()["outcomes"] == {"marlin": 1}
+    assert main.database.usage_stats()["outcomes"] == {"marlin": 2}
 
 
 def test_security_headers_and_no_inline_scripts(client):
@@ -564,6 +574,7 @@ def test_result_page_layout_follows_the_working_group(client):
     assert "SW 2.1</strong>" not in page.split("Requirements version")[0] and "SW 2.2</strong>: Complete" in page
     assert "recommended to be updated" not in page
     assert "regional or country liaison" in page and "meets the minimum 2.2 requirement and can be updated to Marlin" in page
+    assert "Modules the Marlin update installs" not in page  # only shown to cars on Marlin
 
 
 def test_pdf_uses_coloured_marks_and_no_link(client):

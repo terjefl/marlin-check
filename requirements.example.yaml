@@ -41,7 +41,7 @@
 # In production this file is bind-mounted as /config/requirements.yaml and
 # re-read on every analysis — edit it on the host or via /admin (no rebuild).
 
-version: "2026-09-14"
+version: "2026-09-15"
 
 notes: |
   Source: the association's "V2 WIP ECU COMPARISON FOR MARLIN" workbook (MAIN
@@ -51,7 +51,10 @@ notes: |
   Marlin (Sep 2026). ECC at 2.2 is 25 (the 2.2 reports and every full-2.2 car;
   Jens's table says 24). iBooster (IBS) is the eighth critical module since
   2026-09-13: ESP and iBooster must be on the same generation (400 on 2.1, 401
-  on 2.2). The version field is the date of the last change.
+  on 2.2). Marlin installs four modules (VCU 24, PDU 4000, FCM PSOP09, HYDRA
+  ADAS039051; workbook Marlin column, 7 of 9 Marlin cars); `marlin_modules` lists
+  them so a Marlin car sees whether the whole package is in place. The version
+  field is the date of the last change.
 
   Open points:
   - One Marlin car has BCM 41 where the table says 42 for 2.2.
@@ -134,3 +137,29 @@ modules:
     levels: {"2.0": 20, "2.1": 21, "2.2": 23}
     critical: true
     marlin_level: 24                # VCU039024 = "VCU 2.4": the car already runs Marlin
+
+# Modules that the Marlin update installs, and the level Marlin gives them.
+# Only used to tell a car that is already on Marlin whether the whole Marlin
+# package is in place; never part of the outcome. Source: the workbook's
+# Marlin column and 7 of the 9 Marlin cars in the register (2026-09-15).
+marlin_modules:
+  - id: VCU
+    label: Vehicle Control Unit
+    match: [VCU]
+    extract: 'VCU\d{3}0*(\d+)$'     # VCU039024 -> 24
+    marlin_level: 24
+  - id: PDU
+    label: Power Distribution Unit
+    match: [PDU]
+    extract: 'PDU(\d{4})'          # PDU3900D02 -> 3900 (2.2); PDU4000D02 -> 4000 (Marlin)
+    marlin_level: 4000
+  - id: FCM
+    label: Front Camera Module
+    match: [FCM]
+    extract: 'FCM[A-Z]{4}(\d+)'    # FCMSORP0E -> 0 (2.2); FCMPSOP09 -> 9 (Marlin)
+    marlin_level: 9
+  - id: HYDRA
+    label: Advanced Driver Assist System
+    match: [HYDRA]
+    extract: 'ADAS039(\d+)$'       # ADAS039017 -> 17 (2.2); ADAS039051 -> 51 (Marlin)
+    marlin_level: 51

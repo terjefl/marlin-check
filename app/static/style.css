@@ -218,3 +218,4 @@ tr.selectedrow td { background: #e8f0fe; }
 .timeseries .col-bar.vehicles { background: #1a73e8; left: 15%; right: 15%; }
 .timeseries .col-label { font-size: 0.65rem; color: var(--muted); text-align: center; height: 1rem; overflow: visible; white-space: nowrap; }
 .swatch.ts-uploads { background: #9bbfe6; } .swatch.ts-vehicles { background: #1a73e8; }
+.marlin-title { font-size: 1.05rem; margin: 1.2rem 0 0.3rem; }
