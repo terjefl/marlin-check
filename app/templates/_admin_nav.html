@@ -1,7 +1,7 @@
 <div class="meta adminbar">
   <span>
-    <a href="/admin">Requirements</a> · <a href="/admin/fleet">Vehicle register</a> · <a href="/admin/fleet/progress">Updated vehicles</a> · <a href="/stats">Public dashboard</a>
-    &nbsp;– logged in as <strong>{{ username }}</strong>
+    <a href="/admin">Requirements</a> · <a href="/admin/fleet">Vehicle register</a> · <a href="/admin/fleet/progress">Updated vehicles</a>{% if role == 'admin' %} · <a href="/admin/users">Users</a>{% endif %} · <a href="/admin/profile">My account</a> · <a href="/stats">Public dashboard</a>
+    &nbsp;– logged in as <strong>{{ username }}</strong> ({% if role == 'admin' %}full admin{% else %}read-only{% endif %})
   </span>
   <form method="post" action="/admin/logout">
     <input type="hidden" name="csrf" value="{{ csrf }}">

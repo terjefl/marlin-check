@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Two-factor code – {{ t('site_title') }}{% endblock %}
+{% block content %}
+<h1>Two-factor code</h1>
+<p class="meta">Enter the six-digit code from your authenticator app.</p>
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<form class="uploadbox loginbox" method="post" action="/admin/login/code">
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="globalfields">
+    <label>Code
+      <input type="text" name="code" inputmode="numeric" pattern="[0-9 ]*" autocomplete="one-time-code" autofocus required maxlength="7">
+    </label>
+  </div>
+  <button type="submit">Continue</button>
+</form>
+{% endblock %}

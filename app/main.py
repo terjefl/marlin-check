@@ -98,6 +98,9 @@ STATIC_VERSION = hashlib.md5(
 ).hexdigest()[:8]
 
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
+# Bootstrap: the first start copies the YAML admin users into the database.
+if database.import_users_if_empty(auth.load_users()):
+    database.add_audit("system", "-", "users_import", "admin users imported from admin_users.yaml")
 
 # Recent analyses kept in memory, so the result page can offer the PDF without re-upload.
 # NOTE: all of this state (results, rate limits, login lockout) is per process —
@@ -134,7 +137,8 @@ def _render(request: Request, template: str, context: dict, status_code: int = 2
         request,
         template,
         {"lang": lang, "t": translator(lang), "languages": LANGUAGE_NAMES,
-         "static_v": STATIC_VERSION, "steps": block(lang, "intro_steps"), **context},
+         "static_v": STATIC_VERSION, "steps": block(lang, "intro_steps"),
+         "role": getattr(request.state, "role", ""), **context},
         status_code=status_code,
     )
     if request.query_params.get("lang") in SUPPORTED:
@@ -516,9 +520,19 @@ def _safe_next(value: str | None) -> str:
     return "/admin"
 
 
-def require_admin(request: Request) -> str:
-    """FastAPI dependency: username of the logged-in admin, or LoginRequired
-    (turned into a redirect to the login form by the handler below)."""
+class MfaRequired(Exception):
+    """The password was accepted but the TOTP code is still owed."""
+
+
+class MfaSetupRequired(Exception):
+    """Logged in, but MFA is not set up yet: only the profile page is open."""
+
+
+# Paths a session that still has to set up MFA may use.
+_SETUP_PATHS = ("/admin/profile", "/admin/logout")
+
+
+def _session_or_login(request: Request) -> dict:
     session = database.get_session(
         request.cookies.get(auth.SESSION_COOKIE, ""),
         idle_seconds=auth.SESSION_IDLE_SECONDS,
@@ -526,8 +540,32 @@ def require_admin(request: Request) -> str:
     )
     if session is None:
         raise LoginRequired()
+    return session
+
+
+def require_admin(request: Request) -> str:
+    """FastAPI dependency: username of the logged-in admin (any role), or a
+    redirect to the login form, the TOTP code form, or the MFA setup page.
+    Sets request.state.csrf and request.state.role."""
+    session = _session_or_login(request)
+    if session["mfa_pending"]:
+        raise MfaRequired()
+    user = auth.find_user(database, session["username"])
+    if user is None or user.get("disabled"):
+        raise LoginRequired()
+    if session["mfa_setup_required"] and not request.url.path.startswith(_SETUP_PATHS):
+        raise MfaSetupRequired()
     request.state.csrf = session["csrf_token"]
+    request.state.role = user.get("role", "admin")
+    request.state.username = session["username"]
     return session["username"]
+
+
+def require_full_admin(request: Request, username: str = Depends(require_admin)) -> str:
+    """Only the 'admin' role may change anything; 'readonly' sees everything."""
+    if request.state.role != "admin":
+        raise HTTPException(status_code=403, detail="Your account has read-only access. Ask a full admin to make this change.")
+    return username
 
 
 async def require_csrf(request: Request, username: str = Depends(require_admin)) -> str:
@@ -544,11 +582,30 @@ async def require_csrf(request: Request, username: str = Depends(require_admin))
     return username
 
 
+async def require_csrf_admin(request: Request, username: str = Depends(require_csrf)) -> str:
+    """CSRF-checked POST by a full admin."""
+    if request.state.role != "admin":
+        raise HTTPException(status_code=403, detail="Your account has read-only access. Ask a full admin to make this change.")
+    return username
+
+
 @app.exception_handler(LoginRequired)
 def _login_redirect(request: Request, exc: LoginRequired):
     return RedirectResponse(
         f"/admin/login?next={quote(request.url.path, safe='/')}", status_code=303
     )
+
+
+@app.exception_handler(MfaRequired)
+def _mfa_redirect(request: Request, exc: MfaRequired):
+    return RedirectResponse(
+        f"/admin/login/code?next={quote(request.url.path, safe='/')}", status_code=303
+    )
+
+
+@app.exception_handler(MfaSetupRequired)
+def _mfa_setup_redirect(request: Request, exc: MfaSetupRequired):
+    return RedirectResponse("/admin/profile?setup=1", status_code=303)
 
 
 def _render_login(request: Request, *, error: str = "", next_path: str = "/admin",
@@ -580,20 +637,62 @@ async def admin_login(request: Request):
             request, error="Too many failed login attempts. Try again in 15 minutes.",
             next_path=next_path, status_code=429,
         )
+    user = auth.find_user(database, username) if username else None
     # PBKDF2 is CPU-bound: keep it off the event loop
-    if not username or not await run_in_threadpool(auth.authenticate, username, password, ip):
+    if not username or not await run_in_threadpool(auth.authenticate, username, password, ip, user):
         return _render_login(
             request, error="Invalid username or password.", next_path=next_path, status_code=401
         )
 
-    token, _csrf = database.create_session(username)
-    database.add_audit(username, ip, "login", "")
-    response = RedirectResponse(next_path, status_code=303)
+    # MFA is required for every account: with a confirmed TOTP secret the code
+    # comes next; without one, only the profile page (setup) is reachable.
+    has_mfa = bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at"))
+    token, _csrf = database.create_session(username, mfa_pending=has_mfa, mfa_setup_required=not has_mfa)
+    database.add_audit(username, ip, "login", "password ok, TOTP code pending" if has_mfa else "password ok, MFA setup required")
+    target = f"/admin/login/code?next={quote(next_path, safe='/')}" if has_mfa else "/admin/profile?setup=1"
+    response = RedirectResponse(target, status_code=303)
     response.set_cookie(
         auth.SESSION_COOKIE, token, max_age=auth.SESSION_MAX_SECONDS, path="/admin",
         httponly=True, secure=COOKIE_SECURE, samesite="lax",
     )
     return response
+
+
+def _pending_session(request: Request) -> dict:
+    """The session of a user who has given the right password but not the code."""
+    session = _session_or_login(request)
+    if not session["mfa_pending"]:
+        raise LoginRequired()
+    return session
+
+
+@app.get("/admin/login/code", response_class=HTMLResponse)
+def admin_login_code_form(request: Request):
+    _pending_session(request)
+    return _render(request, "admin_login_code.html", {"error": "", "next": _safe_next(request.query_params.get("next"))})
+
+
+@app.post("/admin/login/code")
+async def admin_login_code(request: Request):
+    session = _pending_session(request)
+    form = await request.form()
+    code = str(form.get("code", ""))
+    next_path = _safe_next(str(form.get("next", "")))
+    ip = client_ip(request)
+    username = session["username"]
+    if auth.is_locked_out(ip, username):
+        return _render(request, "admin_login_code.html",
+                       {"error": "Too many failed attempts. Try again in 15 minutes.", "next": next_path}, status_code=429)
+    user = database.get_user(username)
+    step = auth.verify_totp(user["totp_secret"], code) if user and user.get("totp_secret") else None
+    if step is None or not database.use_totp_counter(username, step):
+        auth.register_failure(ip, username)
+        database.add_audit(username, ip, "login_code_failed", "")
+        return _render(request, "admin_login_code.html",
+                       {"error": "Wrong code. Codes are valid once and change every 30 seconds.", "next": next_path}, status_code=401)
+    database.session_mfa_done(request.cookies.get(auth.SESSION_COOKIE, ""))
+    database.add_audit(username, ip, "login", "TOTP code ok")
+    return RedirectResponse(next_path, status_code=303)
 
 
 @app.post("/admin/logout")
@@ -693,14 +792,14 @@ def admin(request: Request, username: str = Depends(require_admin)):
 
 
 @app.post("/admin/save")
-async def admin_save(request: Request, username: str = Depends(require_csrf)):
+async def admin_save(request: Request, username: str = Depends(require_csrf_admin)):
     form = await request.form()
     new_text = str(form.get("yaml_text", "")).replace("\r\n", "\n")
     return _save_requirements(request, username, new_text)
 
 
 @app.post("/admin/save-form")
-async def admin_save_form(request: Request, username: str = Depends(require_csrf)):
+async def admin_save_form(request: Request, username: str = Depends(require_csrf_admin)):
     form = await request.form()
     try:
         new_text = _form_to_yaml(form, username)
@@ -795,6 +894,186 @@ def _form_to_yaml(form, username: str) -> str:
     return header + yaml_module.safe_dump(
         data, allow_unicode=True, sort_keys=False, default_flow_style=False, width=100
     )
+
+
+# --- Admin: own profile (password, MFA) -------------------------------------
+
+def _render_profile(request: Request, username: str, *, message: str = "", error: str = "",
+                    setup: dict | None = None, status_code: int = 200) -> Response:
+    user = database.get_user(username) or {}
+    session = _session_or_login(request)
+    return _render(request, "admin_profile.html", {
+        "username": username, "csrf": request.state.csrf, "user": user,
+        "has_mfa": bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at")),
+        "setup_required": session["mfa_setup_required"],
+        "setup": setup, "message": message, "error": error,
+    }, status_code=status_code)
+
+
+@app.get("/admin/profile", response_class=HTMLResponse)
+def admin_profile(request: Request, username: str = Depends(require_admin)):
+    if username and database.get_user(username) is None:
+        # A YAML-only (rescue) user: create the database record so MFA can be stored
+        yaml_user = auth.find_user(database, username)
+        if yaml_user:
+            database.create_user(username, yaml_user["password_hash"], "admin", "yaml")
+    return _render_profile(request, username)
+
+
+@app.post("/admin/profile/password")
+async def admin_profile_password(request: Request, username: str = Depends(require_csrf)):
+    form = await request.form()
+    current, new, repeat = str(form.get("current", "")), str(form.get("new", "")), str(form.get("repeat", ""))
+    user = database.get_user(username)
+    if not user or not auth.verify_password(current, user["password_hash"]):
+        return _render_profile(request, username, error="The current password is wrong.", status_code=400)
+    if len(new) < 12:
+        return _render_profile(request, username, error="The new password must have at least 12 characters.", status_code=400)
+    if new != repeat:
+        return _render_profile(request, username, error="The two new passwords differ.", status_code=400)
+    database.set_password(username, await run_in_threadpool(auth.hash_password, new))
+    database.add_audit(username, client_ip(request), "password_change", "own password")
+    return _render_profile(request, username, message="Password changed.")
+
+
+@app.post("/admin/profile/totp/start")
+async def admin_profile_totp_start(request: Request, username: str = Depends(require_csrf)):
+    """Generates a new secret and shows the QR code; nothing counts until a
+    code is confirmed. Replacing an existing device needs the current code."""
+    form = await request.form()
+    user = database.get_user(username)
+    if user and user.get("totp_confirmed_at"):
+        step = auth.verify_totp(user["totp_secret"], str(form.get("code", "")))
+        if step is None or not database.use_totp_counter(username, step):
+            return _render_profile(request, username, error="Enter a valid code from your current device to replace it.", status_code=400)
+    secret = auth.new_totp_secret()
+    database.set_totp_secret(username, secret)
+    uri = auth.totp_uri(secret, username)
+    return _render_profile(request, username, setup={"secret": secret, "svg": auth.totp_qr_svg(uri)})
+
+
+@app.post("/admin/profile/totp/confirm")
+async def admin_profile_totp_confirm(request: Request, username: str = Depends(require_csrf)):
+    form = await request.form()
+    user = database.get_user(username)
+    secret = user.get("totp_secret") if user else None
+    step = auth.verify_totp(secret, str(form.get("code", ""))) if secret else None
+    if step is None:
+        setup = {"secret": secret, "svg": auth.totp_qr_svg(auth.totp_uri(secret, username))} if secret else None
+        return _render_profile(request, username, error="That code did not match. Scan the QR code again and enter the current code.", setup=setup, status_code=400)
+    database.confirm_totp(username, step)
+    database.session_setup_done(request.cookies.get(auth.SESSION_COOKIE, ""))
+    database.add_audit(username, client_ip(request), "mfa_setup", "TOTP confirmed")
+    return _render_profile(request, username, message="Two-factor authentication is set up. You will be asked for a code at every login.")
+
+
+# --- Admin: user management (full admin only) -------------------------------
+
+def _render_users(request: Request, username: str, *, message: str = "", error: str = "",
+                  new_password: tuple[str, str] | None = None, status_code: int = 200) -> Response:
+    return _render(request, "admin_users.html", {
+        "username": username, "csrf": request.state.csrf, "users": database.list_users(),
+        "roles": database.ROLES, "message": message, "error": error, "new_password": new_password,
+    }, status_code=status_code)
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+def admin_users(request: Request, username: str = Depends(require_full_admin)):
+    return _render_users(request, username)
+
+
+_USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{1,31}$")
+
+
+@app.post("/admin/users/create")
+async def admin_users_create(request: Request, username: str = Depends(require_csrf_admin)):
+    form = await request.form()
+    new_name = str(form.get("username", "")).strip().lower()
+    role = str(form.get("role", "readonly"))
+    if not _USERNAME_RE.fullmatch(new_name):
+        return _render_users(request, username, error="Username: 2 to 32 characters, lowercase letters, digits, dot, dash or underscore.", status_code=400)
+    if role not in database.ROLES:
+        return _render_users(request, username, error="Unknown role.", status_code=400)
+    password = secrets.token_urlsafe(12)
+    try:
+        database.create_user(new_name, await run_in_threadpool(auth.hash_password, password), role, username)
+    except ValueError as exc:
+        return _render_users(request, username, error=str(exc), status_code=400)
+    database.add_audit(username, client_ip(request), "user_create", f"{new_name} ({role})")
+    return _render_users(request, username, message=f"User {new_name} created with role {role}. They must set up two-factor authentication at first login.",
+                         new_password=(new_name, password))
+
+
+def _target_user(name: str) -> dict:
+    user = database.get_user(name)
+    if user is None:
+        raise HTTPException(status_code=404, detail="No such user.")
+    return user
+
+
+@app.post("/admin/users/{name}/role")
+async def admin_users_role(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    form = await request.form()
+    role = str(form.get("role", ""))
+    _target_user(name)
+    if role not in database.ROLES:
+        return _render_users(request, username, error="Unknown role.", status_code=400)
+    if role != "admin" and database.count_active_admins(excluding=name) == 0:
+        return _render_users(request, username, error="That would leave no full admin.", status_code=400)
+    database.set_role(name, role)
+    database.add_audit(username, client_ip(request), "user_role", f"{name} -> {role}")
+    return _render_users(request, username, message=f"{name} is now {role}.")
+
+
+@app.post("/admin/users/{name}/password")
+async def admin_users_password(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    _target_user(name)
+    password = secrets.token_urlsafe(12)
+    database.set_password(name, await run_in_threadpool(auth.hash_password, password))
+    database.delete_user_sessions(name)
+    database.add_audit(username, client_ip(request), "user_password", f"{name}: new password issued")
+    return _render_users(request, username, message=f"New password for {name}. Pass it on securely; it is shown only once.", new_password=(name, password))
+
+
+@app.post("/admin/users/{name}/reset-mfa")
+async def admin_users_reset_mfa(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    _target_user(name)
+    database.set_totp_secret(name, None)
+    database.delete_user_sessions(name)
+    database.add_audit(username, client_ip(request), "user_mfa_reset", name)
+    return _render_users(request, username, message=f"Two-factor authentication for {name} was reset. They set it up again at next login.")
+
+
+@app.post("/admin/users/{name}/disable")
+async def admin_users_disable(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    _target_user(name)
+    if name == username:
+        return _render_users(request, username, error="You cannot disable your own account.", status_code=400)
+    if database.count_active_admins(excluding=name) == 0:
+        return _render_users(request, username, error="That would leave no full admin.", status_code=400)
+    database.set_disabled(name, True)
+    database.add_audit(username, client_ip(request), "user_disable", name)
+    return _render_users(request, username, message=f"{name} is disabled.")
+
+
+@app.post("/admin/users/{name}/enable")
+async def admin_users_enable(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    _target_user(name)
+    database.set_disabled(name, False)
+    database.add_audit(username, client_ip(request), "user_enable", name)
+    return _render_users(request, username, message=f"{name} is enabled.")
+
+
+@app.post("/admin/users/{name}/delete")
+async def admin_users_delete(request: Request, name: str, username: str = Depends(require_csrf_admin)):
+    _target_user(name)
+    if name == username:
+        return _render_users(request, username, error="You cannot delete your own account.", status_code=400)
+    if database.count_active_admins(excluding=name) == 0:
+        return _render_users(request, username, error="That would leave no full admin.", status_code=400)
+    database.delete_user(name)
+    database.add_audit(username, client_ip(request), "user_delete", name)
+    return _render_users(request, username, message=f"{name} is deleted.")
 
 
 # --- Admin: the vehicle register ------------------------------------------
@@ -951,7 +1230,7 @@ def admin_vehicle(request: Request, vin: str, username: str = Depends(require_ad
 
 
 @app.post("/admin/fleet/{vin}/delete")
-async def admin_vehicle_delete(request: Request, vin: str, username: str = Depends(require_csrf)):
+async def admin_vehicle_delete(request: Request, vin: str, username: str = Depends(require_csrf_admin)):
     vin = _vin_or_404(vin)
     files = database.delete_vehicle(vin)
     removed = 0
@@ -970,7 +1249,7 @@ async def admin_vehicle_delete(request: Request, vin: str, username: str = Depen
 
 
 @app.post("/admin/reevaluate")
-async def admin_reevaluate(request: Request, username: str = Depends(require_csrf)):
+async def admin_reevaluate(request: Request, username: str = Depends(require_csrf_admin)):
     requirements = _current_requirements()
     if requirements is None:
         return _render_admin(request, username, error="Cannot re-evaluate: no valid requirements loaded.", status_code=503)

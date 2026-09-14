@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}My account – {{ t('site_title') }}{% endblock %}
+{% block content %}
+<h1>My account</h1>
+{% if not setup_required %}{% include "_admin_nav.html" %}{% endif %}
+{% if setup_required %}
+<div class="alert">Two-factor authentication is required for every account. Set it up below before you continue.</div>
+{% endif %}
+{% if message %}<div class="alert ok">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+<section class="card">
+  <h2>Two-factor authentication (TOTP)</h2>
+  {% if setup %}
+  <p>Scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden, Authy …), or enter the secret by hand. Then enter the code the app shows to confirm.</p>
+  <div class="qr">{{ setup.svg | safe }}</div>
+  <p class="mono">{{ setup.secret }}</p>
+  <form method="post" action="/admin/profile/totp/confirm" class="filterbar">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Code from the app <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus required maxlength="7" class="mono"></label>
+    <button type="submit" class="small">Confirm</button>
+  </form>
+  {% elif has_mfa %}
+  <p class="meta">Set up on {{ user.totp_confirmed_at[:16].replace('T', ' ') }} UTC. To move to a new phone, enter a code from the current device and a new QR code is shown.</p>
+  <form method="post" action="/admin/profile/totp/start" class="filterbar">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Code from the current device <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="7" class="mono"></label>
+    <button type="submit" class="small secondary">Replace device</button>
+  </form>
+  {% else %}
+  <form method="post" action="/admin/profile/totp/start">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Set up two-factor authentication</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Change password</h2>
+  <form method="post" action="/admin/profile/password" class="uploadbox loginbox">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="globalfields">
+      <label>Current password <input type="password" name="current" autocomplete="current-password" required></label>
+      <label>New password (at least 12 characters) <input type="password" name="new" autocomplete="new-password" required minlength="12"></label>
+      <label>Repeat new password <input type="password" name="repeat" autocomplete="new-password" required minlength="12"></label>
+    </div>
+    <button type="submit" class="small">Change password</button>
+  </form>
+</section>
+{% if setup_required %}
+<form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small secondary">Log out</button></form>
+{% endif %}
+{% endblock %}

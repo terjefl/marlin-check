@@ -44,9 +44,11 @@
 <details class="extra danger-zone">
   <summary>Delete all data for this vehicle</summary>
   <p class="meta">Removes every upload of this VIN from the register, including the stored report files. Use for a member's deletion request. This is logged.</p>
+  {% if role == 'admin' %}
   <form method="post" action="/admin/fleet/{{ vin }}/delete" data-confirm="Delete all {{ history | length }} upload(s) for {{ vin }}? This cannot be undone.">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <button type="submit" class="danger">Delete {{ vin }} permanently</button>
   </form>
+  {% endif %}
 </details>
 {% endblock %}

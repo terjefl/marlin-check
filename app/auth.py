@@ -114,12 +114,74 @@ def _register_failure(ip: str, username: str) -> None:
         _failed_attempts.setdefault(f"user:{username}", []).append(now)
 
 
-def authenticate(username: str, password: str, ip: str) -> bool:
-    """True if the credentials are valid. Records a failure otherwise. Callers
-    must check `is_locked_out` first."""
+def find_user(database, username: str) -> dict | None:
+    """The user record from the database, else from the YAML file (rescue
+    entrance: such a user is a full admin without MFA). None if unknown."""
+    user = database.get_user(username)
+    if user is not None:
+        return user
     stored = load_users().get(username)
+    if stored is None:
+        return None
+    return {"username": username, "password_hash": stored, "role": "admin", "disabled": 0,
+            "totp_secret": None, "totp_confirmed_at": None, "from_yaml": True}
+
+
+def authenticate(username: str, password: str, ip: str, user: dict | None) -> bool:
+    """True if the password matches the user record. Records a failure
+    otherwise. Callers must check `is_locked_out` first. A missing user still
+    costs one PBKDF2 run (no user-enumeration timing)."""
+    stored = user["password_hash"] if user else None
     ok = verify_password(password, stored if stored is not None else _DUMMY_HASH)
-    if stored is None or not ok:
+    if stored is None or not ok or user.get("disabled"):
         _register_failure(ip, username)
         return False
     return True
+
+
+def register_failure(ip: str, username: str) -> None:
+    """A failed TOTP code counts like a failed password."""
+    _register_failure(ip, username)
+
+
+# --- TOTP (RFC 6238) -----------------------------------------------------
+
+TOTP_ISSUER = "Ocean Software Check"
+TOTP_STEP = 30
+
+
+def new_totp_secret() -> str:
+    import pyotp
+
+    return pyotp.random_base32()
+
+
+def totp_uri(secret: str, username: str) -> str:
+    import pyotp
+
+    return pyotp.TOTP(secret).provisioning_uri(name=username, issuer_name=TOTP_ISSUER)
+
+
+def totp_qr_svg(uri: str) -> str:
+    """The provisioning URI as an inline SVG (no raster libraries needed)."""
+    import qrcode
+    import qrcode.image.svg
+
+    image = qrcode.make(uri, image_factory=qrcode.image.svg.SvgPathImage, box_size=6, border=2)
+    return image.to_string(encoding="unicode")
+
+
+def verify_totp(secret: str, code: str, *, now: float | None = None) -> int | None:
+    """The time step the code belongs to if it is valid in the current step
+    or one step either side (clock drift), else None."""
+    import pyotp
+
+    code = code.strip().replace(" ", "")
+    if not code.isdigit() or len(code) != 6:
+        return None
+    totp = pyotp.TOTP(secret)
+    base = int((now if now is not None else time.time()) // TOTP_STEP)
+    for step in (base, base - 1, base + 1):
+        if hmac.compare_digest(totp.at(step * TOTP_STEP), code):
+            return step
+    return None

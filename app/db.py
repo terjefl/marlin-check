@@ -103,6 +103,31 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
     created_at REAL NOT NULL,
     last_seen_at REAL NOT NULL
 );
+
+-- Admin users: password hash (PBKDF2, see auth.py), role, and the TOTP
+-- secret once MFA is set up. Bootstrapped from admin_users.yaml when empty.
+CREATE TABLE IF NOT EXISTS admin_users (
+    username TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'admin',
+    totp_secret TEXT,
+    totp_confirmed_at TEXT,
+    totp_last_counter INTEGER,
+    disabled INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    created_by TEXT NOT NULL DEFAULT '',
+    password_changed_at TEXT
+);
+
+-- Prepared for passkeys (WebAuthn); not used yet.
+CREATE TABLE IF NOT EXISTS admin_passkeys (
+    credential_id TEXT PRIMARY KEY,
+    username TEXT NOT NULL REFERENCES admin_users(username) ON DELETE CASCADE,
+    public_key BLOB NOT NULL,
+    sign_count INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+);
 """
 
 # Columns added after the first release, applied to existing databases with
@@ -115,6 +140,10 @@ _MIGRATIONS = {
         ("top_evidence", "TEXT"),
         ("report_date", "TEXT NOT NULL DEFAULT ''"),
         ("country", "TEXT NOT NULL DEFAULT ''"),
+    ],
+    "admin_sessions": [
+        ("mfa_pending", "INTEGER NOT NULL DEFAULT 0"),
+        ("mfa_setup_required", "INTEGER NOT NULL DEFAULT 0"),
     ],
     "module_readings": [
         ("code", "TEXT NOT NULL DEFAULT ''"),
@@ -631,18 +660,33 @@ class Database:
 
     # --- admin sessions -------------------------------------------------
 
-    def create_session(self, username: str) -> tuple[str, str]:
-        """Creates a login session; returns (cookie token, CSRF token)."""
+    MFA_PENDING_SECONDS = 10 * 60  # a session waiting for the TOTP code dies after 10 min
+
+    def create_session(self, username: str, *, mfa_pending: bool = False,
+                       mfa_setup_required: bool = False) -> tuple[str, str]:
+        """Creates a login session; returns (cookie token, CSRF token).
+        `mfa_pending`: the password was right, the TOTP code is still owed.
+        `mfa_setup_required`: no MFA yet; only the profile page is reachable."""
         token = secrets.token_urlsafe(32)
         csrf = secrets.token_urlsafe(32)
         now = time.time()
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO admin_sessions (token_hash, username, csrf_token,"
-                " created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
-                (_token_hash(token), username, csrf, now, now),
+                " created_at, last_seen_at, mfa_pending, mfa_setup_required)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (_token_hash(token), username, csrf, now, now, int(mfa_pending), int(mfa_setup_required)),
             )
         return token, csrf
+
+    def session_mfa_done(self, token: str) -> None:
+        """The TOTP code was accepted: the session becomes a full session."""
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_sessions SET mfa_pending = 0 WHERE token_hash = ?", (_token_hash(token),))
+
+    def session_setup_done(self, token: str) -> None:
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_sessions SET mfa_setup_required = 0 WHERE token_hash = ?", (_token_hash(token),))
 
     def get_session(self, token: str, *, idle_seconds: float, max_age_seconds: float) -> dict | None:
         """Returns {"username", "csrf_token"} for a live session, else None.
@@ -652,11 +696,13 @@ class Database:
         now = time.time()
         with self._connect() as conn:
             conn.execute(
-                "DELETE FROM admin_sessions WHERE last_seen_at < ? OR created_at < ?",
-                (now - idle_seconds, now - max_age_seconds),
+                "DELETE FROM admin_sessions WHERE last_seen_at < ? OR created_at < ?"
+                " OR (mfa_pending = 1 AND created_at < ?)",
+                (now - idle_seconds, now - max_age_seconds, now - self.MFA_PENDING_SECONDS),
             )
             row = conn.execute(
-                "SELECT username, csrf_token, last_seen_at FROM admin_sessions WHERE token_hash = ?",
+                "SELECT username, csrf_token, last_seen_at, mfa_pending, mfa_setup_required"
+                " FROM admin_sessions WHERE token_hash = ?",
                 (_token_hash(token),),
             ).fetchone()
             if row is None:
@@ -666,11 +712,120 @@ class Database:
                     "UPDATE admin_sessions SET last_seen_at = ? WHERE token_hash = ?",
                     (now, _token_hash(token)),
                 )
-        return {"username": row["username"], "csrf_token": row["csrf_token"]}
+        return {
+            "username": row["username"], "csrf_token": row["csrf_token"],
+            "mfa_pending": bool(row["mfa_pending"]), "mfa_setup_required": bool(row["mfa_setup_required"]),
+        }
 
     def delete_session(self, token: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM admin_sessions WHERE token_hash = ?", (_token_hash(token),))
+
+    def delete_user_sessions(self, username: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
+
+    # --- admin users ---------------------------------------------------------
+
+    ROLES = ("admin", "readonly")
+
+    def import_users_if_empty(self, users: dict[str, str]) -> int:
+        """Bootstrap: copies the YAML users (username -> password hash) into
+        the table when it is empty. Returns how many were imported."""
+        if not users:
+            return 0
+        with self._connect() as conn:
+            if conn.execute("SELECT COUNT(*) AS n FROM admin_users").fetchone()["n"]:
+                return 0
+            now = datetime.now(UTC).isoformat()
+            conn.executemany(
+                "INSERT INTO admin_users (username, password_hash, role, created_at, created_by)"
+                " VALUES (?, ?, 'admin', ?, 'import')",
+                [(name, pw_hash, now) for name, pw_hash in users.items()],
+            )
+        return len(users)
+
+    def list_users(self) -> list[dict]:
+        with self._connect() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT username, role, totp_confirmed_at, disabled, created_at, created_by,"
+                " password_changed_at FROM admin_users ORDER BY username"
+            )]
+
+    def get_user(self, username: str) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM admin_users WHERE username = ?", (username,)).fetchone()
+        return dict(row) if row else None
+
+    def create_user(self, username: str, password_hash: str, role: str, created_by: str) -> None:
+        if role not in self.ROLES:
+            raise ValueError(f"unknown role {role!r}")
+        with self._connect() as conn:
+            if conn.execute("SELECT 1 FROM admin_users WHERE username = ?", (username,)).fetchone():
+                raise ValueError(f"user {username!r} already exists")
+            conn.execute(
+                "INSERT INTO admin_users (username, password_hash, role, created_at, created_by)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (username, password_hash, role, datetime.now(UTC).isoformat(), created_by),
+            )
+
+    def set_password(self, username: str, password_hash: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE admin_users SET password_hash = ?, password_changed_at = ? WHERE username = ?",
+                (password_hash, datetime.now(UTC).isoformat(), username),
+            )
+
+    def set_role(self, username: str, role: str) -> None:
+        if role not in self.ROLES:
+            raise ValueError(f"unknown role {role!r}")
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_users SET role = ? WHERE username = ?", (role, username))
+
+    def set_disabled(self, username: str, disabled: bool) -> None:
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_users SET disabled = ? WHERE username = ?", (int(disabled), username))
+            if disabled:
+                conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
+
+    def delete_user(self, username: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM admin_users WHERE username = ?", (username,))
+            conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
+
+    def count_active_admins(self, *, excluding: str = "") -> int:
+        with self._connect() as conn:
+            return conn.execute(
+                "SELECT COUNT(*) AS n FROM admin_users WHERE role = 'admin' AND disabled = 0 AND username != ?",
+                (excluding,),
+            ).fetchone()["n"]
+
+    def set_totp_secret(self, username: str, secret: str | None) -> None:
+        """A new (unconfirmed) secret, or None to remove MFA entirely."""
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE admin_users SET totp_secret = ?, totp_confirmed_at = NULL, totp_last_counter = NULL"
+                " WHERE username = ?",
+                (secret, username),
+            )
+
+    def confirm_totp(self, username: str, counter: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE admin_users SET totp_confirmed_at = ?, totp_last_counter = ? WHERE username = ?",
+                (datetime.now(UTC).isoformat(), counter, username),
+            )
+
+    def use_totp_counter(self, username: str, counter: int) -> bool:
+        """Marks a TOTP time step as used. False if that step (or a later one)
+        was already used: a code is valid exactly once."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE admin_users SET totp_last_counter = ? WHERE username = ?"
+                " AND (totp_last_counter IS NULL OR totp_last_counter < ?)",
+                (counter, username, counter),
+            )
+            return cur.rowcount == 1
 
     def stats(self, profiles: list[str] | None = None, target: str | None = None) -> dict:
         """Aggregated fleet statistics for the dashboard. Only the latest

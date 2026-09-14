@@ -33,16 +33,44 @@ def client(tmp_path, monkeypatch):
 
     importlib.reload(auth_module)
     importlib.reload(main)
+    # The YAML users were imported at startup; give them a confirmed TOTP
+    # secret so the existing tests are not stopped by the MFA requirement.
+    for name in ("terje", "styremedlem"):
+        main.database.set_totp_secret(name, TOTP_SECRET)
+        main.database.confirm_totp(name, 0)
     # https base URL: the session cookie is Secure and would otherwise be
     # dropped by the cookie jar on plain http.
     return TestClient(main.app, base_url="https://testserver"), main
 
 
-def _login(c, username: str, password: str, **kwargs):
-    return c.post(
+TOTP_SECRET = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"
+
+
+def _totp_code(secret: str = TOTP_SECRET, offset: int = 0) -> str:
+    """The current code, or the one for a neighbouring 30 s step (offset ±1):
+    a code is accepted once, so a second login in the same step uses the next."""
+    import time
+
+    import pyotp
+
+    return pyotp.TOTP(secret).at(int(time.time() // 30 + offset) * 30)
+
+
+def _login(c, username: str, password: str, *, code: str | None = None, **kwargs):
+    """Password step, then (when the password was right) the TOTP step. Returns
+    the final response of the step that was reached, redirects not followed."""
+    response = c.post(
         "/admin/login", data={"username": username, "password": password},
         follow_redirects=False, **kwargs,
     )
+    if response.status_code != 303 or "/admin/login/code" not in response.headers.get("location", ""):
+        return response
+    for offset in (0, 1):
+        step = c.post("/admin/login/code", data={"code": code or _totp_code(offset=offset), "next": "/admin"},
+                      follow_redirects=False)
+        if step.status_code == 303 or code is not None:
+            return step
+    return step
 
 
 def _csrf(page_html: str) -> str:
@@ -73,12 +101,17 @@ def test_admin_requires_login(client):
 def test_login_sets_cookie_and_page_renders_for_both_users(client):
     c, main = client
     for user, pw in [("terje", "hemmelig123"), ("styremedlem", "ogsåhemmelig")]:
-        response = _login(c, user, pw, headers={"CF-Connecting-IP": "203.0.113.9"})
-        assert response.status_code == 303 and response.headers["location"] == "/admin"
+        response = c.post("/admin/login", data={"username": user, "password": pw},
+                          follow_redirects=False, headers={"CF-Connecting-IP": "203.0.113.9"})
+        assert response.status_code == 303 and response.headers["location"] == "/admin/login/code?next=/admin"
         cookie = response.headers["set-cookie"]
         assert "marlin_admin=" in cookie
         assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=lax" in cookie.replace("Lax", "lax")
         assert "Path=/admin" in cookie
+        assert c.get("/admin", follow_redirects=False).headers["location"].startswith("/admin/login/code")  # code still owed
+        step = c.post("/admin/login/code", data={"code": _totp_code(), "next": "/admin"}, follow_redirects=False,
+                      headers={"CF-Connecting-IP": "203.0.113.9"})
+        assert step.status_code == 303 and step.headers["location"] == "/admin"
 
         page = c.get("/admin")
         assert page.status_code == 200
@@ -102,14 +135,16 @@ def test_next_parameter_only_allows_admin_paths(client):
         data={"username": "terje", "password": "hemmelig123", "next": "https://evil.example/"},
         follow_redirects=False,
     )
-    assert response.headers["location"] == "/admin"
+    assert response.headers["location"] == "/admin/login/code?next=/admin"
     c.cookies.clear()
     response = c.post(
         "/admin/login",
         data={"username": "terje", "password": "hemmelig123", "next": "/admin?x=1"},
         follow_redirects=False,
     )
-    assert response.headers["location"] == "/admin?x=1"
+    assert response.headers["location"] == "/admin/login/code?next=/admin%3Fx%3D1"
+    step = c.post("/admin/login/code", data={"code": _totp_code(offset=1), "next": "https://evil.example/"}, follow_redirects=False)
+    assert step.headers["location"] == "/admin"  # the code form sanitises next too
 
 
 def test_logout_invalidates_session(client):
@@ -550,3 +585,121 @@ def test_reevaluate_button_applies_the_current_requirements(client):
     assert "Re-evaluated 1 stored report(s)" in response.text
     assert main.database.stats()["outcomes"] == {"zebra_22": 1}
     assert any(e["action"] == "reevaluate" for e in main.database.audit_entries())
+
+
+def test_totp_setup_is_required_and_codes_are_single_use(client):
+    """A user without MFA can only reach the profile page; setting up TOTP
+    there unlocks the rest. A code is accepted once, wrong codes count towards
+    the lockout, and a session waiting for its code cannot use admin pages."""
+    import pyotp
+
+    c, main = client
+    main.database.set_totp_secret("styremedlem", None)  # no MFA yet
+    response = c.post("/admin/login", data={"username": "styremedlem", "password": "ogsåhemmelig"}, follow_redirects=False)
+    assert response.headers["location"] == "/admin/profile?setup=1"
+    assert c.get("/admin", follow_redirects=False).headers["location"] == "/admin/profile?setup=1"
+    assert c.get("/admin/fleet", follow_redirects=False).status_code == 303
+    profile = c.get("/admin/profile")
+    assert profile.status_code == 200 and "required for every account" in profile.text
+    csrf = _csrf(profile.text)
+
+    started = c.post("/admin/profile/totp/start", data={"csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert "<svg" in started.text
+    secret = main.database.get_user("styremedlem")["totp_secret"]
+    assert secret in started.text and main.database.get_user("styremedlem")["totp_confirmed_at"] is None
+    wrong = c.post("/admin/profile/totp/confirm", data={"csrf": csrf, "code": "000000"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert wrong.status_code == 400 and "<svg" in wrong.text  # try again with the same secret
+    ok = c.post("/admin/profile/totp/confirm", data={"csrf": csrf, "code": pyotp.TOTP(secret).now()}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert ok.status_code == 200 and "is set up" in ok.text
+    assert c.get("/admin").status_code == 200  # unlocked
+    assert any(e["action"] == "mfa_setup" for e in main.database.audit_entries())
+
+    # Next login: password, then the code. The same code is not accepted twice.
+    c.cookies.clear()
+    c.post("/admin/login", data={"username": "styremedlem", "password": "ogsåhemmelig"}, follow_redirects=False)
+    code = _totp_code(secret, offset=1)
+    assert c.post("/admin/login/code", data={"code": code, "next": "/admin"}, follow_redirects=False).status_code == 303
+    c.cookies.clear()
+    c.post("/admin/login", data={"username": "styremedlem", "password": "ogsåhemmelig"}, follow_redirects=False)
+    assert c.post("/admin/login/code", data={"code": code, "next": "/admin"}, follow_redirects=False).status_code == 401
+    for _ in range(10):
+        c.post("/admin/login/code", data={"code": "123456", "next": "/admin"}, follow_redirects=False)
+    assert c.post("/admin/login/code", data={"code": _totp_code(secret), "next": "/admin"}, follow_redirects=False).status_code == 429
+
+
+def test_readonly_role_sees_but_cannot_change(client):
+    c, main = client
+    main.database.set_role("styremedlem", "readonly")
+    _login(c, "styremedlem", "ogsåhemmelig")
+    page = c.get("/admin")
+    assert page.status_code == 200 and "read-only" in page.text and "Validate and save" not in page.text
+    assert "Re-evaluate all" not in page.text and 'href="/admin/users"' not in page.text
+    assert c.get("/admin/fleet").status_code == 200 and c.get("/admin/fleet/vehicles.csv").status_code == 200
+    csrf = _csrf(page.text)
+    headers = {"Sec-Fetch-Site": "same-origin"}
+    assert c.post("/admin/save", data={"yaml_text": "x", "csrf": csrf}, headers=headers).status_code == 403
+    assert c.post("/admin/reevaluate", data={"csrf": csrf}, headers=headers).status_code == 403
+    assert c.get("/admin/users").status_code == 403
+    assert c.post("/admin/users/create", data={"username": "x", "csrf": csrf}, headers=headers).status_code == 403
+    assert c.post("/admin/fleet/VCF1ZBE20PG099905/delete", data={"csrf": csrf}, headers=headers).status_code == 403
+
+
+def test_user_management_panel(client):
+    """Full admins create users (password shown once), change roles, issue
+    passwords, reset MFA, disable and delete, but never remove themselves or
+    the last full admin."""
+    c, main = client
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin/users")
+    assert page.status_code == 200 and "styremedlem" in page.text
+    csrf = _csrf(page.text)
+    headers = {"Sec-Fetch-Site": "same-origin"}
+
+    created = c.post("/admin/users/create", data={"username": "jens", "role": "readonly", "csrf": csrf}, headers=headers)
+    assert created.status_code == 200 and "User jens created" in created.text
+    import re
+
+    password = re.search(r'<code class="mono">([^<]+)</code>', created.text).group(1)
+    assert c.post("/admin/users/create", data={"username": "jens", "role": "readonly", "csrf": csrf}, headers=headers).status_code == 400
+    assert c.post("/admin/users/create", data={"username": "Bad Name!", "role": "readonly", "csrf": csrf}, headers=headers).status_code == 400
+
+    # The new user logs in with the shown password and is sent to MFA setup
+    other = TestClient(main.app, base_url="https://testserver")
+    assert other.post("/admin/login", data={"username": "jens", "password": password}, follow_redirects=False).headers["location"] == "/admin/profile?setup=1"
+
+    assert "is now admin" in c.post("/admin/users/jens/role", data={"role": "admin", "csrf": csrf}, headers=headers).text
+    assert c.post("/admin/users/terje/role", data={"role": "readonly", "csrf": csrf}, headers=headers).status_code == 200  # jens is admin now
+    main.database.set_role("terje", "admin")
+    main.database.set_role("jens", "readonly")
+    main.database.set_role("styremedlem", "readonly")
+    assert "leave no full admin" in c.post("/admin/users/terje/role", data={"role": "readonly", "csrf": csrf}, headers=headers).text
+    assert "cannot disable your own" in c.post("/admin/users/terje/disable", data={"csrf": csrf}, headers=headers).text
+    assert "cannot delete your own" in c.post("/admin/users/terje/delete", data={"csrf": csrf}, headers=headers).text
+
+    assert "Two-factor authentication for styremedlem was reset" in c.post("/admin/users/styremedlem/reset-mfa", data={"csrf": csrf}, headers=headers).text
+    assert main.database.get_user("styremedlem")["totp_secret"] is None
+    assert "New password for jens" in c.post("/admin/users/jens/password", data={"csrf": csrf}, headers=headers).text
+    assert "jens is disabled" in c.post("/admin/users/jens/disable", data={"csrf": csrf}, headers=headers).text
+    assert other.post("/admin/login", data={"username": "jens", "password": password}, follow_redirects=False).status_code == 401
+    assert "jens is enabled" in c.post("/admin/users/jens/enable", data={"csrf": csrf}, headers=headers).text
+    assert "jens is deleted" in c.post("/admin/users/jens/delete", data={"csrf": csrf}, headers=headers).text
+    assert main.database.get_user("jens") is None
+    assert c.post("/admin/users/nobody/delete", data={"csrf": csrf}, headers=headers).status_code == 404
+    actions = {e["action"] for e in main.database.audit_entries(limit=100)}
+    assert {"user_create", "user_role", "user_password", "user_mfa_reset", "user_disable", "user_enable", "user_delete", "users_import"} <= actions
+
+
+def test_manage_users_cli(client, monkeypatch):
+    import scripts.manage_users as cli
+
+    _, main = client
+    monkeypatch.setattr(cli.getpass, "getpass", lambda prompt="": "cli-password-123")
+    data_dir = str(Path(main.database.path).parent)
+    cli.main(["--data-dir", data_dir, "add", "opsuser", "--role", "readonly"])
+    user = main.database.get_user("opsuser")
+    assert user and user["role"] == "readonly" and user["created_by"] == "cli"
+    cli.main(["--data-dir", data_dir, "reset-mfa", "terje"])
+    assert main.database.get_user("terje")["totp_secret"] is None
+    cli.main(["--data-dir", data_dir, "set-role", "opsuser", "admin"])
+    assert main.database.get_user("opsuser")["role"] == "admin"
+    cli.main(["--data-dir", data_dir, "list"])

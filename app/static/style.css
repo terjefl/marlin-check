@@ -219,3 +219,7 @@ tr.selectedrow td { background: #e8f0fe; }
 .timeseries .col-label { font-size: 0.65rem; color: var(--muted); text-align: center; height: 1rem; overflow: visible; white-space: nowrap; }
 .swatch.ts-uploads { background: #9bbfe6; } .swatch.ts-vehicles { background: #1a73e8; }
 .marlin-title { font-size: 1.05rem; margin: 1.2rem 0 0.3rem; }
+.qr svg { width: 200px; height: 200px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 6px; }
+form.inline { display: inline; }
+.actions-cell form { margin: 0 0.2rem 0.2rem 0; }
+.alert.ok { background: var(--ok-bg); border-color: var(--ok); }

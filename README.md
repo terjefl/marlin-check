@@ -63,7 +63,7 @@ app/
                 outcome classification, validation of the YAML
   db.py         SQLite: vehicle register (submissions + all module readings), fleet
                 statistics, re-evaluation, usage stats, audit log, admin sessions
-  auth.py       Credentials (PBKDF2), login lockout, trusted client-IP header
+  auth.py       Credentials (PBKDF2), login lockout, TOTP helpers, trusted client-IP header
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
   templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_fleet/
                 admin_vehicle/admin_login/pdf
@@ -73,7 +73,7 @@ app/
 tests/          pytest suite. Fixtures: a real OLP export (olp_report.pdf, unmodified)
                 and its text extraction with an anonymized VIN, plus synthetic
                 reference cars (100% 2.1, full 2.2, two Marlin cars) built from it
-scripts/        hash_password.py – create admin password hashes
+scripts/        hash_password.py (YAML rescue users), manage_users.py (users in the database)
 requirements.example.yaml   the requirements spec with field documentation
 requirements.txt / .lock    loose spec / pinned+hashed set used by Docker and CI
 pyproject.toml              ruff configuration
@@ -289,6 +289,33 @@ and the admin login lockout live in process memory. A restart invalidates the
 30-minute result/PDF links (the permanent vehicle links are in the database and
 survive). The origin must only be reachable through the proxy
 that sets the trusted client-IP header.
+
+## Admin users, roles and MFA
+
+Admin accounts live in the database (table `admin_users`) and are managed on
+`/admin/users` by a full admin: create (a password is generated and shown
+once), set role, issue a new password, reset two-factor, disable, delete. Two
+roles: **admin** (change requirements, re-evaluate, delete vehicles, manage
+users) and **readonly** (sees everything, including exports, changes nothing;
+state-changing routes answer 403). Nobody can delete or disable themselves or
+the last active full admin. Every action goes to the audit log.
+
+Two-factor authentication (TOTP, RFC 6238) is required for every account.
+Login is password first, then the six-digit code (`/admin/login/code`); a
+session that still owes the code lives 10 minutes. An account without MFA is
+sent to `/admin/profile` and can do nothing else until a code has been
+confirmed. Codes are accepted once (the time step is stored) and one step
+either side for clock drift; wrong codes count towards the same lockout as
+wrong passwords. Users change their own password and move to a new phone on
+`/admin/profile`. The database is prepared for passkeys (`admin_passkeys`),
+not implemented yet.
+
+Bootstrap and rescue: on the first start with an empty table, the users in
+`admin_users.yaml` are imported as full admins without MFA. A user that exists
+only in the YAML file can still log in (rescue entrance) and is asked to set up
+MFA. `scripts/manage_users.py` (`list`, `add`, `set-password`, `set-role`,
+`reset-mfa`, `enable`, `disable`, `delete`) works directly on the database on
+the host, for when nobody can log in.
 
 ## Privacy model
 

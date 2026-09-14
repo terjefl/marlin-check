@@ -72,7 +72,7 @@
     An empty level field = no requirement for that profile (the required profile must have a level). Modules with <code>variants</code> (e.g. BMS) show the per-line levels in grey under the field; those, <code>only_trims</code> and <code>marlin_level</code> are kept on form save and edited in the YAML editor below.
   </p>
   <div class="actions">
-    <button type="submit">Validate and save</button>
+    {% if role == 'admin' %}<button type="submit">Validate and save</button>{% else %}<span class="meta">Read-only account: changes cannot be saved.</span>{% endif %}
     <a class="button secondary" href="/admin">Discard changes</a>
   </div>
 </form>
@@ -97,18 +97,20 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <textarea name="yaml_text" class="yamledit" rows="26" spellcheck="false">{{ yaml_text }}</textarea>
     <div class="actions">
-      <button type="submit">Validate and save YAML</button>
+      {% if role == 'admin' %}<button type="submit">Validate and save YAML</button>{% endif %}
     </div>
   </form>
 </details>
 
 <h2>Vehicle register</h2>
 {% include "_fleet_tiles.html" %}
+{% if role == 'admin' %}
 <form method="post" action="/admin/reevaluate" class="actions" data-confirm="Re-evaluate every stored report with the current requirements file? Outcomes and levels in the register are recomputed; nothing is deleted.">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <button type="submit" class="secondary">Re-evaluate all stored reports with the current requirements</button>
   <a class="button" href="/admin/fleet">Open the vehicle register</a>
 </form>
+{% endif %}
 <p class="fieldhelp">Run this after changing requirement levels, and once after the v2 upgrade so reports stored before it get an outcome.</p>
 
 <h2>Usage statistics</h2>

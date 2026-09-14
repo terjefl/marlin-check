@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Users – {{ t('site_title') }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>Users</h1>
+{% include "_admin_nav.html" %}
+{% if message %}<div class="alert ok">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+{% if new_password %}
+<div class="alert">
+  Password for <strong>{{ new_password[0] }}</strong>: <code class="mono">{{ new_password[1] }}</code><br>
+  <span class="meta">Shown only once. Pass it on securely; the user sets up two-factor authentication at first login and should change the password under “My account”.</span>
+</div>
+{% endif %}
+
+<p class="meta"><strong>Full admin</strong> can change requirements, re-evaluate, delete vehicles and manage users. <strong>Read-only</strong> sees everything, including exports, but cannot change anything. Two-factor authentication is required for both.</p>
+
+<table class="modules">
+  <thead><tr><th>User</th><th>Role</th><th>Two-factor</th><th>Password changed</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td class="mono">{{ u.username }}{% if u.username == username %} <span class="crit">(you)</span>{% endif %}</td>
+      <td>
+        <form method="post" action="/admin/users/{{ u.username }}/role" class="inline">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <select name="role">{% for r in roles %}<option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ 'full admin' if r == 'admin' else 'read-only' }}</option>{% endfor %}</select>
+          <button type="submit" class="small secondary">Set</button>
+        </form>
+      </td>
+      <td>{% if u.totp_confirmed_at %}✅ {{ u.totp_confirmed_at[:10] }}{% else %}<span class="crit">not set up</span>{% endif %}</td>
+      <td>{{ (u.password_changed_at or '')[:10] or '–' }}</td>
+      <td>{% if u.disabled %}<span class="pill oc-zebra_21">disabled</span>{% else %}<span class="pill oc-full_22">active</span>{% endif %}</td>
+      <td class="meta">{{ u.created_at[:10] }} by {{ u.created_by }}</td>
+      <td class="actions-cell">
+        <form method="post" action="/admin/users/{{ u.username }}/password" class="inline" data-confirm="Issue a new password for {{ u.username }}? Their current sessions are logged out."><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small secondary">New password</button></form>
+        <form method="post" action="/admin/users/{{ u.username }}/reset-mfa" class="inline" data-confirm="Reset two-factor authentication for {{ u.username }}? They set it up again at next login."><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small secondary">Reset 2FA</button></form>
+        {% if u.username != username %}
+        {% if u.disabled %}
+        <form method="post" action="/admin/users/{{ u.username }}/enable" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small secondary">Enable</button></form>
+        {% else %}
+        <form method="post" action="/admin/users/{{ u.username }}/disable" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small secondary">Disable</button></form>
+        {% endif %}
+        <form method="post" action="/admin/users/{{ u.username }}/delete" class="inline" data-confirm="Delete {{ u.username }} permanently?"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small danger">Delete</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<section class="card">
+  <h2>New user</h2>
+  <form method="post" action="/admin/users/create" class="filterbar">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Username <input type="text" name="username" required maxlength="32" pattern="[a-z0-9][a-z0-9._-]{1,31}" class="mono"></label>
+    <label>Role <select name="role"><option value="readonly">read-only</option><option value="admin">full admin</option></select></label>
+    <button type="submit" class="small">Create user</button>
+    <span class="meta">A password is generated and shown once.</span>
+  </form>
+</section>
+{% endblock %}
