@@ -21,7 +21,7 @@ car's control modules meet the minimum software levels required for the
   first, current version and level, needed version and level), then only the
   highest complete level in green with every level above in red (counting the
   modules that do not meet), then the recommendation and a red contact line
-  (service partner, or the regional/country liaison for full-2.2 cars). A zebra
+  (service provider, or the regional/country liaison for full-2.2 cars). A zebra
   never gets a green Marlin line; a Marlin car still sees what it lacks for 2.2.
 - Cars on Marlin also see whether the whole Marlin package is in place: the
   requirements file's `marlin_modules` (VCU 24, PDU 4000, FCM PSOP09, HYDRA
@@ -32,7 +32,7 @@ car's control modules meet the minimum software levels required for the
 - Repeat uploads of the same VIN show what changed since the previous report
   (outcome and every control unit whose Supplier SW Version differs); the
   permanent link warns when the report is older than 60 days.
-- A work order PDF for the service partner (`/pdf/<token>/workorder`,
+- A work order PDF for the service provider (`/pdf/<token>/workorder`,
   `/vehicle/<key>/workorder`): the modules to update in the recommended order
   (below 2.1 first, then below 2.2), current and needed version, the Marlin
   package for Marlin cars, the ESP/iBooster and multi-step notes, and a
