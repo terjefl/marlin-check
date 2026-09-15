@@ -116,8 +116,8 @@ def test_login_sets_cookie_and_page_renders_for_both_users(client):
         page = c.get("/admin")
         assert page.status_code == 200
         assert user in page.text
-        assert "target_profile" in page.text  # the YAML content is shown
         assert 'name="csrf"' in page.text
+        assert "target_profile" in c.get("/admin/requirements").text  # the YAML content is shown
 
         # A logged-in user is sent straight from the login form to /admin
         assert c.get("/admin/login", follow_redirects=False).headers["location"] == "/admin"
@@ -311,7 +311,7 @@ def test_form_roundtrip_from_rendered_html(client):
 
     c, main = client
     _login(c, "terje", "hemmelig123")
-    page = c.get("/admin").text
+    page = c.get("/admin/requirements").text
     form_html = re_module.search(
         r'<form method="post" action="/admin/save-form">(.*?)</form>', page, re_module.DOTALL
     ).group(1)
@@ -368,7 +368,7 @@ def test_admin_page_flags_invalid_requirements_file(client):
     good = main.REQUIREMENTS_PATH.read_text()
     _login(c, "terje", "hemmelig123")
     main.REQUIREMENTS_PATH.write_text("modules: [\n")
-    page = c.get("/admin")
+    page = c.get("/admin/requirements")
     assert page.status_code == 200
     assert "requirements file on disk is INVALID" in page.text
     assert 'action="/admin/save-form"' not in page.text  # form editor needs a valid file
@@ -386,7 +386,7 @@ def test_admin_warns_when_profiles_deviate_from_the_texts(client):
     file with other profile names must succeed but show a warning."""
     c, main = client
     _login(c, "terje", "hemmelig123")
-    page = c.get("/admin").text
+    page = c.get("/admin/requirements").text
     assert "the wording shown to members will no longer match" not in page
     csrf = _csrf(page)
     new_text = main.REQUIREMENTS_PATH.read_text().replace('target_profile: "2.1"', 'target_profile: "2.2"')
@@ -399,7 +399,7 @@ def test_admin_warns_when_profiles_deviate_from_the_texts(client):
 def test_form_save_keeps_notes_and_admin_shows_them(client):
     c, main = client
     _login(c, "terje", "hemmelig123")
-    page = c.get("/admin").text
+    page = c.get("/admin/requirements").text
     assert "Open points" in page  # notes rendered
     assert 'data-profiles="[&#34;2.0&#34;' in page  # profiles handed to app.js, no inline script
     form = {
@@ -421,7 +421,7 @@ def test_form_editor_shows_variant_levels_for_bms(client):
     the form must show them instead of an empty-looking row."""
     c, main = client
     _login(c, "terje", "hemmelig123")
-    page = c.get("/admin").text
+    page = c.get("/admin/requirements").text
     assert page.count("NMC 21 / LFP 15") == 3  # one per profile column
     assert 'name="mod-4-level-2.1" value=""' in page and 'placeholder="per variant"' in page
     # The roundtrip still saves without inventing a base level for BMS
@@ -632,8 +632,11 @@ def test_readonly_role_sees_but_cannot_change(client):
     main.database.set_role("styremedlem", "readonly")
     _login(c, "styremedlem", "ogsåhemmelig")
     page = c.get("/admin")
-    assert page.status_code == 200 and "read-only" in page.text and "Validate and save" not in page.text
+    assert page.status_code == 200 and "read-only" in page.text
     assert "Re-evaluate all" not in page.text and 'href="/admin/users"' not in page.text
+    assert "Validate and save" not in c.get("/admin/requirements").text
+    for path in ("/admin/requirements", "/admin/settings", "/admin/analytics", "/admin/log"):
+        assert c.get(path).status_code == 200
     assert c.get("/admin/fleet").status_code == 200 and c.get("/admin/fleet/vehicles.csv").status_code == 200
     csrf = _csrf(page.text)
     headers = {"Sec-Fetch-Site": "same-origin"}
@@ -823,7 +826,7 @@ def test_work_order_switch_in_admin(client, monkeypatch):
     assert main.database.flag("workorder_enabled")
     _upload_car(c, "olp_report_21_full.txt", "21")
     _login(c, "terje", "hemmelig123")
-    page = c.get("/admin").text
+    page = c.get("/admin/settings").text
     assert 'name="workorder_enabled" value="1" checked' in page
     csrf = _csrf(page)
     saved = c.post("/admin/settings", data={"csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})  # unchecked
@@ -898,3 +901,22 @@ def test_merge_duplicate_uploads_in_admin(client):
     assert main.database.stats()["total_submissions"] == 6
     assert '<td class="num">3</td>' in c.get("/admin/fleet/VCF1ZBE20PG099931").text  # "Times" column
     assert any(e["action"] == "merge_duplicates" for e in main.database.audit_entries())
+
+
+def test_admin_analytics_and_log_pages(client):
+    """The detail that left the public dashboard renders on /admin/analytics:
+    uploads chart, movement, month-by-month status, every control unit and the
+    usage count. The activity log has its own page."""
+    c, _ = client
+    _login(c, "terje", "hemmelig123")
+    _upload_car(c, "olp_report.txt", "31")
+    _upload_car(c, "olp_report.txt", "31", BCM395021="BCM395030")  # same car again, BCM lifted 21 -> 30
+    page = c.get("/admin/analytics?lang=en").text
+    assert "Uploads over time" in page and 'id="panel-month"' in page
+    assert page.count('class="col"') >= 60 + 26 + 1
+    assert "Movement in the fleet" in page and "From first to latest report" in page
+    assert "Fleet status month by month" in page
+    assert "Every control unit in the reports" in page and "GW500002" in page
+    assert "What holds the split cars back" in page and "Usage statistics" in page
+    log = c.get("/admin/log").text
+    assert "Activity log" in log and 'class="extra auditentry"' in log and "(login)" in log

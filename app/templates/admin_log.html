@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Activity log – {{ t('site_title') }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>Activity log</h1>
+{% include "_admin_nav.html" %}
+{% if message %}<div class="alert">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+<p class="meta">{{ audit | length }} most recent entries: saves, logins, logouts, exports, settings and register actions.</p>
+{% if not audit %}
+<p class="meta">No changes logged yet.</p>
+{% else %}
+{% for entry in audit %}
+<details class="extra auditentry">
+  <summary>{{ entry.ts[:19] }} UTC – <strong>{{ entry.username }}</strong> from {{ entry.ip }} ({{ entry.action }})</summary>
+  {% if entry.detail %}<pre class="diff">{{ entry.detail }}</pre>{% endif %}
+</details>
+{% endfor %}
+{% endif %}
+{% endblock %}

@@ -38,8 +38,8 @@ car's control modules meet the minimum software levels required for the
   package for Marlin cars, the ESP/iBooster and multi-step notes, and a
   sign-off line. Offered only when there is something to update, and only
   while the switch in the admin console (Settings, table `settings`) is on.
-- `/stats` also shows the version distribution of every control unit in the
-  latest reports, requirements or not.
+- `/admin/analytics` shows the version distribution of every control unit in
+  the latest reports, requirements or not.
 - The admin register flags odd reports (a required module missing, empty or
   unrecognised, or fewer than 30 control units) with a filter and a notice on
   the vehicle page asking for a fresh OLP export.
@@ -67,7 +67,7 @@ car's control modules meet the minimum software levels required for the
   fields, outcome. Public dashboard (`/stats`, aggregated, no VINs) and an
   admin register with per-VIN history, filters, CSV exports, re-evaluation
   against changed requirements and deletion per VIN.
-- Time series and fleet movement on `/stats`: uploads and distinct vehicles per
+- Time series and fleet movement on `/admin/analytics`: uploads and distinct vehicles per
   day/week/month (pure-CSS charts, tabs without JavaScript), and for vehicles
   with more than one upload how they moved on the update ladder (2.1 zebra,
   clean 2.1, 2.2 zebra, full 2.2, on Marlin), which transitions occurred, how
@@ -90,7 +90,7 @@ app/
   auth.py       Credentials (PBKDF2), login lockout, TOTP helpers, trusted client-IP header
   passkeys.py   WebAuthn (passkeys) wrapper around py_webauthn
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
-  templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_fleet/
+  templates/    Jinja2: base/index/result/how/stats/privacy/admin (overview, requirements, settings, analytics, log)/admin_fleet/
                 admin_vehicle/admin_login/pdf
   static/       style.css and app.js (all page JS; no inline scripts, CSP-enforced),
                 the two front-page videos (olp-howto-nb/-en.mp4 + posters; nb gets the
@@ -195,7 +195,14 @@ since startup, `/healthz` returns 503 with the error (the container shows as
 unhealthy), and the admin page shows the error above the YAML editor. If no
 valid set has been loaded at all, uploads get a friendly 503 page.
 
-## Admin page (`/admin`)
+## Admin console (`/admin`)
+
+One page per task, linked from the bar at the top of every admin page:
+Overview (`/admin`: register tiles, merge duplicates, re-evaluate all),
+Requirements (`/admin/requirements`), Settings (`/admin/settings`), Vehicle
+register (`/admin/fleet`), Analytics (`/admin/analytics`: what holds the split
+cars back, every control unit, uploads over time, fleet movement, usage
+count), Activity log (`/admin/log`), Users and My account.
 
 - **Login:** form login at `/admin/login`. Users live in
   `/config/admin_users.yaml` (see `admin_users.example.yaml`) as
@@ -212,8 +219,9 @@ valid set has been loaded at all, uploads get a friendly 503 page.
   touching the file. Saves are atomic and take effect on the next analysis.
   The form editor preserves `variants`, `only_trims`, `marlin_level` and
   `notes`; edit those in the YAML editor.
-- **Activity log:** saves (with unified diff), logins and logouts, with
-  timestamp, username and client IP.
+- **Activity log (`/admin/log`):** saves (with unified diff), logins,
+  logouts, exports, settings and register actions, with timestamp, username
+  and client IP.
 - **Vehicle register (`/admin/fleet`):** one row per VIN (latest upload)
   with outcome, complete/evidence profile and the extracted level of every
   required module; filter by outcome, trim and VIN. `/admin/fleet/<VIN>`
@@ -225,7 +233,7 @@ valid set has been loaded at all, uploads get a friendly 503 page.
   stored report (rebuilt from its readings) and rewrites outcome and levels.
   Run it after changing levels, and once after the v2 upgrade so the rows
   from the consent period get an outcome.
-- **Usage statistics:** anonymous per-upload counters (country from
+- **Usage statistics (on Analytics):** anonymous per-upload counters (country from
   Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
   unique users – see "Privacy model"). Never VIN, report content or raw IP.
 
@@ -367,9 +375,10 @@ the host, for when nobody can log in.
 - The database schema is migrated in place on startup (additive `ALTER
   TABLE`); rows from the consent period are kept and get an outcome after
   "Re-evaluate all" in the admin page.
-- `/stats` is public and aggregated (outcomes, split cars per module, level
-  per module, trims, countries, weeks) – never a VIN. VINs are visible only
-  in the admin register. Deletion per VIN is an admin action.
+- `/stats` is public and aggregated (outcomes, level per module, trims,
+  countries) – never a VIN. The working-group detail (split cars per module,
+  every control unit, uploads over time, fleet movement) is admin-only on
+  `/admin/analytics`. VINs are visible only in the admin register. Deletion per VIN is an admin action.
 - Anonymous usage counting per upload (admin-only view): country, language,
   outcome, and a keyed daily hash of the IP for unique-user counts. The HMAC
   key is random, lives only in process memory and is replaced at the UTC day

@@ -617,17 +617,9 @@ def _fleet_stats() -> dict:
 
 @app.get("/stats", response_class=HTMLResponse)
 def stats(request: Request):
-    progress = database.fleet_progress()
-    progress.pop("vehicles")  # VINs stay in the admin register
-    return _render(
-        request, "stats.html",
-        {
-            "stats": _fleet_stats(), "trim_names": TRIM_NAMES,
-            "timeseries": database.uploads_over_time(),
-            "progress": progress,
-            "history": database.fleet_status_by_month(),
-        },
-    )
+    """Public dashboard: outcomes, level per critical module, trims and countries.
+    The working-group detail lives on /admin/analytics."""
+    return _render(request, "stats.html", {"stats": _fleet_stats(), "trim_names": TRIM_NAMES})
 
 
 @app.get("/privacy", response_class=HTMLResponse)
@@ -914,9 +906,38 @@ async def admin_logout(request: Request, username: str = Depends(require_csrf)):
     return response
 
 
-def _render_admin(request: Request, username: str, *, message: str = "",
-                  error: str = "", yaml_text: str | None = None,
+def _admin_page(request: Request, template: str, username: str, *, message: str = "",
+                error: str = "", status_code: int = 200, **context) -> Response:
+    """Common wrapper for the admin pages (nav needs username, csrf and role)."""
+    return _render(request, template,
+                   {"username": username, "csrf": request.state.csrf, "message": message, "error": error, **context},
+                   status_code=status_code)
+
+
+def _render_admin(request: Request, username: str, *, message: str = "", error: str = "",
                   status_code: int = 200) -> Response:
+    """Overview: the register tiles and the maintenance buttons."""
+    return _admin_page(request, "admin.html", username, message=message, error=error,
+                       status_code=status_code, fleet=_fleet_stats())
+
+
+def _render_settings(request: Request, username: str, *, message: str = "", error: str = "",
+                     status_code: int = 200) -> Response:
+    return _admin_page(
+        request, "admin_settings.html", username, message=message, error=error, status_code=status_code,
+        settings={"workorder_enabled": database.flag("workorder_enabled"),
+                  "result_mail_enabled": database.flag("result_mail_enabled"),
+                  "mail_configured": _relay().enabled,
+                  "smtp_host": database.get_setting("smtp_host"),
+                  "smtp_port": database.get_setting("smtp_port"),
+                  "mail_from": _relay().sender,
+                  "service_partner_url": database.get_setting("service_partner_url")},
+    )
+
+
+def _render_requirements(request: Request, username: str, *, message: str = "",
+                         error: str = "", yaml_text: str | None = None,
+                         status_code: int = 200) -> Response:
     try:
         current_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
     except OSError as exc:
@@ -942,29 +963,10 @@ def _render_admin(request: Request, username: str, *, message: str = "",
                 f"Changing the profiles requires updating the texts in the source code "
                 f"(app/locales/*.json: verdict_ready_text, verdict_zebra_text, ready_22_note)."
             )
-    return _render(
-        request,
-        "admin.html",
-        {
-            "username": username,
-            "csrf": request.state.csrf,
-            "message": message,
-            "error": error,
-            "profile_warning": profile_warning,
-            "requirements": requirements,
-            "yaml_text": yaml_text if yaml_text is not None else current_text,
-            "audit": database.audit_entries(50),
-            "usage": database.usage_stats(14),
-            "settings": {"workorder_enabled": database.flag("workorder_enabled"),
-                         "result_mail_enabled": database.flag("result_mail_enabled"),
-                         "mail_configured": _relay().enabled,
-                         "smtp_host": database.get_setting("smtp_host"),
-                         "smtp_port": database.get_setting("smtp_port"),
-                         "mail_from": _relay().sender,
-                         "service_partner_url": database.get_setting("service_partner_url")},
-            "fleet": _fleet_stats(),
-        },
-        status_code=status_code,
+    return _admin_page(
+        request, "admin_requirements.html", username, message=message, error=error, status_code=status_code,
+        profile_warning=profile_warning, requirements=requirements,
+        yaml_text=yaml_text if yaml_text is not None else current_text,
     )
 
 
@@ -972,12 +974,12 @@ def _save_requirements(request: Request, username: str, new_text: str) -> Respon
     """Shared save logic for the form editor and the raw YAML editor."""
     old_text = REQUIREMENTS_PATH.read_text(encoding="utf-8")
     if new_text.strip() == old_text.strip():
-        return _render_admin(request, username, message="No changes to save.")
+        return _render_requirements(request, username, message="No changes to save.")
 
     try:
         parsed = parse_requirements_text(new_text)
     except RequirementsValidationError as exc:
-        return _render_admin(
+        return _render_requirements(
             request, username, error=f"Not saved — validation error: {exc}",
             yaml_text=new_text, status_code=422,
         )
@@ -996,7 +998,7 @@ def _save_requirements(request: Request, username: str, new_text: str) -> Respon
     os.replace(tmp_path, REQUIREMENTS_PATH)
 
     database.add_audit(username, client_ip(request), "requirements_update", diff)
-    return _render_admin(
+    return _render_requirements(
         request, username,
         message=f"Saved. New requirements version: {parsed.version} "
                 f"({len(parsed.modules)} modules, target {parsed.target_profile}).",
@@ -1006,6 +1008,32 @@ def _save_requirements(request: Request, username: str, new_text: str) -> Respon
 @app.get("/admin", response_class=HTMLResponse)
 def admin(request: Request, username: str = Depends(require_admin)):
     return _render_admin(request, username)
+
+
+@app.get("/admin/requirements", response_class=HTMLResponse)
+def admin_requirements(request: Request, username: str = Depends(require_admin)):
+    return _render_requirements(request, username)
+
+
+@app.get("/admin/settings", response_class=HTMLResponse)
+def admin_settings_page(request: Request, username: str = Depends(require_admin)):
+    return _render_settings(request, username)
+
+
+@app.get("/admin/analytics", response_class=HTMLResponse)
+def admin_analytics(request: Request, username: str = Depends(require_admin)):
+    progress = database.fleet_progress()
+    progress.pop("vehicles", None)
+    return _admin_page(
+        request, "admin_analytics.html", username,
+        stats=_fleet_stats(), trim_names=TRIM_NAMES, timeseries=database.uploads_over_time(),
+        progress=progress, history=database.fleet_status_by_month(), usage=database.usage_stats(14),
+    )
+
+
+@app.get("/admin/log", response_class=HTMLResponse)
+def admin_log(request: Request, username: str = Depends(require_admin)):
+    return _admin_page(request, "admin_log.html", username, audit=database.audit_entries(200))
 
 
 @app.post("/admin/save")
@@ -1021,7 +1049,7 @@ async def admin_save_form(request: Request, username: str = Depends(require_csrf
     try:
         new_text = _form_to_yaml(form, username)
     except ValueError as exc:
-        return _render_admin(
+        return _render_requirements(
             request, username, error=f"Not saved — {exc}", status_code=422
         )
     return _save_requirements(request, username, new_text)
@@ -1129,7 +1157,7 @@ async def admin_settings(request: Request, username: str = Depends(require_csrf_
             changed.append(f"{key}={'on' if value == '1' else 'off'}")
     url = str(form.get("service_partner_url", "")).strip()
     if url and not re.fullmatch(r"https?://[^\s<>\"']+", url):
-        return _render_admin(request, username, error="Service partner link: must start with http:// or https:// and contain no spaces.", status_code=400)
+        return _render_settings(request, username, error="Service partner link: must start with http:// or https:// and contain no spaces.", status_code=400)
     if url and url != database.get_setting("service_partner_url"):
         database.set_setting("service_partner_url", url, username)
         changed.append(f"service_partner_url={url}")
@@ -1137,18 +1165,18 @@ async def admin_settings(request: Request, username: str = Depends(require_csrf_
     port = str(form.get("smtp_port", "")).strip() or "587"
     sender = str(form.get("mail_from", "")).strip()
     if not mail.valid_host(host):
-        return _render_admin(request, username, error="SMTP relay: host name only (letters, digits, dots, dashes), or empty to switch e-mail off.", status_code=400)
+        return _render_settings(request, username, error="SMTP relay: host name only (letters, digits, dots, dashes), or empty to switch e-mail off.", status_code=400)
     if not port.isdigit() or not 1 <= int(port) <= 65535:
-        return _render_admin(request, username, error="SMTP relay: the port must be a number between 1 and 65535.", status_code=400)
+        return _render_settings(request, username, error="SMTP relay: the port must be a number between 1 and 65535.", status_code=400)
     if sender and not mail.valid_sender(sender):
-        return _render_admin(request, username, error="Sender: use an address, or Name <address>.", status_code=400)
+        return _render_settings(request, username, error="Sender: use an address, or Name <address>.", status_code=400)
     for key, value in (("smtp_host", host), ("smtp_port", port), ("mail_from", sender)):
         if "smtp_host" in form and database.get_setting(key) != value:
             database.set_setting(key, value, username)
             changed.append(f"{key}={value or '(empty)'}")
     if changed:
         database.add_audit(username, client_ip(request), "settings", ", ".join(changed))
-    return _render_admin(request, username, message="Settings saved." if changed else "No settings changed.")
+    return _render_settings(request, username, message="Settings saved." if changed else "No settings changed.")
 
 
 @app.post("/admin/settings/test-mail")
@@ -1158,17 +1186,17 @@ async def admin_test_mail(request: Request, username: str = Depends(require_csrf
     address = str(form.get("email", "")).strip()
     relay = _relay()
     if not relay.enabled:
-        return _render_admin(request, username, error="No SMTP relay configured.", status_code=400)
+        return _render_settings(request, username, error="No SMTP relay configured.", status_code=400)
     if not mail.valid_address(address):
-        return _render_admin(request, username, error="Test e-mail: that does not look like an address.", status_code=400)
+        return _render_settings(request, username, error="Test e-mail: that does not look like an address.", status_code=400)
     try:
         await run_in_threadpool(mail.send, relay, address, "Ocean Software Check: test message",
                                 f"This is a test message from the admin console, requested by {username}.\n"
                                 f"Relay: {relay.host}:{relay.port}, sender: {relay.sender}.")
     except Exception as exc:
-        return _render_admin(request, username, error=f"Test e-mail failed: {exc}", status_code=400)
+        return _render_settings(request, username, error=f"Test e-mail failed: {exc}", status_code=400)
     database.add_audit(username, client_ip(request), "settings", "test e-mail sent")
-    return _render_admin(request, username, message="Test e-mail sent. Check the inbox (and the spam folder).")
+    return _render_settings(request, username, message="Test e-mail sent. Check the inbox (and the spam folder).")
 
 
 # --- Admin: own profile (password, MFA) -------------------------------------

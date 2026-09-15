@@ -528,19 +528,17 @@ def test_permanent_vehicle_link(client):
     assert c.get("/vehicle/short").status_code == 404
 
 
-def test_stats_page_shows_time_series_and_fleet_movement(client):
-    """The public dashboard renders the day/week/month uploads chart, the
-    movement section and the month-by-month status, without any VIN."""
+def test_public_stats_page_is_short(client):
+    """The public dashboard keeps outcomes, level per module, trims and
+    countries; the working-group detail moved to /admin/analytics."""
     c, _ = client
     _upload(c)
-    body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030")
-    _upload(c, body=body)  # same VIN again, BCM lifted 21 -> 30
     page = c.get("/stats?lang=en").text
-    assert "Uploads over time" in page and 'id="panel-month"' in page
-    assert page.count('class="col"') >= 60 + 26 + 1
-    assert "Movement in the fleet" in page and "From first to latest report" in page
-    assert "Fleet status month by month" in page
-    assert "Every control unit in the reports" in page and "GW500002" in page
+    assert "Vehicles per software status" in page and "Software level per module" in page
+    assert "Trims" in page and "Countries" in page
+    for gone in ("Uploads over time", "Movement in the fleet", "What holds the split cars back",
+                 "Every control unit in the reports"):
+        assert gone not in page
     assert "VCF1ZBE20PG099999" not in page
 
 
