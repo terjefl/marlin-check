@@ -20,5 +20,5 @@
   <a class="button" href="/admin/fleet">Open the vehicle register</a>
 </form>
 {% endif %}
-<p class="fieldhelp">Run this after changing requirement levels, and once after the v2 upgrade so reports stored before it get an outcome.</p>
+<p class="fieldhelp">Run this after changing requirement levels or after a portal update that changes how reports are read. Each report is parsed again from its stored file, so parser fixes reach old rows too.</p>
 {% endblock %}

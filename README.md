@@ -229,10 +229,11 @@ over time, fleet movement, usage count), Activity log (`/admin/log`), Users and 
   fields) of any upload, and can delete every record and file for that VIN
   (audited). Exports: `vehicles.csv` (one row per car) and `readings.csv`
   (one row per ECU per upload), semicolon-separated with a UTF-8 BOM.
-- **Re-evaluate all:** re-runs the current requirements file on every
-  stored report (rebuilt from its readings) and rewrites outcome and levels.
-  Run it after changing levels, and once after the v2 upgrade so the rows
-  from the consent period get an outcome.
+- **Re-evaluate all:** parses every stored report again from its file
+  (falling back to the stored readings when the file is gone), re-runs the
+  current requirements and rewrites outcome, levels and Marlin package state.
+  Run it after changing levels or after a portal update that changes how
+  reports are read.
 - **Usage statistics (on Analytics):** anonymous per-upload counters (country from
   Cloudflare's `CF-IPCountry`, language, outcome, keyed daily IP hash for
   unique users – see "Privacy model"). Never VIN, report content or raw IP.
