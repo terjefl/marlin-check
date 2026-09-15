@@ -35,6 +35,7 @@
   {% elif mail_status == 'failed' %}<p class="alert error">{{ t('mail_failed') }}</p>{% endif %}
   <form method="post" action="{{ page_path }}/email" class="filterbar">
     <label>{{ t('mail_form_label') }} <input type="email" name="email" required maxlength="254" autocomplete="email"></label>
+    {% if workorder_enabled %}<label class="check"><input type="checkbox" name="checklist" value="1"> {{ t('mail_checklist') }}</label>{% endif %}
     <button type="submit" class="small secondary">{{ t('mail_button') }}</button>
   </form>
   <p class="hint">{{ t('mail_hint') }}</p>

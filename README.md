@@ -45,7 +45,8 @@ car's control modules meet the minimum software levels required for the
   the vehicle page asking for a fresh OLP export.
 - "Send me this result": the permanent link and the PDF to an address the
   member types in (`app/mail.py`). The address is used for that one message and
-  not stored; 5 per IP per minute. The admin console's Settings card holds the
+  not stored; 5 per IP per minute. A checkbox also attaches the checklist for
+  service providers when that PDF is switched on. The admin console's Settings card holds the
   on/off switch, the SMTP relay (host, port, sender; Google Workspace's
   `smtp-relay.gmail.com` with STARTTLS, unauthenticated from a registered IP)
   and a "send a test e-mail" button. An empty relay host switches e-mail off.

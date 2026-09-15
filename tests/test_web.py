@@ -696,8 +696,14 @@ def test_send_result_by_email(client, monkeypatch):
     to, subject, text, attachments = sent[-1]
     assert to == "member@example.org" and "VCF1ZBE20PG099999" in subject
     assert re.search(r"https://check\.example/vehicle/[A-Za-z0-9_-]{16,}", text) and "2.1 zebra" in text
-    assert attachments[0][0].endswith(".pdf") and attachments[0][1][:5] == b"%PDF-"
+    assert attachments[0][0].endswith(".pdf") and attachments[0][1][:5] == b"%PDF-" and len(attachments) == 1
+    assert "{checklist}" not in text
     assert "Sent. Check your inbox" in c.get(f"/result/{token}?mail=sent").text
+    assert 'name="checklist"' in page
+    c.post(f"/result/{token}/email", data={"email": "member@example.org", "checklist": "1"}, follow_redirects=False)
+    _, _, text, attachments = sent[-1]
+    assert [a[0] for a in attachments] == ["ocean-software-check_VCF1ZBE20PG099999.pdf", "ocean-software-check_checklist_VCF1ZBE20PG099999.pdf"]
+    assert "checklist for service providers" in text and "{checklist}" not in text
     with main.database._connect() as conn:  # nothing about the address is stored anywhere
         for table in ("submissions", "usage_events", "audit_log"):
             assert not any("member@example.org" in str(tuple(r)) for r in conn.execute(f"SELECT * FROM {table}"))

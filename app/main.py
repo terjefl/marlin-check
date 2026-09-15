@@ -469,10 +469,7 @@ def _workorder_rows(evaluation) -> list[dict]:
     return rows
 
 
-async def _workorder_response(request: Request, report, evaluation) -> Response:
-    if not database.flag("workorder_enabled"):
-        raise HTTPException(status_code=404, detail="The work order is switched off.")
-    lang = negotiate_language(request)
+def _workorder_html(lang: str, report, evaluation) -> str:
     rows = _workorder_rows(evaluation)
     codes = {r["code"] for r in rows}
     html = templates.get_template("workorder.html").render(
@@ -481,6 +478,13 @@ async def _workorder_response(request: Request, report, evaluation) -> Response:
         marlin_rows=evaluation.marlin_below if evaluation.outcome == "marlin" else [],
         for_pdf=True, generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
+    return html
+
+
+async def _workorder_response(request: Request, report, evaluation) -> Response:
+    if not database.flag("workorder_enabled"):
+        raise HTTPException(status_code=404, detail="The work order is switched off.")
+    html = _workorder_html(negotiate_language(request), report, evaluation)
     pdf_bytes = await _run_heavy(_render_pdf, html)
     return Response(
         pdf_bytes, media_type="application/pdf",
@@ -614,16 +618,21 @@ async def _mail_result(request: Request, report, evaluation, *, link_key: str, b
     url = _permanent_url(request, link_key)
     outcome = t("outcome_" + evaluation.outcome) if evaluation.outcome else ""
     subject = t("mail_subject", vin=report.vin)
-    body = t("mail_body", vin=report.vin, outcome=outcome, url=url)
+    body = t("mail_body", vin=report.vin, outcome=outcome, url=url, checklist="{checklist}")
     pdf_html = templates.get_template("pdf.html").render(
         lang=lang, t=t, report=report, evaluation=evaluation, for_pdf=True,
         service_url=database.get_setting("service_partner_url"),
         generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
     pdf_bytes = await _run_heavy(_render_pdf, pdf_html)
+    attachments = [(f"ocean-software-check_{report.vin}.pdf", pdf_bytes, "application/pdf")]
+    if form.get("checklist") == "1" and database.flag("workorder_enabled"):
+        checklist = await _run_heavy(_render_pdf, _workorder_html(lang, report, evaluation))
+        attachments.append((f"ocean-software-check_checklist_{report.vin}.pdf", checklist, "application/pdf"))
+        body = body.replace("{checklist}", t("mail_body_checklist"))
+    body = body.replace("{checklist}", "")
     try:
-        await run_in_threadpool(mail.send, relay, address, subject, body,
-                                [(f"ocean-software-check_{report.vin}.pdf", pdf_bytes, "application/pdf")])
+        await run_in_threadpool(mail.send, relay, address, subject, body, attachments)
     except Exception as exc:
         log.warning("Result e-mail failed: %s", exc)
         return RedirectResponse(f"{back}?mail=failed", status_code=303)
