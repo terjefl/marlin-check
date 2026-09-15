@@ -513,6 +513,44 @@ class Database:
                             v["uploads"] = row["n"]
         return vehicles
 
+    def changes_since_previous(self, vin: str, submission_id: str) -> dict | None:
+        """What changed between the submission before `submission_id` and that
+        submission, for the same VIN: outcome and every module whose Supplier
+        SW Version differs (by ECU code, required or not). None when there is
+        no earlier upload."""
+        with self._connect() as conn:
+            current = conn.execute("SELECT uploaded_at, outcome FROM submissions WHERE id = ?", (submission_id,)).fetchone()
+            if current is None:
+                return None
+            previous = conn.execute(
+                "SELECT id, uploaded_at, outcome FROM submissions WHERE vin_hash = ? AND uploaded_at < ?"
+                " ORDER BY uploaded_at DESC LIMIT 1",
+                (vin_hash(vin), current["uploaded_at"]),
+            ).fetchone()
+            if previous is None:
+                return None
+
+            def versions(sid: str) -> dict[str, str]:
+                out: dict[str, str] = {}
+                for row in conn.execute(
+                    "SELECT raw_name, code, version FROM module_readings WHERE submission_id = ? ORDER BY rowid", (sid,)
+                ):
+                    code = row["code"] or row["raw_name"].split(" - ", 1)[0]
+                    out.setdefault(code, row["version"])
+                return out
+
+            before, after = versions(previous["id"]), versions(submission_id)
+        modules = [
+            {"code": code, "before": before.get(code, ""), "after": after.get(code, "")}
+            for code in sorted(set(before) | set(after))
+            if before.get(code, "") != after.get(code, "")
+        ]
+        return {
+            "previous_at": previous["uploaded_at"],
+            "outcome_before": previous["outcome"], "outcome_after": current["outcome"],
+            "modules": modules,
+        }
+
     def vehicle_history(self, vin: str) -> list[dict]:
         """Every submission for the VIN, newest first, each with its readings."""
         with self._connect() as conn:

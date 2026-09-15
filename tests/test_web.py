@@ -594,3 +594,29 @@ def test_pdf_uses_coloured_marks_and_no_link(client):
     assert "\u2705" not in html and "\u274c" not in html
     assert "/vehicle/" not in html and "Permanent link" not in html
     assert '<p class="contact">Contact your service provider.</p>' in html
+
+
+def test_changes_since_previous_report_and_report_age(client):
+    """A second upload of the same VIN shows what changed (outcome and every
+    module whose version differs); the permanent link warns when the report
+    is old."""
+    import re
+
+    c, main = client
+    first = _upload(c).text
+    assert "Since your previous report" not in first and "Nothing has changed" not in first
+    same = _upload(c).text
+    assert "Nothing has changed since your previous report" in same
+    body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030").replace(b"ICC390047", b"ICC390C49")
+    page = _upload(c, body=body).text
+    assert "Since your previous report" in page
+    assert "Result: 2.1 zebra → Clean 2.1" in page
+    assert "BCM: BCM395021 → BCM395030" in page and "ICC: ICC390047 → ICC390C49" in page
+
+    key = re.search(r"/vehicle/([A-Za-z0-9_-]{16,})", page).group(1)
+    vehicle = c.get(f"/vehicle/{key}").text
+    assert "Since your previous report" in vehicle and "days old" not in vehicle
+    with main.database._connect() as conn:
+        conn.execute("UPDATE submissions SET uploaded_at = '2026-01-01T10:00:00+00:00' WHERE vin = ?", ("VCF1ZBE20PG099999",))
+    vehicle = c.get(f"/vehicle/{key}").text
+    assert re.search(r"This report is \d+ days old", vehicle)

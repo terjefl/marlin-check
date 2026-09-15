@@ -3,6 +3,25 @@
 {% block content %}
 {% include "_result_body.html" %}
 {% if uploaded_at %}<p class="meta">{{ t('latest_report_note', date=uploaded_at) }}</p>{% endif %}
+{% if report_age_days is not none and report_age_days >= 60 %}<div class="alert">{{ t('report_age_note', days=report_age_days) }}</div>{% endif %}
+{% if changes %}
+<div class="changes">
+  {% set date = changes.previous_at[:16].replace('T', ' ') %}
+  {% if not changes.modules and changes.outcome_before == changes.outcome_after %}
+  <p class="meta">{{ t('changes_none', date=date) }}</p>
+  {% else %}
+  <strong>{{ t('changes_heading', date=date) }}</strong>
+  <ul>
+    {% if changes.outcome_before != changes.outcome_after %}
+    <li>{{ t('changes_outcome', before=(t('outcome_' + changes.outcome_before + '_short') if changes.outcome_before else '?'), after=(t('outcome_' + changes.outcome_after + '_short') if changes.outcome_after else '?')) }}</li>
+    {% endif %}
+    {% for m in changes.modules %}
+    <li class="mono">{{ t('changes_module', code=m.code, before=m.before or '–', after=m.after or '–') }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
 <div class="actions">
   <a class="button" href="{{ pdf_url }}">{{ t('download_pdf') }}</a>
   <a class="button secondary" href="/">{{ t('check_another') }}</a>

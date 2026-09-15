@@ -334,10 +334,11 @@ async def analyze(request: Request, report: UploadFile):
         f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}_{secrets.token_hex(3)}{safe_ext}"
     )
     (UPLOADS_DIR / stored_filename).write_bytes(data)
-    database.store_submission(
+    submission_id = database.store_submission(
         parsed, evaluation, lang, stored_filename,
         country=request.headers.get("cf-ipcountry", "").upper(),
     )
+    changes = database.changes_since_previous(parsed.vin, submission_id)
 
     _log_usage(request, lang, evaluation.verdict, consent=True)
 
@@ -345,7 +346,7 @@ async def analyze(request: Request, report: UploadFile):
     token = secrets.token_urlsafe(16)
     _recent_results[token] = {
         "report": parsed, "evaluation": evaluation, "at": time.time(),
-        "link_key": database.link_key_for(parsed.vin),
+        "link_key": database.link_key_for(parsed.vin), "changes": changes,
     }
 
     # POST-redirect-GET: the result page is a GET page, so switching language
@@ -384,14 +385,14 @@ def _same_origin_json(request: Request) -> None:
 
 
 def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key: str,
-                 uploaded_at: str = "") -> Response:
+                 uploaded_at: str = "", changes: dict | None = None, report_age_days: int | None = None) -> Response:
     response = _render(
         request,
         "result.html",
         {
             "report": report, "evaluation": evaluation, "pdf_url": pdf_url,
             "permanent_url": _permanent_url(request, link_key),
-            "uploaded_at": uploaded_at,
+            "uploaded_at": uploaded_at, "changes": changes, "report_age_days": report_age_days,
         },
     )
     response.headers["Cache-Control"] = "private, no-store"  # contains the VIN
@@ -443,7 +444,7 @@ def result(request: Request, token: str):
     if cached is None:
         return _expired_result(request)
     return _result_page(request, cached["report"], cached["evaluation"],
-                        pdf_url=f"/pdf/{token}", link_key=cached["link_key"])
+                        pdf_url=f"/pdf/{token}", link_key=cached["link_key"], changes=cached.get("changes"))
 
 
 @app.get("/pdf/{token}")
@@ -483,8 +484,14 @@ def vehicle_page(request: Request, key: str):
     if found is None:
         return _unknown_vehicle_link(request)
     report, evaluation, submission = found
+    try:
+        age_days = (datetime.now(UTC) - datetime.fromisoformat(submission["uploaded_at"])).days
+    except ValueError:
+        age_days = None
     return _result_page(request, report, evaluation, pdf_url=f"/vehicle/{key}/pdf",
-                        link_key=key, uploaded_at=submission["uploaded_at"][:16].replace("T", " "))
+                        link_key=key, uploaded_at=submission["uploaded_at"][:16].replace("T", " "),
+                        changes=database.changes_since_previous(report.vin, submission["id"]),
+                        report_age_days=age_days)
 
 
 @app.get("/vehicle/{key}/pdf")
