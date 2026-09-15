@@ -504,7 +504,7 @@ def test_register_lists_filters_and_exports_vehicles(client):
     readings = c.get("/admin/fleet/readings.csv")
     assert readings.status_code == 200
     lines = readings.text.lstrip("﻿").splitlines()
-    assert len(lines) == 1 + 4 * 37  # every ECU of every upload, including the re-upload
+    assert len(lines) == 1 + 3 * 37  # every ECU of every stored report (the identical re-upload was merged)
     assert lines[0].startswith("submission_id;vin;uploaded_at_utc;")
     assert any(";ESP;ESP - Electronic Stability Program;CHASSIS;ESP;89819V050101060131;" in line for line in lines)
 
@@ -840,3 +840,43 @@ def test_work_order_switch_in_admin(client):
     c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1", "service_partner_url": "https://example.org/help"}, headers={"Sec-Fetch-Site": "same-origin"})
     assert main.database.get_setting("service_partner_url") == "https://example.org/help"
     assert 'href="https://example.org/help" target="_blank"' in c.get(f"/vehicle/{key}").text
+
+
+def test_merge_duplicate_uploads_in_admin(client):
+    """The clean-up merges consecutive identical uploads per vehicle into the
+    latest one, keeps counts, deletes files, and leaves distinct reports."""
+    from app.parser import parse_report
+    from app.rules import evaluate, load_requirements
+
+    c, main = client
+    requirements = load_requirements(EXAMPLE)
+    Path(main.UPLOADS_DIR).mkdir(parents=True, exist_ok=True)
+
+    def stored(name, vin_suffix, when, fname, **overrides):
+        report = parse_report((Path(__file__).parent / "fixtures" / name).read_bytes(), name)
+        report.vin = report.vin[:-2] + vin_suffix
+        for m in report.modules:
+            if m.code in overrides:
+                m.supplier_sw = overrides[m.code]
+        (Path(main.UPLOADS_DIR) / fname).write_text("x")
+        sid = main.database.store_submission(report, evaluate(report, requirements), "en", fname)
+        with main.database._connect() as conn:
+            conn.execute("UPDATE submissions SET uploaded_at = ? WHERE id = ?", (when, sid))
+
+    stored("olp_report_21_full.txt", "31", "2026-09-01T10:00:00+00:00", "a.txt")
+    stored("olp_report_21_full.txt", "31", "2026-09-02T10:00:00+00:00", "b.txt")
+    stored("olp_report_21_full.txt", "31", "2026-09-03T10:00:00+00:00", "c.txt")
+    stored("olp_report_21_full.txt", "31", "2026-09-04T10:00:00+00:00", "d.txt", BCM="BCM395042")  # changed
+    stored("olp_report_21_full.txt", "31", "2026-09-05T10:00:00+00:00", "e.txt", BCM="BCM395042")  # same again
+    stored("olp_report_21_full.txt", "32", "2026-09-05T11:00:00+00:00", "f.txt")
+
+    _login(c, "terje", "hemmelig123")
+    csrf = _csrf(c.get("/admin").text)
+    response = c.post("/admin/merge-duplicates", data={"csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert response.status_code == 200 and "Merged 3 duplicate upload(s)" in response.text and "3 file(s) removed" in response.text
+    history = main.database.vehicle_history("VCF1ZBE20PG099931")
+    assert [(h["stored_filename"], h["upload_count"]) for h in history] == [("e.txt", 2), ("c.txt", 3)]
+    assert sorted(f.name for f in Path(main.UPLOADS_DIR).iterdir()) == ["c.txt", "e.txt", "f.txt"]
+    assert main.database.stats()["total_submissions"] == 6
+    assert '<td class="num">3</td>' in c.get("/admin/fleet/VCF1ZBE20PG099931").text  # "Times" column
+    assert any(e["action"] == "merge_duplicates" for e in main.database.audit_entries())

@@ -11,11 +11,12 @@
 {% endif %}
 <h2>Uploads</h2>
 <table class="modules">
-  <thead><tr><th>Uploaded (UTC)</th><th>Report date</th><th>Outcome</th><th class="num">Complete</th><th class="num">Evidence</th><th>Requirements</th><th>Country</th><th>Language</th><th>File</th></tr></thead>
+  <thead><tr><th>Uploaded (UTC)</th><th class="num" title="Identical re-uploads merged into this row">Times</th><th>Report date</th><th>Outcome</th><th class="num">Complete</th><th class="num">Evidence</th><th>Requirements</th><th>Country</th><th>Language</th><th>File</th></tr></thead>
   <tbody>
     {% for h in history %}
     <tr {% if h.id == selected.id %}class="selectedrow"{% endif %}>
       <td><a href="/admin/fleet/{{ vin }}?s={{ h.id }}">{{ h.uploaded_at[:19].replace('T', ' ') }}</a></td>
+      <td class="num">{{ h.upload_count }}</td>
       <td>{{ h.report_date[:19] }}</td>
       <td><span class="pill oc-{{ h.outcome }}">{{ t('outcome_' + h.outcome + '_short') if h.outcome else '(not evaluated)' }}</span></td>
       <td class="num">{{ h.complete_profile or '–' }}</td><td class="num">{{ h.top_evidence or '–' }}</td>

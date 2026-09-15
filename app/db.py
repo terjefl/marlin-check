@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS submissions (
     complete_profile TEXT,
     top_evidence TEXT,
     report_date TEXT NOT NULL DEFAULT '',
-    country TEXT NOT NULL DEFAULT ''
+    country TEXT NOT NULL DEFAULT '',
+    upload_count INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_submissions_vin_hash ON submissions(vin_hash);
 
@@ -144,6 +145,7 @@ CREATE TABLE IF NOT EXISTS admin_passkeys (
 # ALTER TABLE (SQLite cannot add columns through CREATE TABLE IF NOT EXISTS).
 _MIGRATIONS = {
     "submissions": [
+        ("upload_count", "INTEGER NOT NULL DEFAULT 1"),
         ("trim", "TEXT NOT NULL DEFAULT ''"),
         ("outcome", "TEXT NOT NULL DEFAULT ''"),
         ("complete_profile", "TEXT"),
@@ -211,6 +213,22 @@ def _reading_rows(submission_id: str, evaluation: Evaluation) -> list[tuple]:
             m.code, m.section, None, None, None, m.software, m.hardware, m.bootloader,
         ))
     return rows
+
+
+def _report_signature(report: ParsedReport) -> tuple:
+    """What makes two uploads 'the same report': every control unit with all
+    four version fields. Order-independent; the report date is ignored."""
+    return tuple(sorted(
+        (m.code, m.supplier_sw, m.software, m.hardware, m.bootloader) for m in report.modules
+    ))
+
+
+def _rows_signature(rows) -> tuple:
+    return tuple(sorted(
+        ((row["code"] or row["raw_name"].split(" - ", 1)[0]), row["version"], row["software"] or "",
+         row["hardware"] or "", row["bootloader"] or "")
+        for row in rows
+    ))
 
 
 def _report_from_rows(vin: str, rows, report_date: str = "") -> ParsedReport:
@@ -307,7 +325,7 @@ class Database:
                 counted = {
                     row["period"]: (row["uploads"], row["vehicles"])
                     for row in conn.execute(
-                        f"SELECT strftime('{fmt}', uploaded_at) AS period, COUNT(*) AS uploads,"
+                        f"SELECT strftime('{fmt}', uploaded_at) AS period, SUM(upload_count) AS uploads,"
                         " COUNT(DISTINCT vin_hash) AS vehicles FROM submissions GROUP BY period"
                     )
                 }
@@ -344,7 +362,7 @@ class Database:
         keys are aggregates safe for the public dashboard."""
         with self._connect() as conn:
             subs = conn.execute(
-                "SELECT id, vin, vin_hash, uploaded_at, outcome FROM submissions"
+                "SELECT id, vin, vin_hash, uploaded_at, outcome, upload_count FROM submissions"
                 " ORDER BY vin_hash, uploaded_at"
             ).fetchall()
             by_vin: dict[str, list] = {}
@@ -377,7 +395,7 @@ class Database:
                 rank_last = OUTCOME_RANK.get(last["outcome"], -1)
                 vehicles.append({
                     "vin": last["vin"],
-                    "uploads": len(rows),
+                    "uploads": sum(r["upload_count"] for r in rows),
                     "first_at": first["uploaded_at"], "first_outcome": first["outcome"],
                     "last_at": last["uploaded_at"], "last_outcome": last["outcome"],
                     "lifts": lifts,
@@ -472,6 +490,67 @@ class Database:
             ).fetchall()
         return _report_from_rows(sub["vin"], rows, sub["report_date"]), dict(sub)
 
+    def store_upload(self, report: ParsedReport, evaluation: Evaluation, lang: str,
+                     stored_filename: str | None, country: str = "") -> tuple[str, str | None]:
+        """Stores an upload, unless it is identical to the vehicle's latest
+        report: then that row is refreshed instead (new timestamp, file,
+        language and country; upload_count + 1; outcome re-stored in case the
+        requirements changed). Returns (submission id, replaced file name or
+        None); the caller removes the replaced file."""
+        with self._connect() as conn:
+            latest = conn.execute(
+                "SELECT id, stored_filename FROM submissions WHERE vin_hash = ? ORDER BY uploaded_at DESC LIMIT 1",
+                (vin_hash(report.vin),),
+            ).fetchone()
+            if latest is not None:
+                rows = conn.execute(
+                    "SELECT raw_name, version, code, software, hardware, bootloader"
+                    " FROM module_readings WHERE submission_id = ?", (latest["id"],)
+                ).fetchall()
+                if _rows_signature(rows) == _report_signature(report):
+                    conn.execute(
+                        "UPDATE submissions SET uploaded_at = ?, lang = ?, stored_filename = ?, country = ?,"
+                        " upload_count = upload_count + 1, verdict = ?, requirements_version = ?, trim = ?,"
+                        " outcome = ?, complete_profile = ?, top_evidence = ? WHERE id = ?",
+                        (datetime.now(UTC).isoformat(), lang, stored_filename, country[:8],
+                         evaluation.verdict, evaluation.requirements_version, evaluation.trim,
+                         evaluation.outcome, evaluation.complete_profile, evaluation.top_evidence, latest["id"]),
+                    )
+                    conn.execute("DELETE FROM module_readings WHERE submission_id = ?", (latest["id"],))
+                    conn.executemany(_INSERT_READING, _reading_rows(latest["id"], evaluation))
+                    return latest["id"], latest["stored_filename"]
+        return self.store_submission(report, evaluation, lang, stored_filename, country=country), None
+
+    def merge_duplicate_submissions(self) -> tuple[int, list[str]]:
+        """One-off clean-up: for every vehicle, consecutive uploads with the
+        same report are merged into the latest of them (upload counts added
+        up). Returns (rows removed, their stored file names)."""
+        removed, files = 0, []
+        with self._connect() as conn:
+            subs = conn.execute(
+                "SELECT id, vin_hash, uploaded_at, stored_filename, upload_count FROM submissions"
+                " ORDER BY vin_hash, uploaded_at"
+            ).fetchall()
+            previous = None  # (vin_hash, signature, id)
+            for sub in subs:
+                rows = conn.execute(
+                    "SELECT raw_name, version, code, software, hardware, bootloader"
+                    " FROM module_readings WHERE submission_id = ?", (sub["id"],)
+                ).fetchall()
+                signature = _rows_signature(rows)
+                if previous and previous[0] == sub["vin_hash"] and previous[1] == signature:
+                    # same report as the one before it: fold the earlier row into this one
+                    earlier = conn.execute("SELECT stored_filename, upload_count FROM submissions WHERE id = ?",
+                                           (previous[2],)).fetchone()
+                    conn.execute("UPDATE submissions SET upload_count = upload_count + ? WHERE id = ?",
+                                 (earlier["upload_count"], sub["id"]))
+                    conn.execute("DELETE FROM submissions WHERE id = ?", (previous[2],))
+                    removed += 1
+                    if earlier["stored_filename"]:
+                        files.append(earlier["stored_filename"])
+                previous = (sub["vin_hash"], signature, sub["id"])
+        return removed, files
+
     # --- the vehicle register (admin) ----------------------------------------
 
     _LATEST = (
@@ -527,7 +606,7 @@ class Database:
                 ):
                     by_id[row["submission_id"]]["readings"] = row["n"]
                 for row in conn.execute(
-                    "SELECT vin_hash, COUNT(*) AS n FROM submissions GROUP BY vin_hash"
+                    "SELECT vin_hash, SUM(upload_count) AS n FROM submissions GROUP BY vin_hash"
                 ):
                     for v in vehicles:
                         if v["vin_hash"] == row["vin_hash"]:
@@ -1004,7 +1083,7 @@ class Database:
             unique_vins = conn.execute(
                 f"SELECT COUNT(*) AS n FROM ({latest})"
             ).fetchone()["n"]
-            total = conn.execute("SELECT COUNT(*) AS n FROM submissions").fetchone()["n"]
+            total = conn.execute("SELECT COALESCE(SUM(upload_count), 0) AS n FROM submissions").fetchone()["n"]
             verdicts = {
                 row["verdict"]: row["n"]
                 for row in conn.execute(
@@ -1033,7 +1112,7 @@ class Database:
             per_week = [
                 dict(row)
                 for row in conn.execute(
-                    "SELECT strftime('%Y-W%W', uploaded_at) AS week, COUNT(*) AS uploads,"
+                    "SELECT strftime('%Y-W%W', uploaded_at) AS week, SUM(upload_count) AS uploads,"
                     " COUNT(DISTINCT vin_hash) AS vehicles"
                     " FROM submissions GROUP BY week ORDER BY week DESC LIMIT 26"
                 )

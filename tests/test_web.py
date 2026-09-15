@@ -607,7 +607,7 @@ def test_changes_since_previous_report_and_report_age(client):
     first = _upload(c).text
     assert "Since your previous report" not in first and "Nothing has changed" not in first
     same = _upload(c).text
-    assert "Nothing has changed since your previous report" in same
+    assert "Since your previous report" not in same  # identical re-upload: merged, so still one stored state
     body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030").replace(b"ICC390047", b"ICC390C49")
     page = _upload(c, body=body).text
     assert "Since your previous report" in page
@@ -643,3 +643,23 @@ def test_work_order_pdf_lists_modules_in_order(client):
     page = _upload(c, body=full22.read_bytes()).text
     assert "/workorder" not in page  # nothing to update
     assert c.get("/pdf/nonexistent/workorder").status_code == 410
+
+
+def test_identical_reupload_is_merged_and_counted(client):
+    """Uploading the same report again refreshes the vehicle's latest row
+    instead of adding one: one row, upload_count 2, the old file gone, totals
+    still counting every upload. A different report adds a row."""
+    c, main = client
+    _upload(c)
+    first_files = set(Path(main.UPLOADS_DIR).iterdir())
+    _upload(c)
+    history = main.database.vehicle_history("VCF1ZBE20PG099999")
+    assert len(history) == 1 and history[0]["upload_count"] == 2
+    files = set(Path(main.UPLOADS_DIR).iterdir())
+    assert len(files) == 1 and files != first_files  # the newer file replaced the older
+    stats = main.database.stats()
+    assert stats["total_submissions"] == 2 and stats["unique_vins"] == 1
+    _upload(c, body=FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030"))
+    history = main.database.vehicle_history("VCF1ZBE20PG099999")
+    assert len(history) == 2 and history[0]["upload_count"] == 1 and history[1]["upload_count"] == 2
+    assert main.database.fleet_vehicles()[0]["uploads"] == 3

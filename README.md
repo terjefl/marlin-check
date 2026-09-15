@@ -52,6 +52,9 @@ car's control modules meet the minimum software levels required for the
   deliberately no lookup by VIN: the register must not be enumerable.
 - A public "How it works" page (`/how-it-works`) explaining the interpretation
   at processing level, in all languages.
+- An upload identical to the vehicle's latest report (every control unit, all
+  four version fields) refreshes that row instead of adding one (`upload_count`
+  keeps the total); the admin console can merge older consecutive duplicates.
 - Storage is mandatory (association decision, Sep 2026): every analyzed
   report goes into the **vehicle register** – file, VIN, all ECU version
   fields, outcome. Public dashboard (`/stats`, aggregated, no VINs) and an

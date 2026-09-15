@@ -334,10 +334,13 @@ async def analyze(request: Request, report: UploadFile):
         f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}_{secrets.token_hex(3)}{safe_ext}"
     )
     (UPLOADS_DIR / stored_filename).write_bytes(data)
-    submission_id = database.store_submission(
+    submission_id, replaced_file = database.store_upload(
         parsed, evaluation, lang, stored_filename,
         country=request.headers.get("cf-ipcountry", "").upper(),
     )
+    if replaced_file and replaced_file != stored_filename:
+        # Same report as the vehicle's latest: the row was refreshed, the old file is redundant
+        (UPLOADS_DIR / Path(replaced_file).name).unlink(missing_ok=True)
     changes = database.changes_since_previous(parsed.vin, submission_id)
 
     _log_usage(request, lang, evaluation.verdict, consent=True)
@@ -1505,6 +1508,21 @@ async def admin_vehicle_delete(request: Request, vin: str, username: str = Depen
         f"VIN {vin}: {len(files)} submission file(s) referenced, {removed} removed from disk",
     )
     return RedirectResponse("/admin/fleet", status_code=303)
+
+
+@app.post("/admin/merge-duplicates")
+async def admin_merge_duplicates(request: Request, username: str = Depends(require_csrf_admin)):
+    removed, files = await run_in_threadpool(database.merge_duplicate_submissions)
+    deleted = 0
+    for name in files:
+        try:
+            (UPLOADS_DIR / Path(name).name).unlink()
+            deleted += 1
+        except FileNotFoundError:
+            pass
+    database.add_audit(username, client_ip(request), "merge_duplicates",
+                       f"{removed} duplicate upload(s) merged, {deleted} file(s) removed")
+    return _render_admin(request, username, message=f"Merged {removed} duplicate upload(s) into the latest identical report; {deleted} file(s) removed.")
 
 
 @app.post("/admin/reevaluate")

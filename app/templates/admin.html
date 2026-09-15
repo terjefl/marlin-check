@@ -117,6 +117,11 @@
 <h2>Vehicle register</h2>
 {% include "_fleet_tiles.html" %}
 {% if role == 'admin' %}
+<form method="post" action="/admin/merge-duplicates" class="actions" data-confirm="Merge consecutive identical uploads of the same vehicle into the latest one? Their files are deleted; upload counts are kept. This cannot be undone.">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button type="submit" class="secondary">Merge duplicate uploads (identical consecutive reports)</button>
+  <span class="meta">New uploads that repeat the vehicle's latest report are merged automatically.</span>
+</form>
 <form method="post" action="/admin/reevaluate" class="actions" data-confirm="Re-evaluate every stored report with the current requirements file? Outcomes and levels in the register are recomputed; nothing is deleted.">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <button type="submit" class="secondary">Re-evaluate all stored reports with the current requirements</button>
