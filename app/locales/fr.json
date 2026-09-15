@@ -7,7 +7,7 @@
   "lang_label": "Langue",
   "intro_heading": "Fisker Ocean : contrôle des versions logicielles et préparation à Marlin",
   "intro_text": "Cette analyse vérifie si votre voiture est entièrement mise à jour en version 2.1 et 2.2 (y compris 2.2.2 et 2.2.3, qui comptent toutes deux comme 2.2) et si elle est prête pour la mise à jour Marlin.",
-  "membership_note": "Le service est destiné aux membres de la <a href=\"https://fiskeroa.com/\" target=\"_blank\" rel=\"noopener\">Fisker Owners Association</a>, car l'application OceanLink Pro exige d'être membre.",
+  "membership_note": "Le service est destiné aux membres de la <a href=\"https://fiskeroa.com/\" target=\"_blank\" rel=\"noopener\">Fisker Owners Association</a>. L'application OceanLink Pro exige une adhésion FOA active.",
   "upload_label": "Envoyer le OLP Software Version Report",
   "upload_button": "Analyser le rapport",
   "consent_label": "J'accepte que le VIN de ma voiture et les versions logicielles de tous ses calculateurs soient enregistrés dans le registre des véhicules de la Fisker Owners Association et utilisés à des fins statistiques. C'est obligatoire pour utiliser le service.",
