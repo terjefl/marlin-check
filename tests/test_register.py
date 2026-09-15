@@ -214,3 +214,19 @@ def test_time_series_and_fleet_movement(tmp_path):
 
     assert Database(tmp_path / "empty.sqlite3").fleet_status_by_month() == []
     assert Database(tmp_path / "empty.sqlite3").uploads_over_time()["month"] == []
+
+
+def test_reevaluate_strips_cid_padding_from_old_rows(tmp_path):
+    """Rows stored before the parser stripped (cid:0) padding are cleaned by
+    'Re-evaluate all', so the stats stop showing 'BMSN39021(cid:0)' as a version."""
+    path = tmp_path / "m.sqlite3"
+    _old_database(path, "olp_report.txt", "VCF1ZBE20PG099999")
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE module_readings SET version = version || '(cid:0)' WHERE raw_name LIKE 'BMS - %'")
+    conn.commit()
+    conn.close()
+    db = Database(path)
+    db.reevaluate_all(load_requirements(REQUIREMENTS))
+    conn = sqlite3.connect(path)
+    versions = [r[0] for r in conn.execute("SELECT version FROM module_readings WHERE code = 'BMS'")]
+    assert versions == ["BMSN39021"]

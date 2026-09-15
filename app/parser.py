@@ -37,6 +37,11 @@ FIELD_RE = re.compile(
 # pdfplumber renders undefined glyphs (padding in the OLP PDFs) as "(cid:0)"
 _CID_JUNK_RE = re.compile(r"\(cid:\d+\)")
 
+
+def clean_value(value: str) -> str:
+    """Strips pdfplumber's (cid:N) padding glyphs and surrounding whitespace."""
+    return _CID_JUNK_RE.sub("", value).strip()
+
 MAX_REPORT_BYTES = 15 * 1024 * 1024
 # A real OLP report is a handful of pages. Text extraction is CPU-bound and
 # linear in the amount of text, so a page cap keeps a hostile PDF from tying up
@@ -161,7 +166,7 @@ def parse_report(data: bytes, filename: str = "") -> ParsedReport:
             continue
         fld = FIELD_RE.match(line)
         if fld and current is not None:
-            current[_FIELD_ATTR[fld.group(1)]] = _CID_JUNK_RE.sub("", fld.group(2)).strip()
+            current[_FIELD_ATTR[fld.group(1)]] = clean_value(fld.group(2))
             continue
         if SECTION_RE.match(line) and " - " not in line:
             _flush()

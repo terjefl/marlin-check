@@ -234,14 +234,16 @@ def _rows_signature(rows) -> tuple:
 def _report_from_rows(vin: str, rows, report_date: str = "") -> ParsedReport:
     """Rebuilds a ParsedReport from stored readings. Rows from before v2 have
     no `code`; it is recovered from raw_name ("CODE - Name")."""
+    from .parser import clean_value  # rows stored before the (cid:0) fix carry padding glyphs
+
     modules = []
     for row in rows:
         code = row["code"] or row["raw_name"].split(" - ", 1)[0]
         name = row["raw_name"].split(" - ", 1)[1] if " - " in row["raw_name"] else row["raw_name"]
         modules.append(ModuleReading(
-            code=code, name=name, section=row["section"] or "", supplier_sw=row["version"],
-            software=row["software"] or "", hardware=row["hardware"] or "",
-            bootloader=row["bootloader"] or "",
+            code=code, name=name, section=row["section"] or "", supplier_sw=clean_value(row["version"] or ""),
+            software=clean_value(row["software"] or ""), hardware=clean_value(row["hardware"] or ""),
+            bootloader=clean_value(row["bootloader"] or ""),
         ))
     meta = {"report_date": report_date} if report_date else {}
     return ParsedReport(vin=vin, modules=modules, meta=meta)
