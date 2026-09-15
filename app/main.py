@@ -49,7 +49,6 @@ REQUIREMENTS_PATH = Path(
     os.environ.get("MARLIN_REQUIREMENTS_PATH", "./requirements.example.yaml")
 )
 
-RESULT_TTL_SECONDS = 30 * 60  # result/PDF link lives in memory for half an hour
 # The admin session cookie is marked Secure unless explicitly disabled (local
 # dev over plain http). Behind the Cloudflare tunnel the origin only sees http,
 # so this cannot be derived from the request.
@@ -103,17 +102,9 @@ database.seed_settings(mail.ENV_DEFAULTS)
 if database.import_users_if_empty(auth.load_users()):
     database.add_audit("system", "-", "users_import", "admin users imported from admin_users.yaml")
 
-# Recent analyses kept in memory, so the result page can offer the PDF without re-upload.
-# NOTE: all of this state (results, rate limits, login lockout) is per process —
+# NOTE: all of this state (rate limits, login lockout) is per process —
 # the app must run as exactly one uvicorn worker/replica.
-_recent_results: dict[str, dict] = {}
 _upload_hits: dict[str, list[float]] = {}
-
-
-def _prune_results() -> None:
-    cutoff = time.time() - RESULT_TTL_SECONDS
-    for token in [t for t, r in _recent_results.items() if r["at"] < cutoff]:
-        _recent_results.pop(token, None)
 
 
 def _rate_limited(ip: str) -> bool:
@@ -354,27 +345,19 @@ async def analyze(request: Request, report: UploadFile):
         f"_{re.sub(r'[^A-Z0-9]', '', parsed.vin.upper())}_{secrets.token_hex(3)}{safe_ext}"
     )
     (UPLOADS_DIR / stored_filename).write_bytes(data)
-    submission_id, replaced_file = database.store_upload(
+    _submission_id, replaced_file = database.store_upload(
         parsed, evaluation, lang, stored_filename,
         country=request.headers.get("cf-ipcountry", "").upper(),
     )
     if replaced_file and replaced_file != stored_filename:
         # Same report as the vehicle's latest: the row was refreshed, the old file is redundant
         (UPLOADS_DIR / Path(replaced_file).name).unlink(missing_ok=True)
-    changes = database.changes_since_previous(parsed.vin, submission_id)
 
     _log_usage(request, lang, evaluation.verdict, consent=True)
 
-    _prune_results()
-    token = secrets.token_urlsafe(16)
-    _recent_results[token] = {
-        "report": parsed, "evaluation": evaluation, "at": time.time(),
-        "link_key": database.link_key_for(parsed.vin), "changes": changes,
-    }
-
-    # POST-redirect-GET: the result page is a GET page, so switching language
-    # and reloading work without re-submitting the report.
-    return RedirectResponse(f"/result/{token}", status_code=303)
+    # POST-redirect-GET straight to the vehicle's permanent link: the result
+    # page is a GET page, so switching language, reloading and bookmarking work.
+    return RedirectResponse(f"/vehicle/{database.link_key_for(parsed.vin)}", status_code=303)
 
 
 def _public_base(request: Request) -> str:
@@ -493,15 +476,6 @@ async def _workorder_response(request: Request, report, evaluation) -> Response:
     )
 
 
-@app.get("/pdf/{token}/workorder")
-async def download_workorder(request: Request, token: str):
-    _prune_results()
-    cached = _recent_results.get(token)
-    if cached is None:
-        return _expired_result(request)
-    return await _workorder_response(request, cached["report"], cached["evaluation"])
-
-
 def _unknown_vehicle_link(request: Request) -> Response:
     t = translator(negotiate_language(request))
     return _render(request, "index.html",
@@ -509,32 +483,16 @@ def _unknown_vehicle_link(request: Request) -> Response:
                    status_code=404)
 
 
-def _expired_result(request: Request) -> Response:
-    """Unknown or expired token (30 min TTL, or the app restarted): explain
-    instead of silently bouncing to the front page."""
+@app.get("/result/{token}", response_class=HTMLResponse)
+@app.get("/pdf/{token}")
+@app.get("/pdf/{token}/workorder")
+def retired_result_link(request: Request, token: str):
+    """The temporary 30-minute result links from before the permanent link
+    existed: explain instead of silently bouncing to the front page."""
     t = translator(negotiate_language(request))
     return _render(request, "index.html",
                    {"error": t("result_expired"), "requirements": _current_requirements()},
                    status_code=410)
-
-
-@app.get("/result/{token}", response_class=HTMLResponse)
-def result(request: Request, token: str):
-    _prune_results()
-    cached = _recent_results.get(token)
-    if cached is None:
-        return _expired_result(request)
-    return _result_page(request, cached["report"], cached["evaluation"],
-                        pdf_url=f"/pdf/{token}", link_key=cached["link_key"], changes=cached.get("changes"))
-
-
-@app.get("/pdf/{token}")
-async def download_pdf(request: Request, token: str):
-    _prune_results()
-    cached = _recent_results.get(token)
-    if cached is None:
-        return _expired_result(request)
-    return await _pdf_response(request, cached["report"], cached["evaluation"])
 
 
 # --- permanent per-vehicle link ---------------------------------------------
@@ -638,16 +596,6 @@ async def _mail_result(request: Request, report, evaluation, *, link_key: str, b
         return RedirectResponse(f"{back}?mail=failed", status_code=303)
     log.info("Result e-mail sent (lang %s)", lang)
     return RedirectResponse(f"{back}?mail=sent", status_code=303)
-
-
-@app.post("/result/{token}/email")
-async def result_email(request: Request, token: str):
-    _prune_results()
-    cached = _recent_results.get(token)
-    if cached is None:
-        return _expired_result(request)
-    return await _mail_result(request, cached["report"], cached["evaluation"],
-                              link_key=cached["link_key"], back=f"/result/{token}")
 
 
 @app.post("/vehicle/{key}/email")

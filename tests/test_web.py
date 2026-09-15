@@ -121,11 +121,11 @@ def test_stats_and_privacy_pages_render(client):
 
 
 def test_result_page_survives_language_switch_and_reload(client):
-    """POST /analyze redirects to GET /result/<token>; language switch and refresh work."""
+    """POST /analyze redirects to GET /vehicle/<key> (the permanent link); language switch and refresh work."""
     c, _ = client
     response = _upload(c)
     assert response.status_code == 200
-    assert "/result/" in str(response.url)
+    assert "/vehicle/" in str(response.url)
 
     # Refresh (GET of the same URL) works
     again = c.get(str(response.url))
@@ -136,11 +136,11 @@ def test_result_page_survives_language_switch_and_reload(client):
     assert german.status_code == 200
     assert "Ergebnis für VIN" in german.text
 
-    # Expired/unknown token -> front page with an explanation, not a silent redirect
+    # Old-style 30-minute links -> front page with an explanation, not a silent redirect
     gone = c.get("/result/finnesikke?lang=en")
     assert gone.status_code == 410
-    assert "This result link has expired" in gone.text
-    assert c.get("/pdf/finnesikke").status_code == 410
+    assert "This result link is no longer in use" in gone.text
+    assert c.get("/pdf/finnesikke").status_code == 410 and c.get("/pdf/finnesikke/workorder").status_code == 410
     # Result pages carry the VIN and must not be cached anywhere
     assert again.headers["cache-control"] == "private, no-store"
 
@@ -366,8 +366,7 @@ def test_pdf_download_is_not_cacheable(client):
     pytest.importorskip("weasyprint")
     c, _ = client
     response = _upload(c)
-    token = str(response.url).rsplit("/", 1)[1]
-    pdf = c.get(f"/pdf/{token}")
+    pdf = c.get(str(response.url) + "/pdf")
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.headers["cache-control"] == "private, no-store"
@@ -501,16 +500,15 @@ def test_permanent_vehicle_link(client):
     of the same VIN, serves a PDF, and rejects unknown keys."""
     import re
 
-    c, main = client
+    c, _ = client
     page = _upload(c, headers={"x-forwarded-proto": "https", "host": "check.example"}).text
     m = re.search(r"https://check\.example/vehicle/([A-Za-z0-9_-]{16,})", page)
     assert m, "permanent link missing on the result page"
     key = m.group(1)
     assert "Permanent link for this car" in page
 
-    main._recent_results.clear()  # a restart forgets the 30-minute tokens ...
     vehicle = c.get(f"/vehicle/{key}")
-    assert vehicle.status_code == 200  # ... but the permanent link still works
+    assert vehicle.status_code == 200
     assert "2.1 zebra" in vehicle.text and "Latest report for this car" in vehicle.text
     assert vehicle.headers["cache-control"] == "private, no-store"
     assert f"/vehicle/{key}/pdf" in vehicle.text
@@ -585,10 +583,10 @@ def test_pdf_uses_coloured_marks_and_no_link(client):
 
     c, _ = client
     body = FIXTURE.read_bytes().replace(b"BCM395021", b"BCM395030")
-    token = _upload(c, body=body, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
-    cached = main._recent_results[token]
+    key = _upload(c, body=body, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
+    report, evaluation, _submission = main._vehicle_by_key(key)
     html = main.templates.get_template("pdf.html").render(
-        lang="en", t=main.translator("en"), report=cached["report"], evaluation=cached["evaluation"],
+        lang="en", t=main.translator("en"), report=report, evaluation=evaluation,
         for_pdf=True, generated_at="now", service_url=main.database.get_setting("service_partner_url"),
     )
     assert '<span class="mark ok">\u2713</span>' in html and '<span class="mark bad">\u2717</span>' in html
@@ -629,20 +627,20 @@ def test_work_order_pdf_lists_modules_in_order(client):
     from app import main
 
     c, _ = client
-    token = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]  # BCM 21: 2.1 zebra
-    page = c.get(f"/result/{token}").text
-    assert f"/pdf/{token}/workorder" in page
-    cached = main._recent_results[token]
-    rows = main._workorder_rows(cached["evaluation"])
+    key = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]  # BCM 21: 2.1 zebra
+    page = c.get(f"/vehicle/{key}").text
+    assert f"/vehicle/{key}/workorder" in page
+    _report, evaluation, _submission = main._vehicle_by_key(key)
+    rows = main._workorder_rows(evaluation)
     assert rows[0]["code"] == "BCM" and rows[0]["profile"] == "2.1" and rows[0]["needed"] == 30
     assert {r["code"] for r in rows[1:]} == {"ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU"} and all(r["profile"] == "2.2" for r in rows[1:])
-    pdf = c.get(f"/pdf/{token}/workorder")
+    pdf = c.get(f"/vehicle/{key}/workorder")
     assert pdf.status_code == 200 and pdf.content[:5] == b"%PDF-" and "checklist" in pdf.headers["content-disposition"]
 
     full22 = Path(__file__).parent / "fixtures" / "olp_report_22_full.txt"
     page = _upload(c, body=full22.read_bytes()).text
     assert "/workorder" not in page  # nothing to update
-    assert c.get("/pdf/nonexistent/workorder").status_code == 410
+    assert c.get("/vehicle/nonexistent-key-00000000/workorder").status_code == 404
 
 
 def test_identical_reupload_is_merged_and_counted(client):
@@ -684,23 +682,23 @@ def test_send_result_by_email(client, monkeypatch):
     sent = []
     main.database.set_setting("smtp_host", "relay.example", "test")
     monkeypatch.setattr(mail, "send", lambda relay, to, subject, text, attachments=None: sent.append((to, subject, text, attachments)))
-    token = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
-    page = c.get(f"/result/{token}").text
-    assert 'name="email"' in page and f'action="/result/{token}/email"' in page
+    key = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
+    page = c.get(f"/vehicle/{key}").text
+    assert 'name="email"' in page and f'action="/vehicle/{key}/email"' in page
 
-    bad = c.post(f"/result/{token}/email", data={"email": "not-an-address"}, follow_redirects=False)
-    assert bad.headers["location"] == f"/result/{token}?mail=invalid"
-    ok = c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False,
+    bad = c.post(f"/vehicle/{key}/email", data={"email": "not-an-address"}, follow_redirects=False)
+    assert bad.headers["location"] == f"/vehicle/{key}?mail=invalid"
+    ok = c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}, follow_redirects=False,
                 headers={"x-forwarded-proto": "https", "host": "check.example"})
-    assert ok.headers["location"] == f"/result/{token}?mail=sent"
+    assert ok.headers["location"] == f"/vehicle/{key}?mail=sent"
     to, subject, text, attachments = sent[-1]
     assert to == "member@example.org" and "VCF1ZBE20PG099999" in subject
     assert re.search(r"https://check\.example/vehicle/[A-Za-z0-9_-]{16,}", text) and "2.1 zebra" in text
     assert attachments[0][0].endswith(".pdf") and attachments[0][1][:5] == b"%PDF-" and len(attachments) == 1
     assert "{checklist}" not in text
-    assert "Sent. Check your inbox" in c.get(f"/result/{token}?mail=sent").text
+    assert "Sent. Check your inbox" in c.get(f"/vehicle/{key}?mail=sent").text
     assert 'name="checklist"' in page
-    c.post(f"/result/{token}/email", data={"email": "member@example.org", "checklist": "1"}, follow_redirects=False)
+    c.post(f"/vehicle/{key}/email", data={"email": "member@example.org", "checklist": "1"}, follow_redirects=False)
     _, _, text, attachments = sent[-1]
     assert [a[0] for a in attachments] == ["ocean-software-check_VCF1ZBE20PG099999.pdf", "ocean-software-check_checklist_VCF1ZBE20PG099999.pdf"]
     assert "checklist for service providers" in text and "{checklist}" not in text
@@ -708,12 +706,10 @@ def test_send_result_by_email(client, monkeypatch):
         for table in ("submissions", "usage_events", "audit_log"):
             assert not any("member@example.org" in str(tuple(r)) for r in conn.execute(f"SELECT * FROM {table}"))
 
-    key = re.search(r"/vehicle/([A-Za-z0-9_-]{16,})", page).group(1)
-    assert c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}, follow_redirects=False).headers["location"] == f"/vehicle/{key}?mail=sent"
     for _ in range(main.MAIL_LIMIT):
-        c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False)
-    assert c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False).headers["location"].endswith("?mail=limit")
+        c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}, follow_redirects=False)
+    assert c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}, follow_redirects=False).headers["location"].endswith("?mail=limit")
 
     main.database.set_setting("result_mail_enabled", "0", "test")
-    assert 'name="email"' not in c.get(f"/result/{token}").text
-    assert c.post(f"/result/{token}/email", data={"email": "member@example.org"}).status_code == 404
+    assert 'name="email"' not in c.get(f"/vehicle/{key}").text
+    assert c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}).status_code == 404

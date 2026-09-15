@@ -32,7 +32,7 @@ car's control modules meet the minimum software levels required for the
 - Repeat uploads of the same VIN show what changed since the previous report
   (outcome and every control unit whose Supplier SW Version differs); the
   permanent link warns when the report is older than 60 days.
-- A checklist PDF for service providers and FOA Advanced Installers (`/pdf/<token>/workorder`,
+- A checklist PDF for service providers and FOA Advanced Installers (`/vehicle/<key>/workorder`,
   `/vehicle/<key>/workorder`): the modules to update in the recommended order
   (below 2.1 first, then below 2.2), current and needed version, the Marlin
   package for Marlin cars, the ESP/iBooster and multi-step notes, and a
@@ -242,8 +242,8 @@ valid set has been loaded at all, uploads get a friendly 503 page.
 - Every response carries a Content-Security-Policy with no inline scripts
   (all JS is in `static/app.js`), `X-Content-Type-Options`, `X-Frame-Options`
   and `Referrer-Policy`. Result and PDF responses are `Cache-Control: no-store`.
-- Result links are 128-bit random tokens that expire after 30 minutes (or on
-  restart); an expired link shows an explanation instead of a silent redirect.
+- The upload redirects straight to the vehicle's permanent link (128-bit random
+  key); the old `/result/<token>` links answer 410 with an explanation.
 
 ## Running locally
 
@@ -360,11 +360,10 @@ the host, for when nobody can log in.
 ## Privacy model
 
 - Storage is mandatory: the member must tick the acceptance box, otherwise
-  the upload is refused (422) and nothing is stored. The result page also shows
-  the vehicle's permanent link; whoever has the link can see the latest report. Every analyzed report is
+  the upload is refused (422) and nothing is stored. The result page is the
+  vehicle's permanent link; whoever has the link can see the latest report. Every analyzed report is
   stored: the file, the VIN, every ECU block with all four version fields,
-  trim, outcome, upload country (`CF-IPCountry`) and time. The result page
-  lives 30 minutes behind an unguessable token (`/result/<token>`).
+  trim, outcome, upload country (`CF-IPCountry`) and time.
 - The database schema is migrated in place on startup (additive `ALTER
   TABLE`); rows from the consent period are kept and get an outcome after
   "Re-evaluate all" in the admin page.
