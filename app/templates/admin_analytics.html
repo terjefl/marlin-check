@@ -50,7 +50,18 @@
         <span class="bar-count">{{ v.count }}</span>
       </div>
       {% endfor %}
-      {% if versions | length > 6 %}<p class="hint">+ {{ versions | length - 6 }}</p>{% endif %}
+      {% if versions | length > 6 %}
+      <details class="morerows">
+        <summary class="hint">+ {{ versions | length - 6 }} more</summary>
+        {% for v in versions[6:] %}
+        <div class="bar-row">
+          <span class="bar-label">{{ v.version or t('stats_unknown') }}</span>
+          <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
+          <span class="bar-count">{{ v.count }}</span>
+        </div>
+        {% endfor %}
+      </details>
+      {% endif %}
     </div>
     {% endfor %}
   </details>

@@ -234,3 +234,6 @@ form.inline { display: inline; }
 .mailbox { margin-top: 1.2rem; max-width: 640px; }
 .mailbox .filterbar { margin: 0; }
 .mailbox input[type=email] { min-width: 16rem; }
+.morerows > summary { cursor: pointer; list-style: none; }
+.morerows > summary::-webkit-details-marker { display: none; }
+.morerows[open] > summary { display: none; }
