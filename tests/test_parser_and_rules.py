@@ -551,3 +551,21 @@ def test_marlin_package_completeness():
     for bad in ['marlin_modules: {}', 'marlin_modules: [{id: X, marlin_level: "a"}]', 'marlin_modules: [{id: X, marlin_level: 1, extract: "nogroup"}]']:
         with pytest.raises(RequirementsValidationError):
             parse_requirements_text(REQUIREMENTS.read_text().split("\nmarlin_modules:")[0] + "\n" + bad + "\n")
+
+
+def test_parse_older_olp_label_and_cid_padding():
+    """Reports from mid-2025 OLP builds say 'Supplier Software Version' and pad
+    empty fields with glyphs pdfplumber renders as (cid:0)."""
+    from app.parser import parse_report
+
+    text = (
+        "OceanLink Pro\nECU Software Version Report\nDate: 2025-06-20 11:37:55\nVIN: VCF1ZBE20PG099999\n"
+        "BODY\nBCM - Body Control Module\nSoftware Version: FM298033S001L\nHardware Version: FM298033H001E\n"
+        "Supplier Software Version: BCM395030\nBootloader Version: 0108(cid:0)(cid:0)\n"
+        "OHC - Overhead Console\nSoftware Version: FM297026S042H\nHardware Version: FM297026H042G\n"
+        "Supplier Software Version: OHC390006\nBootloader Version: (cid:0)(cid:0)(cid:0)\n"
+    )
+    report = parse_report(text.encode())
+    by_code = {m.code: m for m in report.modules}
+    assert by_code["BCM"].supplier_sw == "BCM395030" and by_code["BCM"].bootloader == "0108"
+    assert by_code["OHC"].supplier_sw == "OHC390006" and by_code["OHC"].bootloader == ""
