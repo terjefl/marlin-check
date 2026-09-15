@@ -920,3 +920,26 @@ def test_admin_analytics_and_log_pages(client):
     assert "What holds the split cars back" in page and "Usage statistics" in page
     log = c.get("/admin/log").text
     assert "Activity log" in log and 'class="extra auditentry"' in log and "(login)" in log
+
+
+def test_marlin_cars_card_and_register_filter(client):
+    """Analytics splits the Marlin cars into full 2.2 with the whole package
+    versus the rest, names what the rest lack, and the register can filter to
+    those cars. The package state is stored per car and survives re-evaluation."""
+    c, main = client
+    _login(c, "terje", "hemmelig123")
+    _upload_car(c, "olp_report_marlin.txt", "41")                      # on Marlin, full 2.2, package complete
+    _upload_car(c, "olp_report_marlin.txt", "42", PDU4000D02="PDU3999D02")  # package: PDU below Marlin level
+    _upload_car(c, "olp_report_marlin.txt", "43", BCM395042="BCM395030")    # BCM at 2.1 level
+    _upload_car(c, "olp_report.txt", "44")                             # a zebra, not on Marlin
+    stats = main.database.stats(main._current_requirements().profiles, main._current_requirements().target_profile)["marlin"]
+    assert (stats["cars"], stats["full_top"], stats["both"], stats["pkg_complete"], stats["pkg_known"]) == (3, 2, 1, 2, 3)
+    assert stats["pkg_missing"] == [{"module_id": "PDU", "n": 1}] and [m["module_id"] for m in stats["below_top"]] == ["BCM"]
+    page = c.get("/admin/analytics").text
+    assert "Marlin cars" in page and "Marlin package modules missing" in page
+    rows = main.database.fleet_vehicles(marlin_gap="2.2")
+    assert sorted(v["vin"][-2:] for v in rows) == ["42", "43"]
+    assert "VCF1ZBE20PG099941" not in c.get("/admin/fleet?marlin_gap=1").text
+    assert "VCF1ZBE20PG099942" in c.get("/admin/fleet?marlin_gap=1").text
+    main.database.reevaluate_all(main._current_requirements())
+    assert main.database.stats(["2.0", "2.1", "2.2"], "2.1")["marlin"]["both"] == 1

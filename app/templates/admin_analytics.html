@@ -11,6 +11,43 @@
 {% set order = ['marlin', 'full_22', 'full_21', 'zebra_22', 'zebra_21'] %}
 {% set icons = {'marlin': '🐟', 'full_22': '✅', 'full_21': '🟣', 'zebra_22': '🦓', 'zebra_21': '⚠️'} %}
 
+{% set mc = stats.marlin %}
+<section class="card">
+  <h2>🐟 Marlin cars</h2>
+  <p class="meta">Cars on Marlin, and how many of them are also at full {{ stats.profiles[-1] }} with the whole Marlin package in place. Package state is stored per car; run "Re-evaluate all" once after a requirements change.</p>
+  <div class="statgrid">
+    <div class="stat oc-marlin"><span class="num">{{ mc.cars }}</span><span class="label">On Marlin</span></div>
+    <div class="stat ok"><span class="num">{{ mc.both }}</span><span class="label">Full {{ stats.profiles[-1] }} and complete Marlin package</span></div>
+    <div class="stat warn"><span class="num">{{ mc.cars - mc.full_top }}</span><span class="label">Modules still below {{ stats.profiles[-1] }}</span></div>
+    <div class="stat warn"><span class="num">{{ mc.pkg_known - mc.pkg_complete }}</span><span class="label">Marlin package incomplete</span></div>
+  </div>
+  <div class="usagegrid">
+    <div>
+      <h3>Modules below {{ stats.profiles[-1] }} on Marlin cars</h3>
+      {% if not mc.below_top %}<p class="meta">{{ t('stats_split_none') }}</p>{% else %}
+      {% for m in mc.below_top %}
+      <div class="bar-row">
+        <span class="bar-label">{{ m.module_id }}</span>
+        <div class="bar-track"><div class="bar oc-zebra_22" style="width: {{ (100 * m.n / mc.cars) | round(1) }}%"></div></div>
+        <span class="bar-count">{{ m.n }}</span>
+      </div>
+      {% endfor %}{% endif %}
+    </div>
+    <div>
+      <h3>Marlin package modules missing</h3>
+      {% if not mc.pkg_missing %}<p class="meta">{{ t('stats_split_none') }}</p>{% else %}
+      {% for m in mc.pkg_missing %}
+      <div class="bar-row">
+        <span class="bar-label">{{ m.module_id }}</span>
+        <div class="bar-track"><div class="bar oc-marlin" style="width: {{ (100 * m.n / mc.cars) | round(1) }}%"></div></div>
+        <span class="bar-count">{{ m.n }}</span>
+      </div>
+      {% endfor %}{% endif %}
+      <p class="hint"><a href="/admin/fleet?marlin_gap=1">Open these cars in the register</a></p>
+    </div>
+  </div>
+</section>
+
 <section class="card">
   <h2>{{ t('stats_split_heading') }}</h2>
   <p class="meta">{{ t('stats_split_intro') }}</p>

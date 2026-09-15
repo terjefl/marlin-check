@@ -200,9 +200,9 @@ valid set has been loaded at all, uploads get a friendly 503 page.
 One page per task, linked from the bar at the top of every admin page:
 Overview (`/admin`: register tiles, merge duplicates, re-evaluate all),
 Requirements (`/admin/requirements`), Settings (`/admin/settings`), Vehicle
-register (`/admin/fleet`), Analytics (`/admin/analytics`: what holds the split
-cars back, every control unit, uploads over time, fleet movement, usage
-count), Activity log (`/admin/log`), Users and My account.
+register (`/admin/fleet`), Analytics (`/admin/analytics`: Marlin cars split by full 2.2 and
+Marlin package, what holds the split cars back, every control unit, uploads
+over time, fleet movement, usage count), Activity log (`/admin/log`), Users and My account.
 
 - **Login:** form login at `/admin/login`. Users live in
   `/config/admin_users.yaml` (see `admin_users.example.yaml`) as

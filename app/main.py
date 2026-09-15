@@ -1464,6 +1464,8 @@ def admin_fleet(request: Request, username: str = Depends(require_admin)):
         "anomalies": q.get("anomalies", "") == "1",
     }
     requirements = _current_requirements()
+    if q.get("marlin_gap", "") == "1" and requirements is not None:
+        filters["marlin_gap"] = requirements.profiles[-1]
     return _render(
         request, "admin_fleet.html",
         {

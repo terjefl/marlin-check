@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from .parser import ModuleReading, ParsedReport
-from .rules import Evaluation, RequirementSet, evaluate
+from .rules import OUTCOME_MARLIN, Evaluation, RequirementSet, evaluate
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS submissions (
@@ -152,6 +152,7 @@ _MIGRATIONS = {
         ("top_evidence", "TEXT"),
         ("report_date", "TEXT NOT NULL DEFAULT ''"),
         ("country", "TEXT NOT NULL DEFAULT ''"),
+        ("marlin_missing", "TEXT"),  # Marlin cars: package modules below the Marlin level, comma-separated ("" = complete); NULL otherwise
     ],
     "admin_users": [
         ("last_login_at", "TEXT"),
@@ -192,6 +193,15 @@ _INSERT_READING = (
     " code, section, extracted, level, evidence_level, software, hardware, bootloader)"
     " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
+
+
+def _marlin_missing(evaluation: Evaluation) -> str | None:
+    """For a car on Marlin: the package modules below the Marlin level, as a
+    comma-separated string ("" when the package is complete). None for cars
+    not on Marlin or when the requirements define no Marlin package."""
+    if evaluation.outcome != OUTCOME_MARLIN or not evaluation.marlin_results:
+        return None
+    return ",".join(r.requirement.id for r in evaluation.marlin_below)
 
 
 def _reading_rows(submission_id: str, evaluation: Evaluation) -> list[tuple]:
@@ -292,8 +302,8 @@ class Database:
             conn.execute(
                 "INSERT INTO submissions (id, vin, vin_hash, uploaded_at, verdict,"
                 " requirements_version, lang, stored_filename, trim, outcome,"
-                " complete_profile, top_evidence, report_date, country)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " complete_profile, top_evidence, report_date, country, marlin_missing)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     submission_id,
                     report.vin.upper(),
@@ -309,6 +319,7 @@ class Database:
                     evaluation.top_evidence,
                     str(report.meta.get("report_date", ""))[:32],
                     country[:8],
+                    _marlin_missing(evaluation),
                 ),
             )
             conn.executemany(_INSERT_READING, _reading_rows(submission_id, evaluation))
@@ -513,10 +524,11 @@ class Database:
                     conn.execute(
                         "UPDATE submissions SET uploaded_at = ?, lang = ?, stored_filename = ?, country = ?,"
                         " upload_count = upload_count + 1, verdict = ?, requirements_version = ?, trim = ?,"
-                        " outcome = ?, complete_profile = ?, top_evidence = ? WHERE id = ?",
+                        " outcome = ?, complete_profile = ?, top_evidence = ?, marlin_missing = ? WHERE id = ?",
                         (datetime.now(UTC).isoformat(), lang, stored_filename, country[:8],
                          evaluation.verdict, evaluation.requirements_version, evaluation.trim,
-                         evaluation.outcome, evaluation.complete_profile, evaluation.top_evidence, latest["id"]),
+                         evaluation.outcome, evaluation.complete_profile, evaluation.top_evidence,
+                         _marlin_missing(evaluation), latest["id"]),
                     )
                     conn.execute("DELETE FROM module_readings WHERE submission_id = ?", (latest["id"],))
                     conn.executemany(_INSERT_READING, _reading_rows(latest["id"], evaluation))
@@ -565,14 +577,17 @@ class Database:
     MIN_READINGS = 30  # a real OLP export has ~37 control units; fewer means a partial export
 
     def fleet_vehicles(self, *, outcome: str = "", trim: str = "", query: str = "",
-                       anomalies: bool = False) -> list[dict]:
+                       anomalies: bool = False, marlin_gap: str = "") -> list[dict]:
         """One row per VIN (latest submission), with the evaluated modules as
         {module_id: {"extracted", "level", "status", "version"}}. Filters are
-        exact on outcome/trim and a substring on the VIN."""
+        exact on outcome/trim and a substring on the VIN. `marlin_gap` = the
+        top profile: only Marlin cars not fully at that profile or with an
+        incomplete Marlin package."""
         filters = [
             ("outcome = ?", outcome),
             ("trim = ?", trim.upper()),
             ("vin LIKE ?", f"%{query.upper()}%" if query else ""),
+            ("(outcome = 'marlin' AND (COALESCE(complete_profile, '') != ? OR COALESCE(marlin_missing, '') != ''))", marlin_gap),
         ]
         where = [sql for sql, value in filters if value]
         params = [value for _sql, value in filters if value]
@@ -722,10 +737,10 @@ class Database:
                 evaluation = evaluate(report, requirements)
                 conn.execute(
                     "UPDATE submissions SET verdict = ?, requirements_version = ?, trim = ?,"
-                    " outcome = ?, complete_profile = ?, top_evidence = ? WHERE id = ?",
+                    " outcome = ?, complete_profile = ?, top_evidence = ?, marlin_missing = ? WHERE id = ?",
                     (evaluation.verdict, evaluation.requirements_version, evaluation.trim,
                      evaluation.outcome, evaluation.complete_profile, evaluation.top_evidence,
-                     sub["id"]),
+                     _marlin_missing(evaluation), sub["id"]),
                 )
                 conn.execute("DELETE FROM module_readings WHERE submission_id = ?", (sub["id"],))
                 conn.executemany(_INSERT_READING, _reading_rows(sub["id"], evaluation))
@@ -1220,6 +1235,34 @@ class Database:
                 "zebra_22": _below("zebra_22", top),
                 "zebra_21": _below("zebra_21", target),
             }
+
+            # Cars on Marlin: how many are also at full top level, how many
+            # have the whole Marlin package, and what the others lack.
+            marlin_cars = conn.execute(f"SELECT COUNT(*) AS n FROM ({latest}) WHERE outcome = 'marlin'").fetchone()["n"]
+            marlin_full_top = conn.execute(
+                f"SELECT COUNT(*) AS n FROM ({latest}) WHERE outcome = 'marlin' AND complete_profile = ?", (top,)
+            ).fetchone()["n"] if top else 0
+            marlin_pkg_complete = conn.execute(
+                f"SELECT COUNT(*) AS n FROM ({latest}) WHERE outcome = 'marlin' AND marlin_missing = ''"
+            ).fetchone()["n"]
+            marlin_pkg_known = conn.execute(
+                f"SELECT COUNT(*) AS n FROM ({latest}) WHERE outcome = 'marlin' AND marlin_missing IS NOT NULL"
+            ).fetchone()["n"]
+            marlin_pkg_missing: dict[str, int] = {}
+            for row in conn.execute(f"SELECT marlin_missing FROM ({latest}) WHERE outcome = 'marlin' AND marlin_missing != ''"):
+                for module_id in row["marlin_missing"].split(","):
+                    marlin_pkg_missing[module_id] = marlin_pkg_missing.get(module_id, 0) + 1
+            marlin = {
+                "cars": marlin_cars,
+                "full_top": marlin_full_top,
+                "both": conn.execute(
+                    f"SELECT COUNT(*) AS n FROM ({latest}) WHERE outcome = 'marlin' AND complete_profile = ? AND marlin_missing = ''", (top,)
+                ).fetchone()["n"] if top else 0,
+                "pkg_complete": marlin_pkg_complete,
+                "pkg_known": marlin_pkg_known,
+                "below_top": _below("marlin", top)["modules"] if top else [],
+                "pkg_missing": sorted(({"module_id": k, "n": n} for k, n in marlin_pkg_missing.items()), key=lambda m: -m["n"]),
+            }
         return {
             "unique_vins": unique_vins,
             "total_submissions": total,
@@ -1233,4 +1276,5 @@ class Database:
             "module_levels": module_levels,
             "profiles": profiles,
             "split": split,
+            "marlin": marlin,
         }

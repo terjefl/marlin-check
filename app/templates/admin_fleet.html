@@ -21,6 +21,7 @@
   </label>
   <label>VIN contains <input type="text" name="q" value="{{ filters.query }}" maxlength="17" class="mono"></label>
   <label class="check"><input type="checkbox" name="anomalies" value="1" {% if filters.anomalies %}checked{% endif %}> Odd reports only</label>
+  <label class="check"><input type="checkbox" name="marlin_gap" value="1" {% if filters.marlin_gap %}checked{% endif %}> Marlin cars not at full 2.2 or missing Marlin modules</label>
   <button type="submit" class="small">Filter</button>
   <a class="button secondary small" href="/admin/fleet">Reset</a>
   <span class="meta">{{ vehicles | length }} vehicle(s)</span>
