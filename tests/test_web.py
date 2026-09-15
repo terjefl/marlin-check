@@ -389,7 +389,7 @@ def test_marlin_car_result_page_and_statistics(client):
     assert "Not complete \u2013 3 of 4 modules the Marlin update installs are not at the Marlin level" in response.text
     assert "PDU \u2013 Power Distribution Unit: is at version 3900 and needs to be updated to 4000 (Marlin level)" in response.text
     assert "Modules the Marlin update installs" in response.text and "Your car has received Marlin, but not every module" in response.text
-    assert '<p class="contact">Contact your service provider.</p>' in response.text
+    assert 'href="https://fiskeroa.com/service/" target="_blank"' in response.text
 
     full = Path(__file__).parent / "fixtures" / "olp_report_marlin.txt"
     page = c.post("/analyze?lang=en", files={"report": ("r.txt", full.read_bytes(), "text/plain")}, data=CONSENT).text
@@ -561,7 +561,7 @@ def test_result_page_layout_follows_the_working_group(client):
     assert "The following modules are recommended to be updated to meet the minimum 2.2 requirements." in page
     assert "multi-step installation process" in page
     assert "Update the modules above so that your car meets the minimum 2.2 requirement, then update to Marlin. You could update to Marlin alone, but it is not recommended." in page
-    assert '<p class="contact">Contact your service provider.</p>' in page
+    assert '<a href="https://fiskeroa.com/service/" target="_blank" rel="noopener">Contact your service provider.</a>' in page
     assert "\u2705 <strong>Marlin</strong>: Ready for the update" in page
     assert "You can save this address" in page
 
@@ -589,12 +589,12 @@ def test_pdf_uses_coloured_marks_and_no_link(client):
     cached = main._recent_results[token]
     html = main.templates.get_template("pdf.html").render(
         lang="en", t=main.translator("en"), report=cached["report"], evaluation=cached["evaluation"],
-        for_pdf=True, generated_at="now",
+        for_pdf=True, generated_at="now", service_url=main.database.get_setting("service_partner_url"),
     )
     assert '<span class="mark ok">\u2713</span>' in html and '<span class="mark bad">\u2717</span>' in html
     assert "\u2705" not in html and "\u274c" not in html
     assert "/vehicle/" not in html and "Permanent link" not in html
-    assert '<p class="contact">Contact your service provider.</p>' in html
+    assert 'href="https://fiskeroa.com/service/"' in html and 'Contact your service provider.</a> <span class="mono">https://fiskeroa.com/service/</span>' in html
 
 
 def test_changes_since_previous_report_and_report_age(client):

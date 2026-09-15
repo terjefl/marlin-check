@@ -862,7 +862,10 @@ class Database:
 
     # --- settings (feature switches) ----------------------------------------
 
-    SETTING_DEFAULTS: ClassVar[dict[str, str]] = {"workorder_enabled": "1"}
+    SETTING_DEFAULTS: ClassVar[dict[str, str]] = {
+        "workorder_enabled": "1",
+        "service_partner_url": "https://fiskeroa.com/service/",
+    }
 
     def get_setting(self, key: str) -> str:
         with self._connect() as conn:

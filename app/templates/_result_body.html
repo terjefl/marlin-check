@@ -78,7 +78,7 @@
   {% if outcome == 'full_22' %}
   <p class="contact">{{ t('contact_liaison') }}</p>
   {% elif outcome != 'marlin' or below_top or marlin_below %}
-  <p class="contact">{{ t('contact_service') }}</p>
+  <p class="contact">{% if service_url %}<a href="{{ service_url }}" target="_blank" rel="noopener">{{ t('contact_service') }}</a>{% if for_pdf %} <span class="mono">{{ service_url }}</span>{% endif %}{% else %}{{ t('contact_service') }}{% endif %}</p>
   {% endif %}
 </div>
 

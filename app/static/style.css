@@ -228,3 +228,4 @@ form.inline { display: inline; }
 .changes li { margin: 0.15rem 0; font-size: 0.92rem; }
 .oddflag { color: var(--warn); font-weight: 700; cursor: help; }
 .filterbar label.check { flex-direction: row; align-items: center; gap: 0.4rem; }
+.contact a { color: inherit; text-decoration: underline; }

@@ -834,3 +834,9 @@ def test_work_order_switch_in_admin(client):
     c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1"}, headers={"Sec-Fetch-Site": "same-origin"})
     assert main.database.flag("workorder_enabled") and f"/vehicle/{key}/workorder" in c.get(f"/vehicle/{key}").text
     assert any(e["action"] == "settings" and "workorder_enabled=off" in e["detail"] for e in main.database.audit_entries())
+    # The service partner link is a setting too, validated as a URL
+    bad = c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1", "service_partner_url": "not a url"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert bad.status_code == 400
+    c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1", "service_partner_url": "https://example.org/help"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert main.database.get_setting("service_partner_url") == "https://example.org/help"
+    assert 'href="https://example.org/help" target="_blank"' in c.get(f"/vehicle/{key}").text

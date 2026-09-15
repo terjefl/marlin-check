@@ -394,6 +394,7 @@ def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key
             "permanent_url": _permanent_url(request, link_key),
             "uploaded_at": uploaded_at, "changes": changes, "report_age_days": report_age_days,
             "workorder_enabled": database.flag("workorder_enabled"),
+            "service_url": database.get_setting("service_partner_url"),
             "workorder_url": pdf_url[:-len("/pdf")] + "/workorder" if pdf_url.endswith("/pdf") else pdf_url + "/workorder",
         },
     )
@@ -409,6 +410,7 @@ async def _pdf_response(request: Request, report, evaluation) -> Response:
         report=report,
         evaluation=evaluation,
         for_pdf=True,  # DejaVu has no emoji: the template uses coloured ✓/✗ instead
+        service_url=database.get_setting("service_partner_url"),
         generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
     pdf_bytes = await _run_heavy(_render_pdf, html)
@@ -909,7 +911,8 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),
             "usage": database.usage_stats(14),
-            "settings": {"workorder_enabled": database.flag("workorder_enabled")},
+            "settings": {"workorder_enabled": database.flag("workorder_enabled"),
+                         "service_partner_url": database.get_setting("service_partner_url")},
             "fleet": _fleet_stats(),
         },
         status_code=status_code,
@@ -1075,6 +1078,12 @@ async def admin_settings(request: Request, username: str = Depends(require_csrf_
         if database.get_setting(key) != value:
             database.set_setting(key, value, username)
             changed.append(f"{key}={'on' if value == '1' else 'off'}")
+    url = str(form.get("service_partner_url", "")).strip()
+    if url and not re.fullmatch(r"https?://[^\s<>\"']+", url):
+        return _render_admin(request, username, error="Service partner link: must start with http:// or https:// and contain no spaces.", status_code=400)
+    if url and url != database.get_setting("service_partner_url"):
+        database.set_setting("service_partner_url", url, username)
+        changed.append(f"service_partner_url={url}")
     if changed:
         database.add_audit(username, client_ip(request), "settings", ", ".join(changed))
     return _render_admin(request, username, message="Settings saved." if changed else "No settings changed.")
