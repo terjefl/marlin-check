@@ -176,6 +176,12 @@ class Evaluation:
     def marlin_complete(self) -> bool:
         return bool(self.marlin_results) and not self.marlin_below
 
+    @property
+    def unread(self) -> list[ModuleResult]:
+        """Required modules the report gave no usable version for (missing,
+        empty or unrecognised): the result is based on an incomplete report."""
+        return [r for r in self.results if r.status in (MISSING, EMPTY, UNPARSEABLE)]
+
     def below(self, profile: str) -> list[ModuleResult]:
         """Modules that do not meet `profile` (no number counts as below)."""
         return [r for r in self.results if r.meets.get(profile) is False]

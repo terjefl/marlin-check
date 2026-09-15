@@ -711,3 +711,29 @@ def test_send_result_by_email(client, monkeypatch):
     main.database.set_setting("result_mail_enabled", "0", "test")
     assert 'name="email"' not in c.get(f"/vehicle/{key}").text
     assert c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}).status_code == 404
+
+
+def test_incomplete_report_is_flagged(client):
+    """A required module with NA (no answer during the scan) gives a warning
+    box, a suffix on the outcome and a module line asking for a new scan; the
+    outcome itself stays pessimistic. The e-mail carries the note too."""
+    import unittest.mock as um
+
+    from app import mail
+
+    c, main = client
+    sent = []
+    main.database.set_setting("smtp_host", "relay.example", "test")
+    body = FIXTURE.read_bytes().replace(b"Supplier SW Version: ECC395 24", b"Supplier SW Version: NA")
+    assert body != FIXTURE.read_bytes()
+    location = _upload(c, body=body, follow_redirects=False).headers["location"]
+    page = c.get(location + "?lang=en").text
+    assert "The report has no readable version for ECC" in page and "(based on an incomplete report)" in page
+    assert "ECC \u2013 Electrical Climate Controller: Version field empty in the report. No version could be read" in page
+    assert "2.1 zebra" in page
+    with um.patch.object(mail, "send", lambda relay, to, subject, text, attachments=None: sent.append(text)):
+        c.post(location + "/email", data={"email": "m@example.org"}, follow_redirects=False)
+    assert sent and "no readable version for ECC" in sent[-1] and "(based on an incomplete report)" in sent[-1]
+    # A clean scan of the same car replaces the incomplete one on the permanent link
+    clean = c.get(_upload(c, follow_redirects=False).headers["location"] + "?lang=en").text
+    assert "incomplete report" not in clean

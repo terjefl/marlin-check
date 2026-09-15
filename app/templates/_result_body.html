@@ -30,9 +30,13 @@
 {% set complete = evaluation.complete_profile %}
 {% set below_top = evaluation.below(top) %}
 {% set n_total = evaluation.results | length %}
+{% set unread = evaluation.unread %}
+{% if unread %}
+<div class="alert error incomplete">{{ t('incomplete_report_note', modules=unread | map(attribute='requirement.id') | join(', ')) }}</div>
+{% endif %}
 <div class="verdict {{ box_class }}">
   <p class="yourcar">{{ t('your_car_has') }}</p>
-  <strong>{% if not for_pdf %}{{ icon }} {% endif %}{{ t('outcome_' + outcome) }}</strong>
+  <strong>{% if not for_pdf %}{{ icon }} {% endif %}{{ t('outcome_' + outcome) }}{% if unread %} {{ t('incomplete_suffix') }}{% endif %}</strong>
   <p>{{ t('outcome_' + outcome + '_text') }}</p>
 
   {% if below_top or marlin_below %}

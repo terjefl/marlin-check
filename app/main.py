@@ -576,7 +576,11 @@ async def _mail_result(request: Request, report, evaluation, *, link_key: str, b
     url = _permanent_url(request, link_key)
     outcome = t("outcome_" + evaluation.outcome) if evaluation.outcome else ""
     subject = t("mail_subject", vin=report.vin)
+    if evaluation.unread:
+        outcome += " " + t("incomplete_suffix")
     body = t("mail_body", vin=report.vin, outcome=outcome, url=url, checklist="{checklist}")
+    if evaluation.unread:
+        body = t("incomplete_report_note", modules=", ".join(r.requirement.id for r in evaluation.unread)) + "\n\n" + body
     pdf_html = templates.get_template("pdf.html").render(
         lang=lang, t=t, report=report, evaluation=evaluation, for_pdf=True,
         service_url=database.get_setting("service_partner_url"),
