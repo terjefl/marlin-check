@@ -693,20 +693,32 @@ class Database:
 
     # --- re-evaluation and deletion (vehicle register maintenance) ---------
 
-    def reevaluate_all(self, requirements: RequirementSet) -> int:
-        """Re-runs the rule engine on every stored report (rebuilt from its
-        module readings) and rewrites the derived columns. Backfills rows from
-        before v2 and applies changed requirements. All-or-nothing."""
+    def reevaluate_all(self, requirements: RequirementSet, uploads_dir: Path | None = None) -> int:
+        """Re-runs the rule engine on every stored report and rewrites the
+        derived columns. The report is parsed again from the stored file when
+        it still exists (so parser fixes reach old rows), otherwise rebuilt
+        from its module readings. Backfills rows from before v2 and applies
+        changed requirements. All-or-nothing."""
+        from .parser import ReportParseError, parse_report
+
         count = 0
         with self._connect() as conn:
-            submissions = conn.execute("SELECT id, vin FROM submissions").fetchall()
+            submissions = conn.execute("SELECT id, vin, stored_filename, report_date FROM submissions").fetchall()
             for sub in submissions:
-                rows = conn.execute(
-                    "SELECT raw_name, version, code, section, software, hardware, bootloader"
-                    " FROM module_readings WHERE submission_id = ? ORDER BY rowid",
-                    (sub["id"],),
-                ).fetchall()
-                report = _report_from_rows(sub["vin"], rows)
+                report = None
+                path = uploads_dir / Path(sub["stored_filename"]).name if uploads_dir and sub["stored_filename"] else None
+                if path is not None and path.is_file():
+                    try:
+                        report = parse_report(path.read_bytes(), path.name)
+                    except ReportParseError:
+                        report = None
+                if report is None or report.vin != sub["vin"]:
+                    rows = conn.execute(
+                        "SELECT raw_name, version, code, section, software, hardware, bootloader"
+                        " FROM module_readings WHERE submission_id = ? ORDER BY rowid",
+                        (sub["id"],),
+                    ).fetchall()
+                    report = _report_from_rows(sub["vin"], rows, sub["report_date"])
                 evaluation = evaluate(report, requirements)
                 conn.execute(
                     "UPDATE submissions SET verdict = ?, requirements_version = ?, trim = ?,"
@@ -1141,7 +1153,7 @@ class Database:
                 f" FROM module_readings mr JOIN ({latest}) s ON s.id = mr.submission_id"
                 f" GROUP BY ecu, mr.version ORDER BY ecu, n DESC"
             ):
-                all_module_versions.setdefault(row["ecu"], []).append({"version": row["version"] or "(empty)", "count": row["n"]})
+                all_module_versions.setdefault(row["ecu"], []).append({"version": row["version"] or "", "count": row["n"]})
             module_versions: dict[str, list[dict]] = {}
             for row in conn.execute(
                 f"SELECT mr.module_id, mr.version, COUNT(*) AS n"

@@ -569,3 +569,17 @@ def test_parse_older_olp_label_and_cid_padding():
     by_code = {m.code: m for m in report.modules}
     assert by_code["BCM"].supplier_sw == "BCM395030" and by_code["BCM"].bootloader == "0108"
     assert by_code["OHC"].supplier_sw == "OHC390006" and by_code["OHC"].bootloader == ""
+
+
+def test_na_counts_as_empty_field():
+    """OLP writes NA when a module gave no answer; the check treats it as an
+    empty field (status 'empty'), not as an unrecognised version."""
+    from app.parser import parse_report
+
+    text = (
+        "OceanLink Pro\nECU Software Version Report\nDate: 2026-01-01\nVIN: VCF1ZBE20PG099999\n"
+        "BODY\nECC - Electrical Climate Controller\nSoftware Version: NA\nHardware Version: NA\n"
+        "Supplier SW Version: NA\nBootloader Version: NA\n"
+    )
+    ecc = parse_report(text.encode()).modules[0]
+    assert (ecc.supplier_sw, ecc.software, ecc.hardware, ecc.bootloader) == ("", "", "", "")

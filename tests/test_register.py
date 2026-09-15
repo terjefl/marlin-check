@@ -230,3 +230,27 @@ def test_reevaluate_strips_cid_padding_from_old_rows(tmp_path):
     conn = sqlite3.connect(path)
     versions = [r[0] for r in conn.execute("SELECT version FROM module_readings WHERE code = 'BMS'")]
     assert versions == ["BMSN39021"]
+
+
+def test_reevaluate_reparses_stored_file(tmp_path):
+    """When the stored report file still exists, 'Re-evaluate all' parses it
+    again, so a parser fix (here: the older 'Supplier Software Version' label)
+    reaches rows that were stored with empty versions."""
+    path = tmp_path / "m.sqlite3"
+    uploads = tmp_path / "uploads"
+    uploads.mkdir()
+    old_label = (FIXTURES / "olp_report.txt").read_text().replace("Supplier SW Version", "Supplier Software Version")
+    (uploads / "stored.txt").write_text(old_label)
+    _old_database(path, "olp_report.txt", "VCF1ZBE20PG099999")
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE submissions SET stored_filename = 'stored.txt'")
+    conn.execute("UPDATE module_readings SET version = ''")  # what the old parser stored
+    conn.commit()
+    conn.close()
+    db = Database(path)
+    db.reevaluate_all(load_requirements(REQUIREMENTS), uploads)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    bcm = conn.execute("SELECT version, extracted, status FROM module_readings WHERE code = 'BCM'").fetchone()
+    assert (bcm["version"], bcm["extracted"], bcm["status"]) == ("BCM395021", 21, "outdated")
+    assert conn.execute("SELECT outcome FROM submissions").fetchone()[0] == "zebra_21"

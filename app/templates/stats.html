@@ -61,7 +61,7 @@
       <h3>{{ module_id }}</h3>
       {% for v in versions %}
       <div class="bar-row">
-        <span class="bar-label">{{ v.version }}</span>
+        <span class="bar-label">{{ v.version or t('stats_unknown') }}</span>
         <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
         <span class="bar-count">{{ v.count }}</span>
       </div>

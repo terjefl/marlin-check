@@ -39,8 +39,10 @@ _CID_JUNK_RE = re.compile(r"\(cid:\d+\)")
 
 
 def clean_value(value: str) -> str:
-    """Strips pdfplumber's (cid:N) padding glyphs and surrounding whitespace."""
-    return _CID_JUNK_RE.sub("", value).strip()
+    """Strips pdfplumber's (cid:N) padding glyphs and surrounding whitespace.
+    OLP writes NA when the module gave no answer; that is an empty field."""
+    value = _CID_JUNK_RE.sub("", value).strip()
+    return "" if value.upper() in ("NA", "N/A") else value
 
 MAX_REPORT_BYTES = 15 * 1024 * 1024
 # A real OLP report is a handful of pages. Text extraction is CPU-bound and

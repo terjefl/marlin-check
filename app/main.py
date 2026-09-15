@@ -1637,7 +1637,7 @@ async def admin_reevaluate(request: Request, username: str = Depends(require_csr
     requirements = _current_requirements()
     if requirements is None:
         return _render_admin(request, username, error="Cannot re-evaluate: no valid requirements loaded.", status_code=503)
-    count = await run_in_threadpool(database.reevaluate_all, requirements)
+    count = await run_in_threadpool(database.reevaluate_all, requirements, UPLOADS_DIR)
     database.add_audit(
         username, client_ip(request), "reevaluate",
         f"{count} stored report(s) re-evaluated with requirements {requirements.version}",
