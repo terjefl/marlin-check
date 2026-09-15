@@ -24,6 +24,7 @@
 {% endif %}
 <div class="actions">
   <a class="button" href="{{ pdf_url }}">{{ t('download_pdf') }}</a>
+  {% if evaluation.below(evaluation.profiles[-1]) or (evaluation.outcome == 'marlin' and evaluation.marlin_below) %}<a class="button secondary" href="{{ pdf_url }}/workorder">{{ t('workorder_button') }}</a>{% endif %}
   <a class="button secondary" href="/">{{ t('check_another') }}</a>
 </div>
 <div class="permalink">

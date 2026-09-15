@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1a1a1a; font-size: 11pt; }
+    h1 { font-size: 16pt; margin-bottom: 2pt; }
+    h2 { font-size: 12pt; margin: 14pt 0 4pt; }
+    .brandline { color: #666; font-size: 9pt; margin-bottom: 1em; }
+    .meta { color: #666; font-size: 9pt; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8pt; font-size: 10pt; }
+    th, td { border: 0.5pt solid #ccc; padding: 4pt 5pt; text-align: left; vertical-align: top; }
+    th { background: #f2f2f2; }
+    td.num { text-align: center; white-space: nowrap; }
+    .mono { font-family: "DejaVu Sans Mono", monospace; font-size: 9.5pt; }
+    .notes { margin-top: 12pt; padding: 8pt 10pt; border: 0.5pt solid #ccc; border-radius: 4pt; font-size: 10pt; }
+    .notes p { margin: 3pt 0; }
+    .sign { margin-top: 28pt; display: flex; gap: 40pt; font-size: 9pt; color: #666; }
+    .sign div { flex: 1; border-top: 0.5pt solid #999; padding-top: 4pt; }
+    footer { margin-top: 16pt; color: #666; font-size: 8pt; border-top: 0.5pt solid #ccc; padding-top: 6pt; }
+  </style>
+</head>
+<body>
+  <div class="brandline">{{ t('site_title') }} – {{ generated_at }}</div>
+  <h1>{{ t('workorder_title') }}</h1>
+  <p class="meta">VIN {{ report.vin }}{% if evaluation.trim_name %} · {{ evaluation.trim_name }} ({{ evaluation.trim }}){% endif %} · {{ t('requirements_version_label') }}: {{ evaluation.requirements_version }}{% if report.meta.get('report_date') %} · OLP {{ report.meta.get('report_date') }}{% endif %}</p>
+  <p>{{ t('workorder_intro') }}</p>
+
+  {% if rows %}
+  <table>
+    <thead><tr><th class="num">{{ t('workorder_col_step') }}</th><th>{{ t('workorder_col_module') }}</th><th>{{ t('workorder_col_current') }}</th><th>{{ t('workorder_col_target') }}</th><th class="num">{{ t('workorder_col_done') }}</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><strong>{{ r.code }}</strong> – {{ r.label }}</td>
+        <td class="mono">{% if r.version %}{{ r.version }}{% if r.extracted is not none %} ({{ r.extracted }}){% endif %}{% else %}{{ t('status_' + r.status) }}{% endif %}</td>
+        <td>{{ t('workorder_target_cell', needed=r.needed, profile=r.profile) }}</td>
+        <td class="num">☐</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p><strong>{{ t('workorder_none') }}</strong></p>
+  {% endif %}
+
+  {% if marlin_rows %}
+  <h2>{{ t('workorder_marlin_heading') }}</h2>
+  <table>
+    <thead><tr><th>{{ t('workorder_col_module') }}</th><th>{{ t('workorder_col_current') }}</th><th>{{ t('workorder_col_target') }}</th><th class="num">{{ t('workorder_col_done') }}</th></tr></thead>
+    <tbody>
+      {% for r in marlin_rows %}
+      <tr>
+        <td><strong>{{ r.requirement.id }}</strong> – {{ r.requirement.label }}</td>
+        <td class="mono">{{ r.version or t('status_' + r.status) }}{% if r.extracted is not none %} ({{ r.extracted }}){% endif %}</td>
+        <td>{{ t('workorder_target_marlin', needed=r.requirement.marlin_level) }}</td>
+        <td class="num">☐</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="notes">
+    {% if pair_note %}<p>• {{ t('workorder_note_pair') }}</p>{% endif %}
+    <p>• {{ t('multistep_note') }}</p>
+    <p>• {{ t('workorder_note_verify') }}</p>
+  </div>
+  <div class="sign"><div>{{ t('workorder_sign_partner') }}</div><div>{{ t('workorder_sign_date') }}</div></div>
+  <footer>{{ t('footer_disclaimer') }}</footer>
+</body>
+</html>

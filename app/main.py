@@ -421,6 +421,51 @@ async def _pdf_response(request: Request, report, evaluation) -> Response:
     )
 
 
+def _workorder_rows(evaluation) -> list[dict]:
+    """Modules to update, in the recommended order: first everything below the
+    target profile (2.1), then what is still below the top profile (2.2)."""
+    target, top = evaluation.target_profile, evaluation.profiles[-1]
+    rows, seen = [], set()
+    for profile in (target, top):
+        for r in evaluation.below(profile):
+            if r.requirement.id in seen:
+                continue
+            seen.add(r.requirement.id)
+            needed = r.levels.get(profile) if r.levels.get(profile) is not None else r.top_required
+            rows.append({
+                "code": r.requirement.id, "label": r.requirement.label, "version": r.version,
+                "extracted": r.extracted, "status": r.status, "needed": needed, "profile": profile,
+            })
+    return rows
+
+
+async def _workorder_response(request: Request, report, evaluation) -> Response:
+    lang = negotiate_language(request)
+    rows = _workorder_rows(evaluation)
+    codes = {r["code"] for r in rows}
+    html = templates.get_template("workorder.html").render(
+        lang=lang, t=translator(lang), report=report, evaluation=evaluation, rows=rows,
+        pair_note=bool({"ESP", "IBS"} & codes),
+        marlin_rows=evaluation.marlin_below if evaluation.outcome == "marlin" else [],
+        for_pdf=True, generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    pdf_bytes = await _run_heavy(_render_pdf, html)
+    return Response(
+        pdf_bytes, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="ocean-software-check_workorder_{report.vin}.pdf"',
+                 "Cache-Control": "private, no-store"},
+    )
+
+
+@app.get("/pdf/{token}/workorder")
+async def download_workorder(request: Request, token: str):
+    _prune_results()
+    cached = _recent_results.get(token)
+    if cached is None:
+        return _expired_result(request)
+    return await _workorder_response(request, cached["report"], cached["evaluation"])
+
+
 def _unknown_vehicle_link(request: Request) -> Response:
     t = translator(negotiate_language(request))
     return _render(request, "index.html",
@@ -501,6 +546,15 @@ async def vehicle_pdf(request: Request, key: str):
         return _unknown_vehicle_link(request)
     report, evaluation, _submission = found
     return await _pdf_response(request, report, evaluation)
+
+
+@app.get("/vehicle/{key}/workorder")
+async def vehicle_workorder(request: Request, key: str):
+    found = _vehicle_by_key(key)
+    if found is None:
+        return _unknown_vehicle_link(request)
+    report, evaluation, _submission = found
+    return await _workorder_response(request, report, evaluation)
 
 
 def _fleet_stats() -> dict:

@@ -620,3 +620,25 @@ def test_changes_since_previous_report_and_report_age(client):
         conn.execute("UPDATE submissions SET uploaded_at = '2026-01-01T10:00:00+00:00' WHERE vin = ?", ("VCF1ZBE20PG099999",))
     vehicle = c.get(f"/vehicle/{key}").text
     assert re.search(r"This report is \d+ days old", vehicle)
+
+
+def test_work_order_pdf_lists_modules_in_order(client):
+    """The work order PDF lists the modules below 2.1 first, then the rest
+    below 2.2, and is offered only when there is something to update."""
+    from app import main
+
+    c, _ = client
+    token = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]  # BCM 21: 2.1 zebra
+    page = c.get(f"/result/{token}").text
+    assert f"/pdf/{token}/workorder" in page
+    cached = main._recent_results[token]
+    rows = main._workorder_rows(cached["evaluation"])
+    assert rows[0]["code"] == "BCM" and rows[0]["profile"] == "2.1" and rows[0]["needed"] == 30
+    assert {r["code"] for r in rows[1:]} == {"ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU"} and all(r["profile"] == "2.2" for r in rows[1:])
+    pdf = c.get(f"/pdf/{token}/workorder")
+    assert pdf.status_code == 200 and pdf.content[:5] == b"%PDF-" and "workorder" in pdf.headers["content-disposition"]
+
+    full22 = Path(__file__).parent / "fixtures" / "olp_report_22_full.txt"
+    page = _upload(c, body=full22.read_bytes()).text
+    assert "/workorder" not in page  # nothing to update
+    assert c.get("/pdf/nonexistent/workorder").status_code == 410
