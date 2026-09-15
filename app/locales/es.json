@@ -203,6 +203,8 @@
   "marlin_status_not_ready": "No listo",
   "marlin_status_on": "ya instalado",
   "recommendation_label": "Recomendación",
+  "section_details": "Detalles",
+  "section_summary": "Resumen",
   "modules_heading_top": "Se recomienda actualizar los siguientes módulos para cumplir los requisitos mínimos de {profile}.",
   "multistep_note": "Estas son las actualizaciones que el coche necesita antes de Marlin. Tenga en cuenta que su socio de servicio deberá comprobar si estas actualizaciones requieren una instalación en varios pasos.",
   "module_line_update": "{code} – {label}: está en la versión {found} (nivel {level}) y debe actualizarse a {needed} (nivel {profile})",

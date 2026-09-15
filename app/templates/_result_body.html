@@ -35,12 +35,15 @@
   <strong>{% if not for_pdf %}{{ icon }} {% endif %}{{ t('outcome_' + outcome) }}</strong>
   <p>{{ t('outcome_' + outcome + '_text') }}</p>
 
+  {% if below_top or marlin_below %}
+  <h3 class="section-title">{{ t('section_details') }}</h3>
+  {% endif %}
   {% if below_top %}
   <p class="modules-heading">{% if outcome == 'marlin' %}{{ t('marlin_below_top_note', profile=top) }}{% else %}{{ t('modules_heading_top', profile=top) }}{% endif %}</p>
   {% if outcome != 'marlin' %}<p class="hint">{{ t('multistep_note') }}</p>{% endif %}
   <ul class="modulelist">
     {% for r in below_top %}
-    <li>{{ mark(false) }} {{ module_line(r, top) }}</li>
+    <li>– {{ module_line(r, top) }}</li>
     {% endfor %}
   </ul>
   {% endif %}
@@ -49,11 +52,12 @@
   <p class="modules-heading">{{ t('marlin_modules_heading') }}</p>
   <ul class="modulelist">
     {% for r in marlin_below %}
-    <li>{{ mark(false) }} {{ marlin_line(r) }}</li>
+    <li>– {{ marlin_line(r) }}</li>
     {% endfor %}
   </ul>
   {% endif %}
 
+  <h3 class="section-title summary">{{ t('section_summary') }}</h3>
   <ul class="levelstatus">
     {% for p in evaluation.profiles %}
     {% if complete is none or evaluation.profiles.index(p) >= evaluation.profiles.index(complete) %}

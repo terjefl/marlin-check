@@ -229,3 +229,6 @@ form.inline { display: inline; }
 .oddflag { color: var(--warn); font-weight: 700; cursor: help; }
 .filterbar label.check { flex-direction: row; align-items: center; gap: 0.4rem; }
 .contact a { color: inherit; text-decoration: underline; }
+.section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 1rem 0 0.2rem; }
+.section-title.summary { margin-top: 1.6rem; }
+.verdict .section-title { font-weight: 600; }
