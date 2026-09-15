@@ -148,6 +148,7 @@ _MIGRATIONS = {
     "admin_sessions": [
         ("mfa_pending", "INTEGER NOT NULL DEFAULT 0"),
         ("mfa_setup_required", "INTEGER NOT NULL DEFAULT 0"),
+        ("webauthn_challenge", "TEXT"),
     ],
     "module_readings": [
         ("code", "TEXT NOT NULL DEFAULT ''"),
@@ -731,6 +732,67 @@ class Database:
         with self._connect() as conn:
             conn.execute("DELETE FROM admin_sessions WHERE token_hash = ?", (_token_hash(token),))
 
+    def set_challenge(self, token: str, challenge: str | None) -> None:
+        """Stores the WebAuthn challenge the browser must sign (one per session)."""
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_sessions SET webauthn_challenge = ? WHERE token_hash = ?",
+                         (challenge, _token_hash(token)))
+
+    def pop_challenge(self, token: str) -> str | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT webauthn_challenge FROM admin_sessions WHERE token_hash = ?",
+                               (_token_hash(token),)).fetchone()
+            conn.execute("UPDATE admin_sessions SET webauthn_challenge = NULL WHERE token_hash = ?",
+                         (_token_hash(token),))
+        return row["webauthn_challenge"] if row else None
+
+    def session_promote(self, token: str, username: str) -> None:
+        """A passwordless passkey login: the anonymous pending session becomes
+        a full session for `username`."""
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE admin_sessions SET username = ?, mfa_pending = 0, mfa_setup_required = 0"
+                " WHERE token_hash = ?",
+                (username, _token_hash(token)),
+            )
+
+    # --- passkeys (WebAuthn) -------------------------------------------------
+
+    def list_passkeys(self, username: str) -> list[dict]:
+        with self._connect() as conn:
+            return [dict(r) for r in conn.execute(
+                "SELECT credential_id, name, sign_count, created_at FROM admin_passkeys"
+                " WHERE username = ? ORDER BY created_at", (username,)
+            )]
+
+    def count_passkeys(self, username: str) -> int:
+        with self._connect() as conn:
+            return conn.execute("SELECT COUNT(*) AS n FROM admin_passkeys WHERE username = ?",
+                                (username,)).fetchone()["n"]
+
+    def add_passkey(self, username: str, credential_id: str, public_key: bytes, sign_count: int, name: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO admin_passkeys (credential_id, username, public_key, sign_count, name, created_at)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (credential_id, username, public_key, sign_count, name, datetime.now(UTC).isoformat()),
+            )
+
+    def get_passkey(self, credential_id: str) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM admin_passkeys WHERE credential_id = ?", (credential_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_passkey_sign_count(self, credential_id: str, sign_count: int) -> None:
+        with self._connect() as conn:
+            conn.execute("UPDATE admin_passkeys SET sign_count = ? WHERE credential_id = ?", (sign_count, credential_id))
+
+    def delete_passkey(self, username: str, credential_id: str) -> bool:
+        with self._connect() as conn:
+            cur = conn.execute("DELETE FROM admin_passkeys WHERE credential_id = ? AND username = ?",
+                               (credential_id, username))
+            return cur.rowcount == 1
+
     def delete_user_sessions(self, username: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
@@ -758,8 +820,10 @@ class Database:
     def list_users(self) -> list[dict]:
         with self._connect() as conn:
             return [dict(r) for r in conn.execute(
-                "SELECT username, role, totp_confirmed_at, disabled, created_at, created_by,"
-                " password_changed_at, last_login_at FROM admin_users ORDER BY username"
+                "SELECT u.username, u.role, u.totp_confirmed_at, u.disabled, u.created_at, u.created_by,"
+                " u.password_changed_at, u.last_login_at,"
+                " (SELECT COUNT(*) FROM admin_passkeys p WHERE p.username = u.username) AS passkeys"
+                " FROM admin_users u ORDER BY u.username"
             )]
 
     def get_user(self, username: str) -> dict | None:
@@ -800,6 +864,7 @@ class Database:
 
     def delete_user(self, username: str) -> None:
         with self._connect() as conn:
+            conn.execute("DELETE FROM admin_passkeys WHERE username = ?", (username,))
             conn.execute("DELETE FROM admin_users WHERE username = ?", (username,))
             conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
 

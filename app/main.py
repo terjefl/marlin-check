@@ -23,7 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth
+from . import auth, passkeys
 from . import db as db_module
 from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, block, negotiate_language, translator
@@ -91,10 +91,10 @@ app = FastAPI(title="Ocean Software Check", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-# Cache busting: content hash of style.css in the URL, so Cloudflare/browsers
-# never serve stale CSS after a deploy.
+# Cache busting: content hash of style.css and app.js in the URL, so Cloudflare/browsers
+# never serve stale CSS or JS after a deploy.
 STATIC_VERSION = hashlib.md5(
-    (BASE_DIR / "static" / "style.css").read_bytes()
+    (BASE_DIR / "static" / "style.css").read_bytes() + (BASE_DIR / "static" / "app.js").read_bytes()
 ).hexdigest()[:8]
 
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
@@ -362,6 +362,25 @@ def _public_base(request: Request) -> str:
 
 def _permanent_url(request: Request, link_key: str) -> str:
     return f"{_public_base(request)}/vehicle/{link_key}"
+
+
+def _rp_id(request: Request) -> str:
+    """The WebAuthn relying-party id: the site's host name without port."""
+    base = _public_base(request)
+    return base.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
+
+
+def _has_mfa(user: dict) -> bool:
+    """Any second factor set up: a confirmed TOTP secret or at least one passkey."""
+    return (bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at"))) or \
+        database.count_passkeys(user["username"]) > 0
+
+
+def _same_origin_json(request: Request) -> None:
+    """JSON endpoints called from app.js: the browser must say same-origin."""
+    fetch_site = request.headers.get("sec-fetch-site", "")
+    if fetch_site and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request rejected.")
 
 
 def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key: str,
@@ -646,7 +665,7 @@ async def admin_login(request: Request):
 
     # MFA is required for every account: with a confirmed TOTP secret the code
     # comes next; without one, only the profile page (setup) is reachable.
-    has_mfa = bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at"))
+    has_mfa = _has_mfa(user)
     token, _csrf = database.create_session(username, mfa_pending=has_mfa, mfa_setup_required=not has_mfa)
     database.add_audit(username, ip, "login", "password ok, TOTP code pending" if has_mfa else "password ok, MFA setup required")
     target = f"/admin/login/code?next={quote(next_path, safe='/')}" if has_mfa else "/admin/profile?setup=1"
@@ -666,10 +685,20 @@ def _pending_session(request: Request) -> dict:
     return session
 
 
+def _render_code(request: Request, session: dict, *, error: str = "", next_path: str = "/admin",
+                 status_code: int = 200) -> Response:
+    user = database.get_user(session["username"]) or {}
+    return _render(request, "admin_login_code.html", {
+        "error": error, "next": next_path,
+        "has_totp": bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at")),
+        "has_passkeys": database.count_passkeys(session["username"]) > 0,
+    }, status_code=status_code)
+
+
 @app.get("/admin/login/code", response_class=HTMLResponse)
 def admin_login_code_form(request: Request):
-    _pending_session(request)
-    return _render(request, "admin_login_code.html", {"error": "", "next": _safe_next(request.query_params.get("next"))})
+    session = _pending_session(request)
+    return _render_code(request, session, next_path=_safe_next(request.query_params.get("next")))
 
 
 @app.post("/admin/login/code")
@@ -681,19 +710,88 @@ async def admin_login_code(request: Request):
     ip = client_ip(request)
     username = session["username"]
     if auth.is_locked_out(ip, username):
-        return _render(request, "admin_login_code.html",
-                       {"error": "Too many failed attempts. Try again in 15 minutes.", "next": next_path}, status_code=429)
+        return _render_code(request, session, error="Too many failed attempts. Try again in 15 minutes.",
+                            next_path=next_path, status_code=429)
     user = database.get_user(username)
     step = auth.verify_totp(user["totp_secret"], code) if user and user.get("totp_secret") else None
     if step is None or not database.use_totp_counter(username, step):
         auth.register_failure(ip, username)
         database.add_audit(username, ip, "login_code_failed", "")
-        return _render(request, "admin_login_code.html",
-                       {"error": "Wrong code. Codes are valid once and change every 30 seconds.", "next": next_path}, status_code=401)
+        return _render_code(request, session, error="Wrong code. Codes are valid once and change every 30 seconds.",
+                            next_path=next_path, status_code=401)
     database.session_mfa_done(request.cookies.get(auth.SESSION_COOKIE, ""))
     database.record_login(username)
     database.add_audit(username, ip, "login", "TOTP code ok")
     return RedirectResponse(next_path, status_code=303)
+
+
+@app.post("/admin/login/passkey/options")
+async def admin_login_passkey_options(request: Request):
+    """Options for navigator.credentials.get. With a pending session (password
+    given) the user's own passkeys are allowed; without one, an anonymous
+    pending session is created and any discoverable passkey may answer."""
+    _same_origin_json(request)
+    token = request.cookies.get(auth.SESSION_COOKIE, "")
+    session = database.get_session(token, idle_seconds=auth.SESSION_IDLE_SECONDS, max_age_seconds=auth.SESSION_MAX_SECONDS)
+    response_cookie = None
+    if session is None or not session["mfa_pending"]:
+        token, _csrf = database.create_session("", mfa_pending=True)
+        session = {"username": ""}
+        response_cookie = token
+    allowed = [p["credential_id"] for p in database.list_passkeys(session["username"])] if session["username"] else []
+    options, challenge = passkeys.authentication_options(rp_id=_rp_id(request), allowed_ids=allowed)
+    database.set_challenge(token, challenge)
+    response = Response(options, media_type="application/json", headers={"Cache-Control": "no-store"})
+    if response_cookie:
+        response.set_cookie(auth.SESSION_COOKIE, response_cookie, max_age=database.MFA_PENDING_SECONDS, path="/admin",
+                            httponly=True, secure=COOKIE_SECURE, samesite="lax")
+    return response
+
+
+@app.post("/admin/login/passkey/verify")
+async def admin_login_passkey_verify(request: Request):
+    _same_origin_json(request)
+    token = request.cookies.get(auth.SESSION_COOKIE, "")
+    session = database.get_session(token, idle_seconds=auth.SESSION_IDLE_SECONDS, max_age_seconds=auth.SESSION_MAX_SECONDS)
+    if session is None or not session["mfa_pending"]:
+        raise HTTPException(status_code=401, detail="Start the sign-in again.")
+    ip = client_ip(request)
+    try:
+        body = passkeys.parse_body(await request.body())
+        credential = body.get("credential") or {}
+        credential_id = passkeys.credential_id_of(credential)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Malformed request.") from None
+    challenge = database.pop_challenge(token)
+    passkey = database.get_passkey(credential_id) if credential_id else None
+    username = session["username"] or (passkey["username"] if passkey else "")
+    if auth.is_locked_out(ip, username):
+        raise HTTPException(status_code=429, detail="Too many failed attempts. Try again in 15 minutes.")
+    user = database.get_user(username) if username else None
+    ok = bool(challenge and passkey and user and not user.get("disabled")
+              and (not session["username"] or passkey["username"] == session["username"]))
+    if ok:
+        try:
+            new_count = passkeys.verify_authentication(
+                credential=credential, challenge=challenge, rp_id=_rp_id(request), origin=_public_base(request),
+                public_key=passkey["public_key"], sign_count=passkey["sign_count"],
+            )
+        except Exception as exc:  # any verification failure: invalid signature, wrong origin, ...
+            log.info("Passkey verification failed for %s: %s", username, exc)
+            ok = False
+        else:
+            database.update_passkey_sign_count(credential_id, new_count)
+    if not ok:
+        auth.register_failure(ip, username)
+        database.add_audit(username or "-", ip, "login_passkey_failed", "")
+        raise HTTPException(status_code=401, detail="The passkey was not accepted.")
+    if session["username"]:
+        database.session_mfa_done(token)
+    else:
+        database.session_promote(token, username)
+    database.record_login(username)
+    database.add_audit(username, ip, "login", f"passkey ok ({passkey['name']})")
+    return JSONResponse({"ok": True, "next": _safe_next(str(body.get("next", "")))})
 
 
 @app.post("/admin/logout")
@@ -906,9 +1004,70 @@ def _render_profile(request: Request, username: str, *, message: str = "", error
     return _render(request, "admin_profile.html", {
         "username": username, "csrf": request.state.csrf, "user": user,
         "has_mfa": bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at")),
+        "passkeys": database.list_passkeys(username),
         "setup_required": session["mfa_setup_required"],
         "setup": setup, "message": message, "error": error,
     }, status_code=status_code)
+
+
+def _csrf_header(request: Request) -> None:
+    submitted = request.headers.get("x-csrf-token", "")
+    if not submitted or not secrets.compare_digest(submitted, request.state.csrf):
+        raise HTTPException(status_code=403, detail="Invalid or missing CSRF token.")
+
+
+@app.post("/admin/profile/passkey/options")
+async def admin_profile_passkey_options(request: Request, username: str = Depends(require_admin)):
+    _same_origin_json(request)
+    _csrf_header(request)
+    existing = [p["credential_id"] for p in database.list_passkeys(username)]
+    options, challenge = passkeys.registration_options(rp_id=_rp_id(request), username=username, existing_ids=existing)
+    database.set_challenge(request.cookies.get(auth.SESSION_COOKIE, ""), challenge)
+    return Response(options, media_type="application/json", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/admin/profile/passkey/register")
+async def admin_profile_passkey_register(request: Request, username: str = Depends(require_admin)):
+    _same_origin_json(request)
+    _csrf_header(request)
+    token = request.cookies.get(auth.SESSION_COOKIE, "")
+    try:
+        body = passkeys.parse_body(await request.body())
+        credential = body.get("credential") or {}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Malformed request.") from None
+    challenge = database.pop_challenge(token)
+    if not challenge:
+        raise HTTPException(status_code=400, detail="No registration in progress. Try again.")
+    name = str(body.get("name", "")).strip()[:60] or "Passkey"
+    try:
+        credential_id, public_key, sign_count = passkeys.verify_registration(
+            credential=credential, challenge=challenge, rp_id=_rp_id(request), origin=_public_base(request),
+        )
+    except Exception as exc:
+        log.info("Passkey registration failed for %s: %s", username, exc)
+        raise HTTPException(status_code=400, detail="The passkey could not be verified. Try again.") from None
+    if database.get_passkey(credential_id):
+        raise HTTPException(status_code=400, detail="That passkey is already registered.")
+    database.add_passkey(username, credential_id, public_key, sign_count, name)
+    session = _session_or_login(request)
+    if session["mfa_setup_required"]:
+        database.session_setup_done(token)
+        database.record_login(username)
+    database.add_audit(username, client_ip(request), "passkey_add", name)
+    return JSONResponse({"ok": True, "name": name})
+
+
+@app.post("/admin/profile/passkey/{credential_id}/delete")
+async def admin_profile_passkey_delete(request: Request, credential_id: str, username: str = Depends(require_csrf)):
+    user = database.get_user(username) or {}
+    has_totp = bool(user.get("totp_secret")) and bool(user.get("totp_confirmed_at"))
+    if not has_totp and database.count_passkeys(username) <= 1:
+        return _render_profile(request, username, error="This is your only second factor. Set up an authenticator app or add another passkey first.", status_code=400)
+    if not database.delete_passkey(username, credential_id):
+        raise HTTPException(status_code=404, detail="No such passkey.")
+    database.add_audit(username, client_ip(request), "passkey_delete", credential_id[:12])
+    return _render_profile(request, username, message="Passkey removed.")
 
 
 @app.get("/admin/profile", response_class=HTMLResponse)

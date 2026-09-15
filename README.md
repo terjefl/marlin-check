@@ -64,6 +64,7 @@ app/
   db.py         SQLite: vehicle register (submissions + all module readings), fleet
                 statistics, re-evaluation, usage stats, audit log, admin sessions
   auth.py       Credentials (PBKDF2), login lockout, TOTP helpers, trusted client-IP header
+  passkeys.py   WebAuthn (passkeys) wrapper around py_webauthn
   i18n.py       Language negotiation + JSON dictionaries in app/locales/
   templates/    Jinja2: base/index/result/how/stats/privacy/admin/admin_fleet/
                 admin_vehicle/admin_login/pdf
@@ -307,8 +308,21 @@ sent to `/admin/profile` and can do nothing else until a code has been
 confirmed. Codes are accepted once (the time step is stored) and one step
 either side for clock drift; wrong codes count towards the same lockout as
 wrong passwords. Users change their own password and move to a new phone on
-`/admin/profile`. The database is prepared for passkeys (`admin_passkeys`),
-not implemented yet.
+`/admin/profile`.
+
+Passkeys (WebAuthn, `py_webauthn`, `app/passkeys.py`): a user adds one on
+`/admin/profile` (discoverable credential with user verification, so Face ID,
+Touch ID, Windows Hello, security keys and password managers all work). A
+passkey counts as the second factor instead of a TOTP code on
+`/admin/login/code`, and signs in on its own from the login page ("Sign in with
+a passkey"), which creates an anonymous pending session that is promoted once
+the signature verifies. A passkey alone satisfies the MFA requirement; the only
+remaining second factor cannot be removed. The relying-party id is the site's
+host name (`MARLIN_PUBLIC_URL` or the forwarded host), so passkeys registered
+on one domain do not work on another. The challenge is stored on the session
+row and consumed once; sign counts are tracked. All JavaScript is in
+`static/app.js` (CSP-compliant); the JSON endpoints require `Sec-Fetch-Site:
+same-origin` and, for the profile, the CSRF token in `X-CSRF-Token`.
 
 Bootstrap and rescue: on the first start with an empty table, the users in
 `admin_users.yaml` are imported as full admins without MFA. A user that exists

@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Two-factor code – {{ t('site_title') }}{% endblock %}
 {% block content %}
-<h1>Two-factor code</h1>
-<p class="meta">Enter the six-digit code from your authenticator app.</p>
+<h1>Two-factor</h1>
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+{% if has_passkeys %}
+<div class="uploadbox loginbox">
+  <p class="meta">Confirm with your passkey.</p>
+  <button type="button" id="passkey-login" data-next="{{ next }}">Use passkey</button>
+  <p class="alert error" id="passkey-error" hidden></p>
+</div>
+{% endif %}
+{% if has_totp %}
+<p class="meta">{% if has_passkeys %}Or enter{% else %}Enter{% endif %} the six-digit code from your authenticator app.</p>
 <form class="uploadbox loginbox" method="post" action="/admin/login/code">
   <input type="hidden" name="next" value="{{ next }}">
   <div class="globalfields">
@@ -13,4 +21,5 @@
   </div>
   <button type="submit">Continue</button>
 </form>
+{% endif %}
 {% endblock %}

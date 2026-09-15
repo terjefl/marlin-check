@@ -4,7 +4,7 @@
 <h1>My account</h1>
 {% if not setup_required %}{% include "_admin_nav.html" %}{% endif %}
 {% if setup_required %}
-<div class="alert">Two-factor authentication is required for every account. Set it up below before you continue.</div>
+<div class="alert">Two-factor authentication is required for every account. Set up an authenticator app or add a passkey below before you continue.</div>
 {% endif %}
 {% if message %}<div class="alert ok">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
@@ -33,6 +33,29 @@
     <button type="submit">Set up two-factor authentication</button>
   </form>
   {% endif %}
+</section>
+
+<section class="card">
+  <h2>Passkeys</h2>
+  <p class="meta">A passkey (Face ID, Touch ID, Windows Hello, a security key or a password manager) signs you in without a code, and can replace both the password and the authenticator app.</p>
+  {% if passkeys %}
+  <table class="modules">
+    <thead><tr><th>Name</th><th>Added (UTC)</th><th></th></tr></thead>
+    <tbody>
+      {% for pk in passkeys %}
+      <tr>
+        <td>{{ pk.name }}</td><td>{{ pk.created_at[:16].replace('T', ' ') }}</td>
+        <td><form method="post" action="/admin/profile/passkey/{{ pk.credential_id }}/delete" class="inline" data-confirm="Remove the passkey “{{ pk.name }}”?"><input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit" class="small danger">Remove</button></form></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <div class="filterbar">
+    <label>Name for the new passkey <input type="text" id="passkey-name" maxlength="60" placeholder="e.g. iPhone, YubiKey"></label>
+    <button type="button" class="small" id="passkey-register" data-csrf="{{ csrf }}">Add a passkey</button>
+  </div>
+  <p class="alert error" id="passkey-error" hidden></p>
 </section>
 
 <section class="card">

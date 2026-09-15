@@ -18,4 +18,9 @@
   </div>
   <button type="submit">Sign in</button>
 </form>
+<div class="uploadbox loginbox">
+  <p class="meta">Or sign in without a password.</p>
+  <button type="button" class="secondary" id="passkey-signin" data-next="{{ next }}">Sign in with a passkey</button>
+  <p class="alert error" id="passkey-error" hidden></p>
+</div>
 {% endblock %}

@@ -706,3 +706,95 @@ def test_manage_users_cli(client, monkeypatch):
     cli.main(["--data-dir", data_dir, "set-role", "opsuser", "admin"])
     assert main.database.get_user("opsuser")["role"] == "admin"
     cli.main(["--data-dir", data_dir, "list"])
+
+
+def _fake_passkey_verification(monkeypatch, main, credential_id="cred-one"):
+    """WebAuthn cannot run in TestClient: replace the cryptographic checks
+    with stubs that accept a credential whose id is `credential_id`."""
+    def fake_register(*, credential, challenge, rp_id, origin):
+        assert challenge and rp_id == "testserver" and origin == "https://testserver"
+        assert credential["id"] == credential_id
+        return credential_id, b"public-key-bytes", 0
+
+    def fake_authenticate(*, credential, challenge, rp_id, origin, public_key, sign_count):
+        assert challenge and rp_id == "testserver" and public_key == b"public-key-bytes"
+        if credential.get("id") != credential_id:
+            raise ValueError("bad signature")
+        return sign_count + 1
+
+    monkeypatch.setattr(main.passkeys, "verify_registration", fake_register)
+    monkeypatch.setattr(main.passkeys, "verify_authentication", fake_authenticate)
+
+
+def test_passkey_registration_second_factor_and_passwordless_login(client, monkeypatch):
+    c, main = client
+    _fake_passkey_verification(monkeypatch, main)
+    _login(c, "terje", "hemmelig123")
+    csrf = _csrf(c.get("/admin/profile").text)
+    headers = {"Sec-Fetch-Site": "same-origin", "X-CSRF-Token": csrf}
+
+    # Registration: options carry the challenge and rp id; the stored challenge is consumed once
+    options = c.post("/admin/profile/passkey/options", json={}, headers=headers)
+    assert options.status_code == 200 and options.json()["rp"]["id"] == "testserver"
+    assert options.json()["authenticatorSelection"]["residentKey"] == "required"
+    assert c.post("/admin/profile/passkey/options", json={}, headers={"Sec-Fetch-Site": "same-origin"}).status_code == 403  # no CSRF header
+    registered = c.post("/admin/profile/passkey/register", json={"credential": {"id": "cred-one"}, "name": "iPhone"}, headers=headers)
+    assert registered.status_code == 200 and registered.json() == {"ok": True, "name": "iPhone"}
+    assert c.post("/admin/profile/passkey/register", json={"credential": {"id": "cred-one"}}, headers=headers).status_code == 400  # challenge consumed
+    profile = c.get("/admin/profile").text
+    assert "iPhone" in profile and main.database.count_passkeys("terje") == 1
+    assert '<td class="num">1</td>' in c.get("/admin/users").text  # passkey count in the user list
+
+    # Second factor: password first, then the passkey instead of a code
+    c.cookies.clear()
+    assert c.post("/admin/login", data={"username": "terje", "password": "hemmelig123"}, follow_redirects=False).headers["location"].startswith("/admin/login/code")
+    page = c.get("/admin/login/code").text
+    assert 'id="passkey-login"' in page and 'name="code"' in page  # both factors offered
+    opts = c.post("/admin/login/passkey/options", json={}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert opts.status_code == 200 and opts.json()["allowCredentials"][0]["id"] == "cred-one"
+    bad = c.post("/admin/login/passkey/verify", json={"credential": {"id": "someone-else"}}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert bad.status_code == 401
+    c.post("/admin/login/passkey/options", json={}, headers={"Sec-Fetch-Site": "same-origin"})  # fresh challenge
+    good = c.post("/admin/login/passkey/verify", json={"credential": {"id": "cred-one"}, "next": "/admin/users"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert good.status_code == 200 and good.json() == {"ok": True, "next": "/admin/users"}
+    assert c.get("/admin").status_code == 200
+    assert main.database.get_passkey("cred-one")["sign_count"] == 1
+
+    # Passwordless: no session at all, the discoverable passkey identifies the user
+    other = TestClient(main.app, base_url="https://testserver")
+    opts = other.post("/admin/login/passkey/options", json={}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert opts.status_code == 200 and "marlin_admin=" in opts.headers["set-cookie"] and not opts.json().get("allowCredentials")
+    assert other.get("/admin", follow_redirects=False).status_code == 303  # still only pending
+    result = other.post("/admin/login/passkey/verify", json={"credential": {"id": "cred-one"}}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert result.status_code == 200 and result.json()["next"] == "/admin"
+    page = other.get("/admin")
+    assert page.status_code == 200 and "terje" in page.text
+    assert any(e["action"] == "login" and "passkey ok" in e["detail"] for e in main.database.audit_entries())
+
+    # A passkey alone satisfies the MFA requirement for a user without TOTP
+    main.database.set_totp_secret("terje", None)
+    other.cookies.clear()
+    assert other.post("/admin/login", data={"username": "terje", "password": "hemmelig123"}, follow_redirects=False).headers["location"].startswith("/admin/login/code")
+    page = other.get("/admin/login/code").text
+    assert 'id="passkey-login"' in page and 'name="code"' not in page
+    # ...and the only second factor cannot be removed
+    csrf2 = _csrf(c.get("/admin/profile").text)
+    refused = c.post("/admin/profile/passkey/cred-one/delete", data={"csrf": csrf2}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert refused.status_code == 400 and "only second factor" in refused.text
+    main.database.set_totp_secret("terje", TOTP_SECRET)
+    main.database.confirm_totp("terje", 0)
+    removed = c.post("/admin/profile/passkey/cred-one/delete", data={"csrf": csrf2}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert removed.status_code == 200 and main.database.count_passkeys("terje") == 0
+
+
+def test_passkey_registration_unlocks_an_account_without_mfa(client, monkeypatch):
+    c, main = client
+    _fake_passkey_verification(monkeypatch, main, credential_id="cred-two")
+    main.database.set_totp_secret("styremedlem", None)
+    c.post("/admin/login", data={"username": "styremedlem", "password": "ogsåhemmelig"}, follow_redirects=False)
+    csrf = _csrf(c.get("/admin/profile").text)
+    headers = {"Sec-Fetch-Site": "same-origin", "X-CSRF-Token": csrf}
+    assert c.post("/admin/profile/passkey/options", json={}, headers=headers).status_code == 200
+    assert c.post("/admin/profile/passkey/register", json={"credential": {"id": "cred-two"}, "name": "Key"}, headers=headers).status_code == 200
+    assert c.get("/admin").status_code == 200  # setup requirement lifted
+    assert main.database.get_user("styremedlem")["last_login_at"] is not None
