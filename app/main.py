@@ -461,7 +461,7 @@ async def _workorder_response(request: Request, report, evaluation) -> Response:
     pdf_bytes = await _run_heavy(_render_pdf, html)
     return Response(
         pdf_bytes, media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="ocean-software-check_workorder_{report.vin}.pdf"',
+        headers={"Content-Disposition": f'attachment; filename="ocean-software-check_checklist_{report.vin}.pdf"',
                  "Cache-Control": "private, no-store"},
     )
 

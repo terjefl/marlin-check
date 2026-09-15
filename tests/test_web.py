@@ -637,7 +637,7 @@ def test_work_order_pdf_lists_modules_in_order(client):
     assert rows[0]["code"] == "BCM" and rows[0]["profile"] == "2.1" and rows[0]["needed"] == 30
     assert {r["code"] for r in rows[1:]} == {"ESP", "IBS", "ECC", "MCU_F", "MCU_R", "VCU"} and all(r["profile"] == "2.2" for r in rows[1:])
     pdf = c.get(f"/pdf/{token}/workorder")
-    assert pdf.status_code == 200 and pdf.content[:5] == b"%PDF-" and "workorder" in pdf.headers["content-disposition"]
+    assert pdf.status_code == 200 and pdf.content[:5] == b"%PDF-" and "checklist" in pdf.headers["content-disposition"]
 
     full22 = Path(__file__).parent / "fixtures" / "olp_report_22_full.txt"
     page = _upload(c, body=full22.read_bytes()).text

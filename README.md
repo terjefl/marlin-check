@@ -32,7 +32,7 @@ car's control modules meet the minimum software levels required for the
 - Repeat uploads of the same VIN show what changed since the previous report
   (outcome and every control unit whose Supplier SW Version differs); the
   permanent link warns when the report is older than 60 days.
-- A work order PDF for the service provider (`/pdf/<token>/workorder`,
+- A checklist PDF for service providers and FOA Advanced Installers (`/pdf/<token>/workorder`,
   `/vehicle/<key>/workorder`): the modules to update in the recommended order
   (below 2.1 first, then below 2.2), current and needed version, the Marlin
   package for Marlin cars, the ESP/iBooster and multi-step notes, and a
