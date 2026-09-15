@@ -33,7 +33,7 @@
   "critical_label": "crítico",
   "extra_modules_title": "Otros módulos del informe (sin requisito Marlin)",
   "download_pdf": "Descargar informe PDF",
-  "workorder_button": "Lista de comprobación para socios de servicio y FOA Advanced Installers (PDF)",
+  "workorder_button": "Descargar lista de comprobación PDF para socios de servicio y FOA Advanced Installers",
   "workorder_title": "Lista de comprobación y propuesta de orden de trabajo",
   "workorder_intro": "Sugerencias para socios de servicio y FOA Advanced Installers: los módulos que conviene actualizar para que el coche cumpla el requisito mínimo de 2.2, en el orden propuesto, primero al nivel 2.1 y luego a 2.2. Derivado del informe OLP subido y de la tabla de requisitos de la Fisker Owners Association.",
   "workorder_col_step": "Paso",

@@ -33,7 +33,7 @@
   "critical_label": "kritisk",
   "extra_modules_title": "Andre moduler i rapporten (uten Marlin-krav)",
   "download_pdf": "Last ned PDF-rapport",
-  "workorder_button": "Sjekkliste for servicepartnere og FOA Advanced Installers (PDF)",
+  "workorder_button": "Last ned PDF-sjekkliste for servicepartnere og FOA Advanced Installers",
   "workorder_title": "Sjekkliste og forslag til arbeidsordre",
   "workorder_intro": "Forslag til servicepartnere og FOA Advanced Installers: modulene som bør oppdateres for at bilen oppfyller minimumskravet for 2.2, i foreslått rekkefølge, først til 2.1-nivå og så til 2.2. Utledet fra den opplastede OLP-rapporten og Fisker Owners Associations kravtabell.",
   "workorder_col_step": "Trinn",
