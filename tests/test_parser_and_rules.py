@@ -583,3 +583,5 @@ def test_na_counts_as_empty_field():
     )
     ecc = parse_report(text.encode()).modules[0]
     assert (ecc.supplier_sw, ecc.software, ecc.hardware, ecc.bootloader) == ("", "", "", "")
+    only_punctuation = text.replace("Supplier SW Version: NA", "Supplier SW Version: )))")
+    assert parse_report(only_punctuation.encode()).modules[0].supplier_sw == ""
