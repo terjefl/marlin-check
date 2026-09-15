@@ -1314,13 +1314,14 @@ def admin_fleet(request: Request, username: str = Depends(require_admin)):
         "outcome": q.get("outcome", "") if q.get("outcome", "") in OUTCOMES else "",
         "trim": q.get("trim", "")[:1].upper(),
         "query": q.get("q", "")[:17],
+        "anomalies": q.get("anomalies", "") == "1",
     }
     requirements = _current_requirements()
     return _render(
         request, "admin_fleet.html",
         {
             "username": username, "csrf": request.state.csrf,
-            "vehicles": database.fleet_vehicles(**filters),
+            "vehicles": database.fleet_vehicles(**filters), "min_readings": database.MIN_READINGS,
             "filters": filters, "outcomes": OUTCOMES, "trim_names": TRIM_NAMES,
             "module_ids": [m.id for m in requirements.modules] if requirements else [],
             "profiles": list(requirements.profiles) if requirements else [],
@@ -1441,11 +1442,14 @@ def admin_vehicle(request: Request, vin: str, username: str = Depends(require_ad
         raise HTTPException(status_code=404, detail="No submissions for this VIN.")
     selected_id = request.query_params.get("s", "")
     selected = next((h for h in history if h["id"] == selected_id), history[0])
+    odd = [r["module_id"] for r in selected["readings"] if r["module_id"] and r["status"] in ("missing", "unparseable", "empty")]
     return _render(
         request, "admin_vehicle.html",
         {
             "username": username, "csrf": request.state.csrf, "vin": vin,
             "history": history, "selected": selected, "trim_names": TRIM_NAMES,
+            "odd_modules": odd, "few_readings": len(selected["readings"]) < database.MIN_READINGS,
+            "min_readings": database.MIN_READINGS,
             "permanent_url": _permanent_url(request, database.link_key_for(vin)),
         },
     )

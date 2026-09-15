@@ -6,6 +6,9 @@
 {% include "_admin_nav.html" %}
 <p class="meta"><a href="/admin/fleet">← Vehicle register</a> · Trim: {{ trim_names.get(selected.trim, selected.trim or 'unknown') }} · {{ history | length }} upload(s){% if permanent_url %} · Permanent link: <a class="mono" href="{{ permanent_url }}">{{ permanent_url }}</a>{% endif %}</p>
 
+{% if odd_modules or few_readings %}
+<div class="alert">⚠ This report looks incomplete: {% if odd_modules %}{{ odd_modules | join(', ') }} could not be read (missing, empty or unrecognised version).{% endif %}{% if few_readings %} Only {{ selected.readings | length }} control units, a full OLP export has about 37.{% endif %} Ask the member to export the report again in OLP with every ECU selected, then upload it.</div>
+{% endif %}
 <h2>Uploads</h2>
 <table class="modules">
   <thead><tr><th>Uploaded (UTC)</th><th>Report date</th><th>Outcome</th><th class="num">Complete</th><th class="num">Evidence</th><th>Requirements</th><th>Country</th><th>Language</th><th>File</th></tr></thead>

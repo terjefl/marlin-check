@@ -20,6 +20,7 @@
     </select>
   </label>
   <label>VIN contains <input type="text" name="q" value="{{ filters.query }}" maxlength="17" class="mono"></label>
+  <label class="check"><input type="checkbox" name="anomalies" value="1" {% if filters.anomalies %}checked{% endif %}> Odd reports only</label>
   <button type="submit" class="small">Filter</button>
   <a class="button secondary small" href="/admin/fleet">Reset</a>
   <span class="meta">{{ vehicles | length }} vehicle(s)</span>
@@ -34,7 +35,7 @@
 <table class="modules fleet">
   <thead>
     <tr>
-      <th>VIN</th><th>Trim</th><th>Last upload (UTC)</th><th class="num">Uploads</th><th>Outcome</th>
+      <th>VIN</th><th>Trim</th><th>Last upload (UTC)</th><th class="num">Uploads</th><th>Outcome</th><th title="Required modules missing, unreadable or empty, or a report with too few control units">⚠</th>
       <th class="num">Complete</th><th class="num">Evidence</th><th>Country</th>
       {% for m in module_ids %}<th class="num">{{ m }}</th>{% endfor %}
     </tr>
@@ -47,6 +48,7 @@
       <td>{{ v.uploaded_at[:16].replace('T', ' ') }}</td>
       <td class="num">{{ v.uploads }}</td>
       <td><span class="pill oc-{{ v.outcome }}">{{ t('outcome_' + v.outcome + '_short') if v.outcome else '(not evaluated)' }}</span></td>
+      <td>{% if v.odd %}<span class="oddflag" title="{% if v.anomalies %}{{ v.anomalies | join(', ') }} not readable in the report. {% endif %}{% if v.readings < min_readings %}Only {{ v.readings }} control units in the report. {% endif %}Ask the member to export the report again in OLP with every ECU selected.">⚠</span>{% endif %}</td>
       <td class="num">{{ v.complete_profile or '–' }}</td>
       <td class="num">{{ v.top_evidence or '–' }}</td>
       <td>{{ v.country or '' }}</td>

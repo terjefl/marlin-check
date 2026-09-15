@@ -93,6 +93,24 @@
     </div>
     {% endfor %}
   </details>
+  <details class="extra">
+    <summary>{{ t('stats_all_modules_heading') }}</summary>
+    <p class="meta">{{ t('stats_all_modules_intro') }}</p>
+    {% for ecu, versions in stats.all_module_versions.items() %}
+    {% set total = versions | sum(attribute='count') %}
+    <div class="modstat">
+      <h3>{{ ecu }}</h3>
+      {% for v in versions[:6] %}
+      <div class="bar-row">
+        <span class="bar-label">{{ v.version }}</span>
+        <div class="bar-track"><div class="bar" style="width: {{ (100 * v.count / total) | round(1) }}%"></div></div>
+        <span class="bar-count">{{ v.count }}</span>
+      </div>
+      {% endfor %}
+      {% if versions | length > 6 %}<p class="hint">+ {{ versions | length - 6 }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </details>
 </section>
 
 <div class="usagegrid">

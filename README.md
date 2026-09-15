@@ -29,6 +29,19 @@ car's control modules meet the minimum software levels required for the
   the register) are checked and shown as a level line, a list of what is
   missing and a small table. Never part of the outcome; not counted on `/stats`
   yet (that would need re-evaluation to store it).
+- Repeat uploads of the same VIN show what changed since the previous report
+  (outcome and every control unit whose Supplier SW Version differs); the
+  permanent link warns when the report is older than 60 days.
+- A work order PDF for the service partner (`/pdf/<token>/workorder`,
+  `/vehicle/<key>/workorder`): the modules to update in the recommended order
+  (below 2.1 first, then below 2.2), current and needed version, the Marlin
+  package for Marlin cars, the ESP/iBooster and multi-step notes, and a
+  sign-off line. Offered only when there is something to update.
+- `/stats` also shows the version distribution of every control unit in the
+  latest reports, requirements or not.
+- The admin register flags odd reports (a required module missing, empty or
+  unrecognised, or fewer than 30 control units) with a filter and a notice on
+  the vehicle page asking for a fresh OLP export.
 - Downloadable PDF report (WeasyPrint), generated in the active language, with
   coloured ticks/crosses (the image has no emoji font) and without the permanent link.
 - A permanent link per vehicle (`/vehicle/<random key>`, 128-bit key created on the

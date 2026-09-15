@@ -798,3 +798,19 @@ def test_passkey_registration_unlocks_an_account_without_mfa(client, monkeypatch
     assert c.post("/admin/profile/passkey/register", json={"credential": {"id": "cred-two"}, "name": "Key"}, headers=headers).status_code == 200
     assert c.get("/admin").status_code == 200  # setup requirement lifted
     assert main.database.get_user("styremedlem")["last_login_at"] is not None
+
+
+def test_odd_reports_are_flagged_in_the_register(client):
+    """A report with an unreadable required module or too few control units
+    gets a warning flag, a filter, and a notice on the vehicle page."""
+    c, _ = client
+    _upload_car(c, "olp_report_21_full.txt", "11")
+    _upload_car(c, "olp_report_21_full.txt", "12", BCM395030="BCM-weird")   # BCM not readable
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin/fleet").text
+    assert page.count('class="oddflag"') == 1 and "BCM not readable" in page
+    flagged = c.get("/admin/fleet?anomalies=1").text
+    assert "VCF1ZBE20PG099912" in flagged and "VCF1ZBE20PG099911" not in flagged
+    vehicle = c.get("/admin/fleet/VCF1ZBE20PG099912").text
+    assert "This report looks incomplete" in vehicle and "BCM could not be read" in vehicle
+    assert "This report looks incomplete" not in c.get("/admin/fleet/VCF1ZBE20PG099911").text

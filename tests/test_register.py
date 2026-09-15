@@ -144,6 +144,9 @@ def test_fleet_statistics_count_outcomes_levels_and_split_cars(tmp_path):
     # BCM over the five cars: 21 (below every profile), 30, 42, 42, 42
     assert stats["module_levels"]["BCM"] == {"below": 1, "2.1": 1, "2.2": 3}
     assert stats["profiles"] == ["2.0", "2.1", "2.2"]
+    # Every control unit, requirements or not, by ECU code over the latest reports
+    assert stats["all_module_versions"]["GW"] == [{"version": "GW500002", "count": 5}]
+    assert {v["version"] for v in stats["all_module_versions"]["BCM"]} == {"BCM395021", "BCM395030", "BCM395042"}
 
 
 def test_time_series_and_fleet_movement(tmp_path):

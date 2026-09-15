@@ -542,6 +542,7 @@ def test_stats_page_shows_time_series_and_fleet_movement(client):
     assert page.count('class="col"') >= 60 + 26 + 1
     assert "Movement in the fleet" in page and "From first to latest report" in page
     assert "Fleet status month by month" in page
+    assert "Every control unit in the reports" in page and "GW500002" in page
     assert "VCF1ZBE20PG099999" not in page
 
 

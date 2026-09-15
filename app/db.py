@@ -472,7 +472,10 @@ class Database:
         " ON s.vin_hash = m.vin_hash AND s.uploaded_at = m.latest"
     )
 
-    def fleet_vehicles(self, *, outcome: str = "", trim: str = "", query: str = "") -> list[dict]:
+    MIN_READINGS = 30  # a real OLP export has ~37 control units; fewer means a partial export
+
+    def fleet_vehicles(self, *, outcome: str = "", trim: str = "", query: str = "",
+                       anomalies: bool = False) -> list[dict]:
         """One row per VIN (latest submission), with the evaluated modules as
         {module_id: {"extracted", "level", "status", "version"}}. Filters are
         exact on outcome/trim and a substring on the VIN."""
@@ -494,6 +497,8 @@ class Database:
             for v in vehicles:
                 v["modules"] = {}
                 v["uploads"] = 0
+                v["anomalies"] = []   # required modules missing, unreadable or empty
+                v["readings"] = 0     # control units in the report
             if by_id:
                 placeholders = ",".join("?" * len(by_id))
                 for row in conn.execute(
@@ -505,12 +510,23 @@ class Database:
                         "extracted": row["extracted"], "level": row["level"],
                         "status": row["status"], "version": row["version"],
                     }
+                    if row["status"] in ("missing", "unparseable", "empty"):
+                        by_id[row["submission_id"]]["anomalies"].append(row["module_id"])
+                for row in conn.execute(
+                    f"SELECT submission_id, COUNT(*) AS n FROM module_readings WHERE submission_id IN ({placeholders})"
+                    " GROUP BY submission_id", list(by_id),
+                ):
+                    by_id[row["submission_id"]]["readings"] = row["n"]
                 for row in conn.execute(
                     "SELECT vin_hash, COUNT(*) AS n FROM submissions GROUP BY vin_hash"
                 ):
                     for v in vehicles:
                         if v["vin_hash"] == row["vin_hash"]:
                             v["uploads"] = row["n"]
+        for v in vehicles:
+            v["odd"] = bool(v["anomalies"]) or v["readings"] < self.MIN_READINGS
+        if anomalies:
+            vehicles = [v for v in vehicles if v["odd"]]
         return vehicles
 
     def changes_since_previous(self, vin: str, submission_id: str) -> dict | None:
@@ -989,6 +1005,16 @@ class Database:
                     " FROM submissions GROUP BY week ORDER BY week DESC LIMIT 26"
                 )
             ]
+            # Every control unit in the latest reports (requirements or not),
+            # by ECU code: the most common versions and how many vehicles carry each.
+            all_module_versions: dict[str, list[dict]] = {}
+            for row in conn.execute(
+                f"SELECT COALESCE(NULLIF(mr.code, ''), substr(mr.raw_name, 1, instr(mr.raw_name || ' - ', ' - ') - 1)) AS ecu,"
+                f" mr.version, COUNT(*) AS n"
+                f" FROM module_readings mr JOIN ({latest}) s ON s.id = mr.submission_id"
+                f" GROUP BY ecu, mr.version ORDER BY ecu, n DESC"
+            ):
+                all_module_versions.setdefault(row["ecu"], []).append({"version": row["version"] or "(empty)", "count": row["n"]})
             module_versions: dict[str, list[dict]] = {}
             for row in conn.execute(
                 f"SELECT mr.module_id, mr.version, COUNT(*) AS n"
@@ -1064,6 +1090,7 @@ class Database:
             "countries": countries,
             "per_week": per_week,
             "module_versions": module_versions,
+            "all_module_versions": all_module_versions,
             "module_levels": module_levels,
             "profiles": profiles,
             "split": split,
