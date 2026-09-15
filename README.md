@@ -4,7 +4,7 @@ Web portal for the Fisker Owners Association, renamed from "Marlin Readiness
 Check" on 2026-09-13 (the URL stays): members upload an ECU diagnostics
 report exported from **OceanLink Pro (OLP)**, and the portal checks whether the
 car's control modules meet the minimum software levels required for the
-**Marlin** software update. Live at <https://oceansoftwarecheck.com> (BETA since 2026-09-05; marlin.flagan.net redirects there since 2026-09-15).
+**Marlin** software update. Live at <https://oceansoftwarecheck.com> (in production since 2026-09-16 after a BETA from 2026-09-05; marlin.flagan.net redirects there since 2026-09-15).
 
 - Per-module result (OK / outdated / missing / version not recognised / empty
   field), one column per software release (2.0 / 2.1 / 2.2) with the minimum
@@ -101,7 +101,7 @@ pyproject.toml              ruff configuration
 
 | Area | State |
 |---|---|
-| Parser | Verified against a real OLP PDF export (fixture) and the consented uploads of the BETA period |
+| Parser | Verified against a real OLP PDF export (fixture) and the uploads of the BETA period |
 | Requirements | The association's minimum table (2.0/2.1/2.2) plus iBooster as the eighth critical module (2026-09-13, ESP and iBooster must be on the same generation); ECC 2.2 = 25 since 2026-09-14. Verified against real cars sitting exactly at the 2.1 minimums, on full 2.2 and on Marlin. Open points are listed below and tracked in the `notes:` field of the requirements file |
 | Trim logic | Verified for One (Z), Extreme (E, 2026-09-12) and Ultra (U, 2026-09-13) by real uploads, all on the NMC battery line as expected; the Sport case (VIN letter S, no MCU_R, BMSL battery line) awaits a real Sport report |
 | Deployment | Automatic: push to `main` → tests → image → Portainer webhook → new container (see below) |
@@ -124,10 +124,9 @@ every fully updated 2.2 car say 25; the hand-written table had 24), iBooster
 401 is confirmed by the workbook, the 2.0 column is correct, and the 2.1
 profile as the direct-Marlin requirement is stated in words.
 
-Operational, on Terje's signal only: reset all data at go-live (delete
-`marlin.sqlite3` + `-wal`/`-shm` and `uploads/*` on the host with the
-container stopped) and drop the BETA banner. Pre-v2 rows show country
-"(unknown)" on `/stats` because country was not stored before v2; left as is.
+The BETA banner was removed 2026-09-16; the data was kept (identical uploads
+merged instead of a reset). Pre-v2 rows show country "(unknown)" on `/stats`
+because country was not stored before v2; left as is.
 
 ## How the check works (short)
 
