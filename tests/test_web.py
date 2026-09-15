@@ -663,3 +663,10 @@ def test_identical_reupload_is_merged_and_counted(client):
     history = main.database.vehicle_history("VCF1ZBE20PG099999")
     assert len(history) == 2 and history[0]["upload_count"] == 1 and history[1]["upload_count"] == 2
     assert main.database.fleet_vehicles()[0]["uploads"] == 3
+
+
+def test_front_page_links_to_the_association(client):
+    c, _ = client
+    page = c.get("/?lang=en").text
+    assert 'href="https://fiskeroa.com/" target="_blank" rel="noopener">Fisker Owners Association</a>' in page
+    assert "requires membership" in page and "Check whether your Ocean is ready for the Marlin update." in page
