@@ -220,6 +220,7 @@
   "module_line_update": "{code} – {label}: er på version {found} ({level}-niveau) og skal opdateres til {needed} ({profile}-niveau)",
   "module_line_below_all": "{code} – {label}: er på version {found} (under {first}-niveau) og skal opdateres til {needed} ({profile}-niveau)",
   "module_line_unread": "{code} – {label}: {status} og skal være på {needed} ({profile}-niveau)",
+  "below_level": "under {first}",
   "rec_update_then_marlin": "Opdatér modulerne ovenfor, så bilen opfylder minimumskravet til 2.2, og opdatér derefter til Marlin.",
   "rec_update_via_21": "Opdatér modulerne ovenfor, så bilen opfylder minimumskravet til 2.2, først 2.1 og så 2.2, og opdatér derefter til Marlin.",
   "rec_marlin_alone": "Du kan opdatere til Marlin alene, men det anbefales ikke.",

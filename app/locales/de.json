@@ -220,6 +220,7 @@
   "module_line_update": "{code} – {label}: steht auf Version {found} (Stufe {level}) und muss auf {needed} (Stufe {profile}) aktualisiert werden",
   "module_line_below_all": "{code} – {label}: steht auf Version {found} (unter Stufe {first}) und muss auf {needed} (Stufe {profile}) aktualisiert werden",
   "module_line_unread": "{code} – {label}: {status} und muss auf {needed} (Stufe {profile}) stehen",
+  "below_level": "unter {first}",
   "rec_update_then_marlin": "Aktualisieren Sie die Module oben, damit Ihr Fahrzeug die Mindestanforderung für 2.2 erfüllt, und aktualisieren Sie dann auf Marlin.",
   "rec_update_via_21": "Aktualisieren Sie die Module oben, damit Ihr Fahrzeug die Mindestanforderung für 2.2 erfüllt, zuerst 2.1 und dann 2.2, und aktualisieren Sie dann auf Marlin.",
   "rec_marlin_alone": "Sie könnten auch nur auf Marlin aktualisieren, das wird aber nicht empfohlen.",

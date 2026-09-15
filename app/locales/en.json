@@ -220,6 +220,7 @@
   "module_line_update": "{code} – {label}: is at version {found} ({level} level) and needs to be updated to {needed} ({profile} level)",
   "module_line_below_all": "{code} – {label}: is at version {found} (below the {first} level) and needs to be updated to {needed} ({profile} level)",
   "module_line_unread": "{code} – {label}: {status} and needs to be at {needed} ({profile} level)",
+  "below_level": "below {first}",
   "rec_update_then_marlin": "Update the modules above so that your car meets the minimum 2.2 requirement, then update to Marlin.",
   "rec_update_via_21": "Update the modules above so that your car meets the minimum 2.2 requirement, first 2.1 and then 2.2, then update to Marlin.",
   "rec_marlin_alone": "You could update to Marlin alone, but it is not recommended.",

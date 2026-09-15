@@ -41,20 +41,48 @@
   {% if below_top %}
   <p class="modules-heading">{% if outcome == 'marlin' %}{{ t('marlin_below_top_note', profile=top) }}{% else %}{{ t('modules_heading_top', profile=top) }}{% endif %}</p>
   {% if outcome != 'marlin' %}<p class="hint">{{ t('multistep_note') }}</p>{% endif %}
+  {% if for_pdf %}
+  {# One row per module so every entry fits on one line in the PDF #}
+  <table class="updates">
+    <thead><tr><th>{{ t('workorder_col_module') }}</th><th>{{ t('workorder_col_current') }}</th><th>{{ t('workorder_col_target') }}</th></tr></thead>
+    <tbody>
+    {% for r in below_top %}
+    {% set needed = r.levels.get(top) if r.levels.get(top) is not none else r.top_required %}
+    <tr><td>{{ r.requirement.id }} – {{ r.requirement.label }}</td>
+      <td class="mono">{% if r.extracted is none %}{{ t('status_' + r.status) }}{% elif r.level %}{{ r.extracted }} ({{ r.level }}){% else %}{{ r.extracted }} ({{ t('below_level', first=evaluation.profiles[0]) }}){% endif %}</td>
+      <td class="mono">{{ needed }} ({{ top }})</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
   <ul class="modulelist">
     {% for r in below_top %}
     <li>– {{ module_line(r, top) }}</li>
     {% endfor %}
   </ul>
   {% endif %}
+  {% endif %}
 
   {% if marlin_below %}
   <p class="modules-heading">{{ t('marlin_modules_heading') }}</p>
+  {% if for_pdf %}
+  <table class="updates">
+    <thead><tr><th>{{ t('workorder_col_module') }}</th><th>{{ t('workorder_col_current') }}</th><th>{{ t('workorder_col_target') }}</th></tr></thead>
+    <tbody>
+    {% for r in marlin_below %}
+    <tr><td>{{ r.requirement.id }} – {{ r.requirement.label }}</td>
+      <td class="mono">{% if r.extracted is none %}{{ t('status_' + r.status) }}{% else %}{{ r.extracted }}{% endif %}</td>
+      <td class="mono">{{ r.requirement.marlin_level }} (Marlin)</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
   <ul class="modulelist">
     {% for r in marlin_below %}
     <li>– {{ marlin_line(r) }}</li>
     {% endfor %}
   </ul>
+  {% endif %}
   {% endif %}
 
   <h3 class="section-title summary">{{ t('section_summary') }}</h3>
