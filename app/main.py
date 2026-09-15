@@ -393,6 +393,8 @@ def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key
             "report": report, "evaluation": evaluation, "pdf_url": pdf_url,
             "permanent_url": _permanent_url(request, link_key),
             "uploaded_at": uploaded_at, "changes": changes, "report_age_days": report_age_days,
+            "workorder_enabled": database.flag("workorder_enabled"),
+            "workorder_url": pdf_url[:-len("/pdf")] + "/workorder" if pdf_url.endswith("/pdf") else pdf_url + "/workorder",
         },
     )
     response.headers["Cache-Control"] = "private, no-store"  # contains the VIN
@@ -440,6 +442,8 @@ def _workorder_rows(evaluation) -> list[dict]:
 
 
 async def _workorder_response(request: Request, report, evaluation) -> Response:
+    if not database.flag("workorder_enabled"):
+        raise HTTPException(status_code=404, detail="The work order is switched off.")
     lang = negotiate_language(request)
     rows = _workorder_rows(evaluation)
     codes = {r["code"] for r in rows}
@@ -905,6 +909,7 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "yaml_text": yaml_text if yaml_text is not None else current_text,
             "audit": database.audit_entries(50),
             "usage": database.usage_stats(14),
+            "settings": {"workorder_enabled": database.flag("workorder_enabled")},
             "fleet": _fleet_stats(),
         },
         status_code=status_code,
@@ -1054,6 +1059,25 @@ def _form_to_yaml(form, username: str) -> str:
     return header + yaml_module.safe_dump(
         data, allow_unicode=True, sort_keys=False, default_flow_style=False, width=100
     )
+
+
+# --- Admin: settings (feature switches) --------------------------------------
+
+_SWITCHES = ("workorder_enabled",)
+
+
+@app.post("/admin/settings")
+async def admin_settings(request: Request, username: str = Depends(require_csrf_admin)):
+    form = await request.form()
+    changed = []
+    for key in _SWITCHES:
+        value = "1" if form.get(key) == "1" else "0"
+        if database.get_setting(key) != value:
+            database.set_setting(key, value, username)
+            changed.append(f"{key}={'on' if value == '1' else 'off'}")
+    if changed:
+        database.add_audit(username, client_ip(request), "settings", ", ".join(changed))
+    return _render_admin(request, username, message="Settings saved." if changed else "No settings changed.")
 
 
 # --- Admin: own profile (password, MFA) -------------------------------------

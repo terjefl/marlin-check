@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import ClassVar
 
 from .parser import ModuleReading, ParsedReport
 from .rules import Evaluation, RequirementSet, evaluate
@@ -118,6 +119,14 @@ CREATE TABLE IF NOT EXISTS admin_users (
     created_by TEXT NOT NULL DEFAULT '',
     password_changed_at TEXT,
     last_login_at TEXT
+);
+
+-- Feature switches and other settings the admin console controls.
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL DEFAULT ''
 );
 
 -- Prepared for passkeys (WebAuthn); not used yet.
@@ -850,6 +859,27 @@ class Database:
     def delete_user_sessions(self, username: str) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM admin_sessions WHERE username = ?", (username,))
+
+    # --- settings (feature switches) ----------------------------------------
+
+    SETTING_DEFAULTS: ClassVar[dict[str, str]] = {"workorder_enabled": "1"}
+
+    def get_setting(self, key: str) -> str:
+        with self._connect() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else self.SETTING_DEFAULTS.get(key, "")
+
+    def flag(self, key: str) -> bool:
+        return self.get_setting(key) == "1"
+
+    def set_setting(self, key: str, value: str, updated_by: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)"
+                " ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at,"
+                " updated_by = excluded.updated_by",
+                (key, value, datetime.now(UTC).isoformat(), updated_by),
+            )
 
     # --- admin users ---------------------------------------------------------
 

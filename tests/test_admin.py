@@ -814,3 +814,23 @@ def test_odd_reports_are_flagged_in_the_register(client):
     vehicle = c.get("/admin/fleet/VCF1ZBE20PG099912").text
     assert "This report looks incomplete" in vehicle and "BCM could not be read" in vehicle
     assert "This report looks incomplete" not in c.get("/admin/fleet/VCF1ZBE20PG099911").text
+
+
+def test_work_order_switch_in_admin(client):
+    """The work order PDF can be switched off in the admin console: the button
+    disappears and the routes answer 404. Read-only admins see the state."""
+    c, main = client
+    assert main.database.flag("workorder_enabled")
+    _upload_car(c, "olp_report_21_full.txt", "21")
+    _login(c, "terje", "hemmelig123")
+    page = c.get("/admin").text
+    assert 'name="workorder_enabled" value="1" checked' in page
+    csrf = _csrf(page)
+    saved = c.post("/admin/settings", data={"csrf": csrf}, headers={"Sec-Fetch-Site": "same-origin"})  # unchecked
+    assert "Settings saved." in saved.text and not main.database.flag("workorder_enabled")
+    key = main.database.link_key_for("VCF1ZBE20PG099921")
+    assert "/workorder" not in c.get(f"/vehicle/{key}").text
+    assert c.get(f"/vehicle/{key}/workorder").status_code == 404
+    c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert main.database.flag("workorder_enabled") and f"/vehicle/{key}/workorder" in c.get(f"/vehicle/{key}").text
+    assert any(e["action"] == "settings" and "workorder_enabled=off" in e["detail"] for e in main.database.audit_entries())

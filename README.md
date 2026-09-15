@@ -36,7 +36,8 @@ car's control modules meet the minimum software levels required for the
   `/vehicle/<key>/workorder`): the modules to update in the recommended order
   (below 2.1 first, then below 2.2), current and needed version, the Marlin
   package for Marlin cars, the ESP/iBooster and multi-step notes, and a
-  sign-off line. Offered only when there is something to update.
+  sign-off line. Offered only when there is something to update, and only
+  while the switch in the admin console (Settings, table `settings`) is on.
 - `/stats` also shows the version distribution of every control unit in the
   latest reports, requirements or not.
 - The admin register flags odd reports (a required module missing, empty or
