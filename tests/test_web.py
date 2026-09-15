@@ -669,4 +669,4 @@ def test_front_page_links_to_the_association(client):
     c, _ = client
     page = c.get("/?lang=en").text
     assert 'href="https://fiskeroa.com/" target="_blank" rel="noopener">Fisker Owners Association</a>' in page
-    assert "is for members of" in page and "requires an active FOA membership" in page and "Check whether your Ocean is ready for the Marlin update." in page
+    assert "is for members of" in page and "requires an active FOA membership" in page and "what remains before Marlin." in page
