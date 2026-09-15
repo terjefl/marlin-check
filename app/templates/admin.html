@@ -108,10 +108,21 @@
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <label class="check"><input type="checkbox" name="workorder_enabled" value="1" {% if settings.workorder_enabled %}checked{% endif %}> Offer the checklist PDF for service providers and FOA Advanced Installers on the result page</label>
   <label>Service provider link (opens in a new window from “Contact your service provider”) <input type="url" name="service_partner_url" value="{{ settings.service_partner_url }}" class="mono" size="40"></label>
+  <label class="check"><input type="checkbox" name="result_mail_enabled" value="1" {% if settings.result_mail_enabled %}checked{% endif %}> Offer “send me this result” by e-mail on the result page{% if not settings.mail_configured %} (needs an SMTP relay below){% endif %}</label>
+  <label>SMTP relay host (empty = e-mail off) <input type="text" name="smtp_host" value="{{ settings.smtp_host }}" class="mono" size="28" placeholder="smtp-relay.gmail.com"></label>
+  <label>Port <input type="text" name="smtp_port" value="{{ settings.smtp_port }}" class="mono" size="5" inputmode="numeric"></label>
+  <label>Sender <input type="text" name="mail_from" value="{{ settings.mail_from }}" class="mono" size="44"></label>
   <button type="submit" class="small">Save settings</button>
 </form>
+{% if settings.mail_configured %}
+<form method="post" action="/admin/settings/test-mail" class="filterbar">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Send a test e-mail to <input type="email" name="email" required class="mono" size="28"></label>
+  <button type="submit" class="small secondary">Send test</button>
+</form>
+{% endif %}
 {% else %}
-<p class="meta">Checklist PDF for service providers: {{ 'on' if settings.workorder_enabled else 'off' }}. Service provider link: {{ settings.service_partner_url }}</p>
+<p class="meta">Checklist PDF for service providers: {{ 'on' if settings.workorder_enabled else 'off' }}. Service provider link: {{ settings.service_partner_url }}. Result e-mail: {{ 'on' if settings.result_mail_enabled and settings.mail_configured else 'off' }}{% if settings.mail_configured %} via {{ settings.smtp_host }}:{{ settings.smtp_port }}{% endif %}.</p>
 {% endif %}
 
 <h2>Vehicle register</h2>

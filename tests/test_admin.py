@@ -816,7 +816,7 @@ def test_odd_reports_are_flagged_in_the_register(client):
     assert "This report looks incomplete" not in c.get("/admin/fleet/VCF1ZBE20PG099911").text
 
 
-def test_work_order_switch_in_admin(client):
+def test_work_order_switch_in_admin(client, monkeypatch):
     """The work order PDF can be switched off in the admin console: the button
     disappears and the routes answer 404. Read-only admins see the state."""
     c, main = client
@@ -840,6 +840,24 @@ def test_work_order_switch_in_admin(client):
     c.post("/admin/settings", data={"csrf": csrf, "workorder_enabled": "1", "service_partner_url": "https://example.org/help"}, headers={"Sec-Fetch-Site": "same-origin"})
     assert main.database.get_setting("service_partner_url") == "https://example.org/help"
     assert 'href="https://example.org/help" target="_blank"' in c.get(f"/vehicle/{key}").text
+    # The SMTP relay lives in the settings too; a test message goes through it
+    from app import mail
+    sent = []
+    monkeypatch.setattr(mail, "send", lambda relay, to, subject, text, attachments=None: sent.append((relay, to, subject)))
+    base = {"csrf": csrf, "workorder_enabled": "1", "result_mail_enabled": "1"}
+    assert c.post("/admin/settings", data={**base, "smtp_host": "bad host!"}, headers={"Sec-Fetch-Site": "same-origin"}).status_code == 400
+    assert c.post("/admin/settings", data={**base, "smtp_host": "relay.example", "smtp_port": "99999"}, headers={"Sec-Fetch-Site": "same-origin"}).status_code == 400
+    assert c.post("/admin/settings", data={**base, "smtp_host": "relay.example", "mail_from": "<<nope>>"}, headers={"Sec-Fetch-Site": "same-origin"}).status_code == 400
+    page = c.post("/admin/settings", data={**base, "smtp_host": "relay.example", "smtp_port": "2525", "mail_from": "Check <noreply@example.org>"},
+                  headers={"Sec-Fetch-Site": "same-origin"}).text
+    assert main.database.get_setting("smtp_host") == "relay.example" and main.database.get_setting("smtp_port") == "2525"
+    assert 'action="/admin/settings/test-mail"' in page and 'name="email"' in c.get(f"/vehicle/{key}").text
+    assert c.post("/admin/settings/test-mail", data={"csrf": csrf, "email": "nope"}, headers={"Sec-Fetch-Site": "same-origin"}).status_code == 400
+    ok = c.post("/admin/settings/test-mail", data={"csrf": csrf, "email": "admin@example.org"}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert "Test e-mail sent" in ok.text and sent[-1][0] == mail.Relay("relay.example", 2525, "Check <noreply@example.org>") and sent[-1][1] == "admin@example.org"
+    assert any(e["action"] == "settings" and "smtp_host=relay.example" in e["detail"] for e in main.database.audit_entries())
+    c.post("/admin/settings", data={**base, "smtp_host": ""}, headers={"Sec-Fetch-Site": "same-origin"})  # empty host = off
+    assert 'name="email"' not in c.get(f"/vehicle/{key}").text
 
 
 def test_merge_duplicate_uploads_in_admin(client):

@@ -670,3 +670,44 @@ def test_front_page_links_to_the_association(client):
     page = c.get("/?lang=en").text
     assert 'href="https://fiskeroa.com/" target="_blank" rel="noopener">Fisker Owners Association</a>' in page
     assert "is for members of" in page and "requires an active FOA membership" in page and "what remains before Marlin." in page
+
+
+def test_send_result_by_email(client, monkeypatch):
+    """The result page offers 'send me this result' when a relay is configured:
+    the permanent link and the PDF go to the typed address, which is not
+    stored; invalid addresses and bursts are refused; the switch turns it off."""
+    import re
+
+    from app import mail
+
+    c, main = client
+    sent = []
+    main.database.set_setting("smtp_host", "relay.example", "test")
+    monkeypatch.setattr(mail, "send", lambda relay, to, subject, text, attachments=None: sent.append((to, subject, text, attachments)))
+    token = _upload(c, follow_redirects=False).headers["location"].rsplit("/", 1)[1]
+    page = c.get(f"/result/{token}").text
+    assert 'name="email"' in page and f'action="/result/{token}/email"' in page
+
+    bad = c.post(f"/result/{token}/email", data={"email": "not-an-address"}, follow_redirects=False)
+    assert bad.headers["location"] == f"/result/{token}?mail=invalid"
+    ok = c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False,
+                headers={"x-forwarded-proto": "https", "host": "check.example"})
+    assert ok.headers["location"] == f"/result/{token}?mail=sent"
+    to, subject, text, attachments = sent[-1]
+    assert to == "member@example.org" and "VCF1ZBE20PG099999" in subject
+    assert re.search(r"https://check\.example/vehicle/[A-Za-z0-9_-]{16,}", text) and "2.1 zebra" in text
+    assert attachments[0][0].endswith(".pdf") and attachments[0][1][:5] == b"%PDF-"
+    assert "Sent. Check your inbox" in c.get(f"/result/{token}?mail=sent").text
+    with main.database._connect() as conn:  # nothing about the address is stored anywhere
+        for table in ("submissions", "usage_events", "audit_log"):
+            assert not any("member@example.org" in str(tuple(r)) for r in conn.execute(f"SELECT * FROM {table}"))
+
+    key = re.search(r"/vehicle/([A-Za-z0-9_-]{16,})", page).group(1)
+    assert c.post(f"/vehicle/{key}/email", data={"email": "member@example.org"}, follow_redirects=False).headers["location"] == f"/vehicle/{key}?mail=sent"
+    for _ in range(main.MAIL_LIMIT):
+        c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False)
+    assert c.post(f"/result/{token}/email", data={"email": "member@example.org"}, follow_redirects=False).headers["location"].endswith("?mail=limit")
+
+    main.database.set_setting("result_mail_enabled", "0", "test")
+    assert 'name="email"' not in c.get(f"/result/{token}").text
+    assert c.post(f"/result/{token}/email", data={"email": "member@example.org"}).status_code == 404

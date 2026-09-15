@@ -23,7 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import auth, passkeys
+from . import auth, mail, passkeys
 from . import db as db_module
 from .auth import LoginRequired, client_ip
 from .i18n import LANGUAGE_NAMES, SUPPORTED, block, negotiate_language, translator
@@ -98,6 +98,7 @@ STATIC_VERSION = hashlib.md5(
 ).hexdigest()[:8]
 
 database = db_module.Database(DATA_DIR / "marlin.sqlite3")
+database.seed_settings(mail.ENV_DEFAULTS)
 # Bootstrap: the first start copies the YAML admin users into the database.
 if database.import_users_if_empty(auth.load_users()):
     database.add_audit("system", "-", "users_import", "admin users imported from admin_users.yaml")
@@ -126,6 +127,25 @@ def _rate_limited(ip: str) -> bool:
             del _upload_hits[known_ip]
     hits = _upload_hits.setdefault(ip, [])
     if len(hits) >= RATE_LIMIT_UPLOADS:
+        return True
+    hits.append(now)
+    return False
+
+
+MAIL_LIMIT = 5                 # result e-mails per IP per window
+_mail_hits: dict[str, list[float]] = {}
+
+
+def _mail_rate_limited(ip: str) -> bool:
+    now = time.time()
+    for known_ip in list(_mail_hits):
+        recent = [x for x in _mail_hits[known_ip] if x > now - RATE_LIMIT_WINDOW]
+        if recent:
+            _mail_hits[known_ip] = recent
+        else:
+            del _mail_hits[known_ip]
+    hits = _mail_hits.setdefault(ip, [])
+    if len(hits) >= MAIL_LIMIT:
         return True
     hits.append(now)
     return False
@@ -398,6 +418,9 @@ def _result_page(request: Request, report, evaluation, *, pdf_url: str, link_key
             "uploaded_at": uploaded_at, "changes": changes, "report_age_days": report_age_days,
             "workorder_enabled": database.flag("workorder_enabled"),
             "service_url": database.get_setting("service_partner_url"),
+            "mail_enabled": _relay().enabled and database.flag("result_mail_enabled"),
+            "mail_status": request.query_params.get("mail", ""),
+            "page_path": request.url.path,
             "workorder_url": pdf_url[:-len("/pdf")] + "/workorder" if pdf_url.endswith("/pdf") else pdf_url + "/workorder",
         },
     )
@@ -564,6 +587,67 @@ async def vehicle_workorder(request: Request, key: str):
         return _unknown_vehicle_link(request)
     report, evaluation, _submission = found
     return await _workorder_response(request, report, evaluation)
+
+
+def _relay() -> mail.Relay:
+    return mail.relay_from_settings(database.get_setting)
+
+
+async def _mail_result(request: Request, report, evaluation, *, link_key: str, back: str) -> Response:
+    """'Send me this result': the permanent link and the PDF to an address the
+    member types in. The address is used once and not stored; only the fact
+    that a mail went out is logged (no address, no VIN)."""
+    relay = _relay()
+    if not (relay.enabled and database.flag("result_mail_enabled")):
+        raise HTTPException(status_code=404, detail="E-mail is switched off.")
+    fetch_site = request.headers.get("sec-fetch-site", "")
+    if fetch_site and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request rejected.")
+    form = await request.form()
+    address = str(form.get("email", "")).strip()
+    if not mail.valid_address(address):
+        return RedirectResponse(f"{back}?mail=invalid", status_code=303)
+    if _mail_rate_limited(client_ip(request)):
+        return RedirectResponse(f"{back}?mail=limit", status_code=303)
+    lang = negotiate_language(request)
+    t = translator(lang)
+    url = _permanent_url(request, link_key)
+    outcome = t("outcome_" + evaluation.outcome) if evaluation.outcome else ""
+    subject = t("mail_subject", vin=report.vin)
+    body = t("mail_body", vin=report.vin, outcome=outcome, url=url)
+    pdf_html = templates.get_template("pdf.html").render(
+        lang=lang, t=t, report=report, evaluation=evaluation, for_pdf=True,
+        service_url=database.get_setting("service_partner_url"),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    pdf_bytes = await _run_heavy(_render_pdf, pdf_html)
+    try:
+        await run_in_threadpool(mail.send, relay, address, subject, body,
+                                [(f"ocean-software-check_{report.vin}.pdf", pdf_bytes, "application/pdf")])
+    except Exception as exc:
+        log.warning("Result e-mail failed: %s", exc)
+        return RedirectResponse(f"{back}?mail=failed", status_code=303)
+    log.info("Result e-mail sent (lang %s)", lang)
+    return RedirectResponse(f"{back}?mail=sent", status_code=303)
+
+
+@app.post("/result/{token}/email")
+async def result_email(request: Request, token: str):
+    _prune_results()
+    cached = _recent_results.get(token)
+    if cached is None:
+        return _expired_result(request)
+    return await _mail_result(request, cached["report"], cached["evaluation"],
+                              link_key=cached["link_key"], back=f"/result/{token}")
+
+
+@app.post("/vehicle/{key}/email")
+async def vehicle_email(request: Request, key: str):
+    found = _vehicle_by_key(key)
+    if found is None:
+        return _unknown_vehicle_link(request)
+    report, evaluation, _submission = found
+    return await _mail_result(request, report, evaluation, link_key=key, back=f"/vehicle/{key}")
 
 
 def _fleet_stats() -> dict:
@@ -915,6 +999,11 @@ def _render_admin(request: Request, username: str, *, message: str = "",
             "audit": database.audit_entries(50),
             "usage": database.usage_stats(14),
             "settings": {"workorder_enabled": database.flag("workorder_enabled"),
+                         "result_mail_enabled": database.flag("result_mail_enabled"),
+                         "mail_configured": _relay().enabled,
+                         "smtp_host": database.get_setting("smtp_host"),
+                         "smtp_port": database.get_setting("smtp_port"),
+                         "mail_from": _relay().sender,
                          "service_partner_url": database.get_setting("service_partner_url")},
             "fleet": _fleet_stats(),
         },
@@ -1069,7 +1158,7 @@ def _form_to_yaml(form, username: str) -> str:
 
 # --- Admin: settings (feature switches) --------------------------------------
 
-_SWITCHES = ("workorder_enabled",)
+_SWITCHES = ("workorder_enabled", "result_mail_enabled")
 
 
 @app.post("/admin/settings")
@@ -1087,9 +1176,42 @@ async def admin_settings(request: Request, username: str = Depends(require_csrf_
     if url and url != database.get_setting("service_partner_url"):
         database.set_setting("service_partner_url", url, username)
         changed.append(f"service_partner_url={url}")
+    host = str(form.get("smtp_host", "")).strip()
+    port = str(form.get("smtp_port", "")).strip() or "587"
+    sender = str(form.get("mail_from", "")).strip()
+    if not mail.valid_host(host):
+        return _render_admin(request, username, error="SMTP relay: host name only (letters, digits, dots, dashes), or empty to switch e-mail off.", status_code=400)
+    if not port.isdigit() or not 1 <= int(port) <= 65535:
+        return _render_admin(request, username, error="SMTP relay: the port must be a number between 1 and 65535.", status_code=400)
+    if sender and not mail.valid_sender(sender):
+        return _render_admin(request, username, error="Sender: use an address, or Name <address>.", status_code=400)
+    for key, value in (("smtp_host", host), ("smtp_port", port), ("mail_from", sender)):
+        if "smtp_host" in form and database.get_setting(key) != value:
+            database.set_setting(key, value, username)
+            changed.append(f"{key}={value or '(empty)'}")
     if changed:
         database.add_audit(username, client_ip(request), "settings", ", ".join(changed))
     return _render_admin(request, username, message="Settings saved." if changed else "No settings changed.")
+
+
+@app.post("/admin/settings/test-mail")
+async def admin_test_mail(request: Request, username: str = Depends(require_csrf_admin)):
+    """Sends a short test message through the configured relay to the address typed in."""
+    form = await request.form()
+    address = str(form.get("email", "")).strip()
+    relay = _relay()
+    if not relay.enabled:
+        return _render_admin(request, username, error="No SMTP relay configured.", status_code=400)
+    if not mail.valid_address(address):
+        return _render_admin(request, username, error="Test e-mail: that does not look like an address.", status_code=400)
+    try:
+        await run_in_threadpool(mail.send, relay, address, "Ocean Software Check: test message",
+                                f"This is a test message from the admin console, requested by {username}.\n"
+                                f"Relay: {relay.host}:{relay.port}, sender: {relay.sender}.")
+    except Exception as exc:
+        return _render_admin(request, username, error=f"Test e-mail failed: {exc}", status_code=400)
+    database.add_audit(username, client_ip(request), "settings", "test e-mail sent")
+    return _render_admin(request, username, message="Test e-mail sent. Check the inbox (and the spam folder).")
 
 
 # --- Admin: own profile (password, MFA) -------------------------------------

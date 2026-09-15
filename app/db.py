@@ -943,8 +943,21 @@ class Database:
 
     SETTING_DEFAULTS: ClassVar[dict[str, str]] = {
         "workorder_enabled": "1",
+        "result_mail_enabled": "1",
+        "smtp_host": "",      # seeded from MARLIN_SMTP_* at startup (seed_settings)
+        "smtp_port": "587",
+        "mail_from": "",
         "service_partner_url": "https://fiskeroa.com/service/",
     }
+
+    def seed_settings(self, values: dict[str, str]) -> None:
+        """Writes values for keys that have never been saved (used to carry the
+        MARLIN_SMTP_* environment variables into the admin-controlled settings)."""
+        with self._connect() as conn:
+            for key, value in values.items():
+                if value:
+                    conn.execute("INSERT OR IGNORE INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)",
+                                 (key, value, datetime.now(UTC).isoformat(), "environment"))
 
     def get_setting(self, key: str) -> str:
         with self._connect() as conn:

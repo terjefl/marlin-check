@@ -231,3 +231,6 @@ form.inline { display: inline; }
 .section-title.summary { margin-top: 1.6rem; }
 .verdict .section-title { font-weight: 600; }
 .membership a { font-weight: 600; }
+.mailbox { margin-top: 1.2rem; max-width: 640px; }
+.mailbox .filterbar { margin: 0; }
+.mailbox input[type=email] { min-width: 16rem; }

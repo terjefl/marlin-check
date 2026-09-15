@@ -43,6 +43,12 @@ car's control modules meet the minimum software levels required for the
 - The admin register flags odd reports (a required module missing, empty or
   unrecognised, or fewer than 30 control units) with a filter and a notice on
   the vehicle page asking for a fresh OLP export.
+- "Send me this result": the permanent link and the PDF to an address the
+  member types in (`app/mail.py`). The address is used for that one message and
+  not stored; 5 per IP per minute. The admin console's Settings card holds the
+  on/off switch, the SMTP relay (host, port, sender; Google Workspace's
+  `smtp-relay.gmail.com` with STARTTLS, unauthenticated from a registered IP)
+  and a "send a test e-mail" button. An empty relay host switches e-mail off.
 - Downloadable PDF report (WeasyPrint), generated in the active language, with
   coloured ticks/crosses (the image has no emoji font) and without the permanent link.
 - A permanent link per vehicle (`/vehicle/<random key>`, 128-bit key created on the
@@ -275,6 +281,9 @@ changing `requirements.txt`, regenerate the lock with
 | `MARLIN_ADMIN_USERS_PATH` | `/config/admin_users.yaml` | same | Admin users (PBKDF2 hashes) |
 | `MARLIN_COOKIE_SECURE` | `1` | same | Mark the admin session cookie `Secure`. Set to `0` only for local development over plain http (compose.yml does). |
 | `MARLIN_PUBLIC_URL` | (empty) | same | Absolute base for the permanent vehicle links, e.g. `https://oceansoftwarecheck.com`. Empty = derived from `X-Forwarded-Proto` and `Host`, which the Cloudflare tunnel provides. |
+| `MARLIN_SMTP_HOST` | (empty) | same | Optional seed for the SMTP relay setting on first start (e.g. `smtp-relay.gmail.com`). The relay is otherwise configured in the admin console under Settings. |
+| `MARLIN_SMTP_PORT` | `587` | same | Optional seed for the relay port setting. |
+| `MARLIN_MAIL_FROM` | `Ocean Software Check <noreply@oceansoftwarecheck.com>` | same | Optional seed for the sender setting; must belong to a domain the relay accepts. |
 | `MARLIN_MAX_HEAVY_JOBS` | `4` | same | How many report analyses and PDF renderings may run at once; further requests wait in line. Protects the container's memory limit under a burst of uploads. |
 | `MARLIN_CLIENT_IP_HEADER` | `cf-connecting-ip` | same | The one request header trusted for the client IP (rate limits, login lockout, audit log, usage hash). Set to empty to use the socket address when no proxy is in front. |
 

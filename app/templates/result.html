@@ -27,6 +27,19 @@
   {% if workorder_enabled and (evaluation.below(evaluation.profiles[-1]) or (evaluation.outcome == 'marlin' and evaluation.marlin_below)) %}<a class="button secondary" href="{{ workorder_url }}">{{ t('workorder_button') }}</a>{% endif %}
   <a class="button secondary" href="/">{{ t('check_another') }}</a>
 </div>
+{% if mail_enabled %}
+<div class="mailbox">
+  {% if mail_status == 'sent' %}<p class="alert ok">{{ t('mail_sent') }}</p>
+  {% elif mail_status == 'invalid' %}<p class="alert error">{{ t('mail_invalid') }}</p>
+  {% elif mail_status == 'limit' %}<p class="alert error">{{ t('mail_limit') }}</p>
+  {% elif mail_status == 'failed' %}<p class="alert error">{{ t('mail_failed') }}</p>{% endif %}
+  <form method="post" action="{{ page_path }}/email" class="filterbar">
+    <label>{{ t('mail_form_label') }} <input type="email" name="email" required maxlength="254" autocomplete="email"></label>
+    <button type="submit" class="small secondary">{{ t('mail_button') }}</button>
+  </form>
+  <p class="hint">{{ t('mail_hint') }}</p>
+</div>
+{% endif %}
 <div class="permalink">
   <strong>{{ t('permanent_link_title') }}</strong>
   <a class="mono" href="{{ permanent_url }}">{{ permanent_url }}</a>
